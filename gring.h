@@ -30,10 +30,12 @@
                 }
             }
 
-            // 
-            inline int128 operator+(const int128& o) const {
+            int128 operator+(const int128& o) const {
                 __m128i packed_sum = _mm_add_epi64(m_val, o.m_val);
-                __m128i carry = _mm_cmpgt_epi64(m_val, packed_sum);
+                
+                __m128i rangeshift = _mm_set1_epi64x(0x8000000000000000);  // unsigned comparison
+                __m128i carry = _mm_cmpgt_epi64(_mm_xor_si128(m_val, rangeshift), 
+                                     _mm_xor_si128(packed_sum, rangeshift));
                 if (!_mm_test_all_zeros(carry, _mm_set_epi64x(0, -1))) {
                     // add carry bit from lower 64 bits
                     packed_sum = _mm_add_epi64(packed_sum,  _mm_set_epi64x(0, 1));
@@ -41,15 +43,15 @@
                 return packed_sum;
             }
 
-            inline int128& operator+=(const int128& o) {
+            int128& operator+=(const int128& o) {
                 return *this = *this + o;
             }
 
-            inline int128 operator*(const int128& o) const {
-                
+            int128 operator*(const int128& o) const {
+                // TODO
             }
 
-            inline int128& operator*=(const int128& o) {
+            int128& operator*=(const int128& o) {
                 return *this = *this * o;
             }
 
@@ -60,12 +62,12 @@
             //     return *this = *this & o;
             // }
 
-            // int128 operator^(const int128& o) const {
-            //     return m_val ^ o.m_val;
-            // }
-            // int128& operator^=(const int128& o) {
-            //     return *this = *this ^ o;
-            // }
+            int128 operator^(const int128& o) const {
+                return m_val ^ o.m_val;
+            }
+            int128& operator^=(const int128& o) {
+                return *this = *this ^ o;
+            }
 
             int128 operator>>(int s) const {
                 __m128i packed_shifted = _mm_srli_epi64(m_val, s); // Shift both parts
@@ -167,23 +169,29 @@
         public:
             int256(int128 lo, int128 hi) : m_lo(lo), m_hi(hi) {}
 
-            // TODO: carry bits undealt with
             int256 operator+(const int256& o) const {
-                int128 m_c = (m_lo > m_lo + o.m_lo);
-                return int256(m_lo + o.m_lo, m_hi + o.m_hi);
+                bool carry = (m_lo > m_lo + o.m_lo);
+                if (carry) 
+                    return int256(m_lo + o.m_lo , m_hi + o.m_hi + int128(1));
+                else
+                    return int256(m_lo + o.m_lo, m_hi + o.m_hi);
             }
 
+            int256& operator+=(const int256& o) {
+                return *this = *this + o;
 
-            int256 operator&(const int256& o) const {
-                return int256(m_lo & o.m_lo, m_hi & o.m_hi);
-            }
-            int256 operator&(const int128& o) const {
-                return int256(m_lo & o.reveal(), 0);
             }
 
-            int256 operator^(const int256& o) const {
-                return int256(m_lo ^ o.m_lo, m_hi ^ o.m_hi);
+            //TODO
+            int256 operator*(const int256& o) const {
+                return int256(m_lo * o.m_lo , m_hi * o.m_hi + int128(1));
             }
+
+            int256& operator*=(const int256& o) {
+                return *this = *this * o;
+
+            }
+
 
             int256 operator>>(int s) const {
                 assert(s < 128);
@@ -239,7 +247,9 @@
             }
 
         private:
-
+            static int256 make_mask(int k) {
+                return {int128::make_mask(std::min(k, 128)), int128::make_mask(std::max(0, k - 128))};
+            }
 
         private:
            T val; 
