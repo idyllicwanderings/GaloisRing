@@ -79,3 +79,41 @@ for a in images:
 
 print(root_image^2 + root_image + 1)
 # print(res[2] + res[2])
+
+
+
+
+tables = []
+for k in range(2, 9):
+    F = GF(2^k, 'α', modulus="minimal_weight")
+    inj = F.fetch_int
+    proj = lambda x: x.integer_representation()
+    tables.append((k, [[proj(inj(a) * inj(b)) for b in range(2^k)] for a in range(2^k)] + [[0] + [proj(inj(a)^-1) for a in range(1, 2^k)]]))
+
+textual_tables = []
+for k, tb in tables:
+    textual_tables.append("constexpr inline std::uint8_t mul%d[(1<<%d) + 1][1<<%d] = %s;" % (k, k, k, str(tb).translate("".maketrans("[]", "{}"))))
+
+with open("gftables.h", "w") as f:
+    f.write("""
+// This file was automatically generated, changes may be overwritten
+#pragma once
+#include <cstdint>
+namespace gftables {
+    %s
+} // namespace gftables
+""" % "\n    ".join(textual_tables))
+
+
+
+embeddings = {}
+for base_k in GENERATE_EMBEDDINGS:
+    F1 = GF(2^base_k, 'α', modulus="minimal_weight")
+    extension_factor = 1
+    while extension_factor * base_k <= 128:
+        ext_k = extension_factor * base_k
+        F2 = GF(2^ext_k, 'β', modulus="minimal_weight")
+        el = F2['x'](F1.modulus()).roots()[0][0]
+        embeddings[(base_k, ext_k)] = [(el^i).integer_representation() for i in range(base_k)]
+        extension_factor += 1
+
