@@ -28,7 +28,7 @@ cc_binary(
 
 To build the project, use
 ```bash
-bazel build //main:hello-world --sandbox_add_mount_pair=/tmp
+bazel build //main:galois-ring --sandbox_add_mount_pair=/tmp
 ```
 
 The workaround is for issue listed below :https://github.com/bazelbuild/bazel/issues/20533. 
@@ -38,4 +38,3 @@ To run the tests, use
 ```bash
 bazel test test:arith-test
 ```
-

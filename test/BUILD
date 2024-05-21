@@ -1,13 +1,12 @@
 cc_test(
     name = "arith-test",
-    srcs = ["gr_test.cc",
-            "br_test.cc",
-            "int_test.cc"
+    srcs = ["testGR.cc",
+            "testGR.cc"
             ],
     copts = ["-Iexternal/gtest/include"],
     deps = [
         "@gtest//:main",
-        "//main:hello-greet",
+        "//main:galois-ring",
     ],
 )
 
