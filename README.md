@@ -36,5 +36,6 @@ The workaround is for issue listed below :https://github.com/bazelbuild/bazel/is
 To run the tests, use 
 
 ```bash
+bazel test test:arith-test
 ```
 

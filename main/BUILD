@@ -1,10 +1,5 @@
 load("@rules_cc//cc:defs.bzl", "cc_binary", "cc_library")
 
-cc_library(
-    name = "hello-greet",
-    srcs = ["hello-greet.cc"],
-    hdrs = ["hello-greet.h"],
-)
 
 cc_binary(
     name = "hello-world",
@@ -12,5 +7,5 @@ cc_binary(
     deps = [
         ":hello-greet",
         "//lib:hello-time",
-    ],
+        "@com_github_google_glog//:glog"],
 )
