@@ -1,4 +1,4 @@
-#include "gring.h"
+#include "lib/gring.h"
 
 int main() {
     return 1;

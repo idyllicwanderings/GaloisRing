@@ -11,17 +11,14 @@ http_archive(
 )
 
 #google Test v 1.14.0
-http_archive(
+load("@bazel_tools//tools/build_defs/repo:git.bzl", "git_repository")
+git_repository(
     name = "gtest",
-    url = "https://github.com/google/googletest/archive/release-1.14.0.zip",
-    sha256 = "94c634d499558a76fa649edb13721dce6e98fb1e7018dfaeba3cd7a083945e91",
-    build_file = "@//:gtest.BUILD",
-    strip_prefix = "googletest-release-1.14.0",
+    remote = "https://github.com/google/googletest",
+    branch = "v1.14.x",
 )
 
 #google logging
-load("@bazel_tools//tools/build_defs/repo:http.bzl", "http_archive")
-
 http_archive(
     name = "com_github_gflags_gflags",
     sha256 = "34af2f15cf7367513b352bdcd2493ab14ce43692d2dcd9dfc499492966c64dcf",
@@ -29,14 +26,13 @@ http_archive(
     urls = ["https://github.com/gflags/gflags/archive/v2.2.2.tar.gz"],
 )
 
-http_archive(
-    name = "com_github_google_glog",
-    sha256 = "122fb6b712808ef43fbf80f75c52a21c9760683dae470154f02bddfc61135022",
-    strip_prefix = "glog-0.6.0",
-    urls = ["https://github.com/google/glog/archive/v0.6.0.zip"],
+git_repository(
+    name = "glog",
+    remote = "https://github.com/google/glog.git",
+    tag = "v0.7.0",
 )
 
-#the rest idk
+#the rest 
 load("@aspect_gcc_toolchain//toolchain:repositories.bzl", "gcc_toolchain_dependencies")
 
 gcc_toolchain_dependencies()
@@ -47,3 +43,6 @@ gcc_register_toolchain(
     name = "gcc_toolchain_x86_64",
     target_arch = ARCHS.x86_64,
 )
+
+
+
