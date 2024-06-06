@@ -48,19 +48,14 @@ namespace arith {
     template <int k>
     constexpr int num_reduction_monomials() {
         static_assert(2 <= k && k <= 128, "Unsupported extension field");
-        int responses[] = {0, 0, 3, 3, 3, 3, 3, 3, 5, 3, 3, 3, 3, 5, 3, 3, 5,
-         3, 3, 5, 3, 3, 3, 3, 5, 3, 5, 5, 3, 3, 3, 3, 5, 3, 3, 3, 3, 5, 5, 3,
-          5, 3, 3, 5, 3, 5, 3, 3, 5, 3, 5, 5, 3, 5, 3, 3, 5, 3, 3, 5, 3, 5, 3, 3,
-           5, 3, 3, 5, 3, 5, 5, 3, 5, 3, 3, 5, 3, 5, 5, 3, 5, 3, 5, 5, 3, 5, 3, 3,
-            5, 3, 3, 5, 3, 3, 3, 3, 5, 3, 3, 5, 3, 5, 3, 3, 5, 3, 3, 5, 3, 5, 3, 3,
-             5, 3, 5, 5, 5, 5, 3, 3, 5, 3, 5, 3, 3, 5, 3, 3, 5};
+        int responses[] = {0, 0, 3, 3, 3, 3, 3, 3, 5, 3, 3, 3, 3, 5, 3, 3, 5, 3, 3, 5, 3, 3, 3, 3, 5, 3, 5, 5, 3, 3, 3, 3, 5, 3, 3, 3, 3, 5, 5, 3, 5, 3, 3, 5, 3, 5, 3, 3, 5, 3, 5, 5, 3, 5, 3, 3, 5, 3, 3, 5, 3, 5, 3, 3, 5, 3, 3, 5, 3, 5, 5, 3, 5, 3, 3, 5, 3, 5, 5, 3, 5, 3, 5, 5, 3, 5, 3, 3, 5, 3, 3, 5, 3, 3, 3, 3, 5, 3, 3, 5, 3, 5, 3, 3, 5, 3, 3, 5, 3, 5, 3, 3, 5, 3, 5, 5, 5, 5, 3, 3, 5, 3, 5, 3, 3, 5, 3, 3, 5};
         return responses[k];
     }
 
     template <int k, int w>
     struct reduction_polynomial_impl {};
 
-     template <int k>
+    template <int k>
     struct reduction_polynomial_impl<k, 3> {
         using type = int;
         constexpr static type value() {
@@ -232,133 +227,133 @@ class Z2K {
 };
 
 
-// template<int k, int d>
-// class BR {
-//     private:
-//         static_assert(1 <= d && d <= 128, "Unsupported Base Ring extension");
-//         static_assert( polys_.size() == d0_, "Inconsistent Extension with polynomails");
+template<int k, int d>
+class BR {
+    private:
+        static_assert(1 <= d && d <= 128, "Unsupported Base Ring extension");
+        static_assert( polys_.size() == d0_, "Inconsistent Extension with polynomails");
     
-//     public: 
-//         using F = typename arith::datatype<arith::type_idx<k>()>::type;
+    public: 
+        using F = typename arith::datatype<arith::type_idx<k>()>::type;
 
-//         // 一个约束T只能是整数类型的concept，整数类型包括 char,
-//         // unsigned char, short, ushort, int, unsinged int, long等。
-//         template <typename T>
-//         concept integral = std::is_integral_v<T>;
+        // 一个约束T只能是整数类型的concept，整数类型包括 char,
+        // unsigned char, short, ushort, int, unsinged int, long等。
+        template <typename T>
+        concept integral = std::is_integral_v<T>;
 
-//         template <typename T>
-//         explicit BR<k,d>(const std::vector<T>& eles): polys_(eles), d0_(d) {}
+        template <typename T>
+        explicit BR<k,d>(const std::vector<T>& eles): polys_(eles), d0_(d) {}
 
-//         explicit BR<k,d>(const std::vector<Z2K<k>>& eles): polys_(eles), d0_(d) {}
+        explicit BR<k,d>(const std::vector<Z2K<k>>& eles): polys_(eles), d0_(d) {}
 
-//         BR<k,d>: d0_(1)  {
-//             polys_.emplace_back(Z2K<k>());
-//         }
+        BR<k,d>: d0_(1)  {
+            polys_.emplace_back(Z2K<k>());
+        }
     
-//     public:
-//         BR<k,d> operator+(const BR<k,d>& o) const {
-//             static_assert(o.d0_ == this.d0_, "Inconsistent Extension Degree");
-//             std::vector<Z2K<k>> polys;
-//             for (int i = 0;i < d0_; i++) {
-//                 polys.emplace_back(o.polys_[i] + polys_[i]);
-//             }
-//             return BK<k,d>(polys);
-//         }
+    public:
+        BR<k,d> operator+(const BR<k,d>& o) const {
+            static_assert(o.d0_ == this.d0_, "Inconsistent Extension Degree");
+            std::vector<Z2K<k>> polys;
+            for (int i = 0;i < d0_; i++) {
+                polys.emplace_back(o.polys_[i] + polys_[i]);
+            }
+            return BK<k,d>(polys);
+        }
 
-//         BR<k,d> operator+=(const BR<k,d>& o) {
-//             return *this = (*this) + o;
-//         }
+        BR<k,d> operator+=(const BR<k,d>& o) {
+            return *this = (*this) + o;
+        }
 
-//         BR<k,d> operator-(const BR<k,d>& o) const {
-//             static_assert(o.d0_ == this.d0_, "Inconsistent Extension Degree");
-//             std::vector<Z2K<k>> polys;
-//             for (int i = 0;i < d0_; i++) {
-//                 polys.emplace_back(polys_[i] - o.polys_[i]);
-//             }
-//             return BK<k,d>(polys);
-//         }
+        BR<k,d> operator-(const BR<k,d>& o) const {
+            static_assert(o.d0_ == this.d0_, "Inconsistent Extension Degree");
+            std::vector<Z2K<k>> polys;
+            for (int i = 0;i < d0_; i++) {
+                polys.emplace_back(polys_[i] - o.polys_[i]);
+            }
+            return BK<k,d>(polys);
+        }
 
-//         BR<k,d> operator-=(const BR<k,d>& o) {
-//             return *this = (*this) + o;
-//         }
+        BR<k,d> operator-=(const BR<k,d>& o) {
+            return *this = (*this) + o;
+        }
 
-//         BR<k,d> operator*(const BR<k,d>& o) const {
-//             std::vector<Z2K<k>> a = polys_;
-//             std::vector<Z2K<k>> b = o.polys_;
-//             //TODO: to further deal with a bigger than 64 bits
-//             return BR<k, d>(arith::reduce<k, F>(multiply(a, b)));
+        BR<k,d> operator*(const BR<k,d>& o) const {
+            std::vector<Z2K<k>> a = polys_;
+            std::vector<Z2K<k>> b = o.polys_;
+            //TODO: to further deal with a bigger than 64 bits
+            return BR<k, d>(arith::reduce<k, F>(multiply(a, b)));
      
-//         }
+        }
 
-//         BR<k,d>& operator*=(const BR<k,d>& o) {
-//             return *this = (*this) * o;
-//         }
+        BR<k,d>& operator*=(const BR<k,d>& o) {
+            return *this = (*this) * o;
+        }
 
-//         bool operator==(const BR<k,d>& o) const {
-//             return (d0_ == o.d0_ && polys_ == o.polys_);
-//         }
+        bool operator==(const BR<k,d>& o) const {
+            return (d0_ == o.d0_ && polys_ == o.polys_);
+        }
 
-//         bool operator!=(const BR<k,d>& o) const {
-//             return (d0_ == o.d0_ || polys_ == o.polys_);
-//         }
-
-
-//     private:
-//         std::vector<Z2K<k>> polys_(d);
-//         const int d0_ = 1;
-// }
+        bool operator!=(const BR<k,d>& o) const {
+            return (d0_ == o.d0_ || polys_ == o.polys_);
+        }
 
 
-// /**
-//  * (GR(BR, k))
-// */
-// template <typename BR, int d>
-// class GR {
-//     public:
-//         GR operator+(const GR& o) const {
+    private:
+        std::vector<Z2K<k>> polys_(d);
+        const int d0_ = 1;
+}
+
+
+/**
+ * (GR(BR, k))
+*/
+template <typename BR, int d>
+class GR {
+    public:
+        GR operator+(const GR& o) const {
             
-//         }
+        }
 
-//         GR operator+=(const GR& o) {
-//             return *this = (*this) + o;
-//         }
+        GR operator+=(const GR& o) {
+            return *this = (*this) + o;
+        }
 
-//         GR operator-(const GR& o) const {
-//         }
+        GR operator-(const GR& o) const {
+        }
 
-//         GR operator-=(const GR& o) {
-//             return *this = (*this) + o;
-//         }
+        GR operator-=(const GR& o) {
+            return *this = (*this) + o;
+        }
 
-//         GR operator*(const GR& o) const {
+        GR operator*(const GR& o) const {
 
-//         }
+        }
 
-//         GR& operator*=(const GR& o) {
-//             return *this = (*this) * other;
-//         }
+        GR& operator*=(const GR& o) {
+            return *this = (*this) * other;
+        }
 
-//         bool operator==(const GR& other) const {
+        bool operator==(const GR& other) const {
 
-//         }
+        }
 
-//         bool operator!=(const GR& other) const {
+        bool operator!=(const GR& other) const {
             
-//         }
+        }
     
-//     public:
-//         lift();
-//         root();
-//         reduction();
+    public:
+        lift();
+        root();
+        reduction();
 
 
-//     private:
-//         /**
-//          * GR(basering, k )
-//         */
-//         BR basering_;
-//         int k_;
-// };
+    private:
+        /**
+         * GR(basering, k )
+        */
+        BR basering_;
+        int k_;
+};
 
 
 #endif

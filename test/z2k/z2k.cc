@@ -28,10 +28,11 @@
 //     std::string identifier_;
 // };
 
+// TODO: 写一个bash script，先更改in中的参数，然后跑sage，然后更改z2k.cc参数k，跑test，最后加到.bazelrc
+constexpr int k = 13;
 
 TEST(Z2KTest, Add) {
     // TODO: find a way to instantiaze the template k??
-    constexpr int k = 8;
     ifstream out_file;
     out_file.open("test/z2k/expected_out_add", ios::in);
     //EXPECT_EQ(identifier_, "add");
@@ -49,7 +50,6 @@ TEST(Z2KTest, Add) {
 
 
 TEST(Z2KTest, Multiply) {
-    constexpr int k = 8;
     ifstream out_file;
     out_file.open("test/z2k/expected_out_multiply", ios::in);
     //EXPECT_EQ(identifier_, "multiply");
