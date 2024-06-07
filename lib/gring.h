@@ -8,8 +8,13 @@
 #include <cstdint>
 #include <iostream>
 #include <iomanip>
+
 #include <algorithm>
 #include <vector>
+#include <array>
+
+#include <concepts>
+#include <type_traits>
 
 #include <glog/logging.h>
 
@@ -112,7 +117,7 @@ namespace arith {
             res = low[i] - hi[i] - hired1[i] - hired2[i] - hired3[i];
         }
         return res;
-  }
+    }
 
     /**
      * maximum 32 bits for now
@@ -228,33 +233,34 @@ class Z2K {
 
 
 template<int k, int d>
-class BR {
-    private:
-        static_assert(1 <= d && d <= 128, "Unsupported Base Ring extension");
-        static_assert( polys_.size() == d0_, "Inconsistent Extension with polynomails");
-    
+requires requires {
+    1 <= d && d <= 64;
+    1 <= k && k <= 32;
+}
+class BR 
+{
     public: 
         using F = typename arith::datatype<arith::type_idx<k>()>::type;
-
-        // 一个约束T只能是整数类型的concept，整数类型包括 char,
-        // unsigned char, short, ushort, int, unsinged int, long等。
-        template <typename T>
-        concept integral = std::is_integral_v<T>;
+        using BaseType = void;
 
         template <typename T>
-        explicit BR<k,d>(const std::vector<T>& eles): polys_(eles), d0_(d) {}
+        explicit BR<k,d>(const std::vector<T>& eles): polys_(eles) {}
 
-        explicit BR<k,d>(const std::vector<Z2K<k>>& eles): polys_(eles), d0_(d) {}
+        explicit BR<k,d>(const std::vector<Z2K<k>>& eles): polys_(eles) {}
 
-        BR<k,d>: d0_(1)  {
+        BR<k,d>  {
             polys_.emplace_back(Z2K<k>());
+        }
+        
+        static BR<k,d> get_zero() {
+            // set every term in poly to zero
+            return BR<k,d>();
         }
     
     public:
         BR<k,d> operator+(const BR<k,d>& o) const {
-            static_assert(o.d0_ == this.d0_, "Inconsistent Extension Degree");
             std::vector<Z2K<k>> polys;
-            for (int i = 0;i < d0_; i++) {
+            for (int i = 0;i < d; i++) {
                 polys.emplace_back(o.polys_[i] + polys_[i]);
             }
             return BK<k,d>(polys);
@@ -265,9 +271,8 @@ class BR {
         }
 
         BR<k,d> operator-(const BR<k,d>& o) const {
-            static_assert(o.d0_ == this.d0_, "Inconsistent Extension Degree");
             std::vector<Z2K<k>> polys;
-            for (int i = 0;i < d0_; i++) {
+            for (int i = 0;i < d; i++) {
                 polys.emplace_back(polys_[i] - o.polys_[i]);
             }
             return BK<k,d>(polys);
@@ -282,7 +287,6 @@ class BR {
             std::vector<Z2K<k>> b = o.polys_;
             //TODO: to further deal with a bigger than 64 bits
             return BR<k, d>(arith::reduce<k, F>(multiply(a, b)));
-     
         }
 
         BR<k,d>& operator*=(const BR<k,d>& o) {
@@ -290,70 +294,126 @@ class BR {
         }
 
         bool operator==(const BR<k,d>& o) const {
-            return (d0_ == o.d0_ && polys_ == o.polys_);
+            return (polys_ == o.polys_);
         }
 
         bool operator!=(const BR<k,d>& o) const {
-            return (d0_ == o.d0_ || polys_ == o.polys_);
+            return (polys_ != o.polys_);
         }
 
-
     private:
-        std::vector<Z2K<k>> polys_(d);
-        const int d0_ = 1;
-}
+        std::array<Z2K<k>, d> polys_;
+        static constexpr int d0_ = d;
+
+};
 
 
 /**
  * (GR(BR, k))
 */
-template <typename BR, int d>
+
+template<typename T>
+struct is_BR_template : std::false_type {};
+template<int k, int d>
+struct is_BR_template<BR<k, d>> : std::true_type {};
+
+//declaration of GR
+template<typename R, int k>
+struct GR;
+template<typename T>
+struct is_GR_template : std::false_type {};
+template<typename R, int k>
+struct is_GR_template<GR<R, k>> : std::true_type {};
+
+
+template<typename T>
+concept IsBaseBR = is_BR_template<T>::value && !is_gr_template<T>::value;
+
+//check if BaseRing ends with BR
+//TODO: make it more generic ring requirements by checking *, + and polynomial: demo.h example 2
+template<typename T>
+concept BaseRing = requires {
+    requires IsBaseBR<T> || (is_gr_template<T>::value && requires {
+        typename T::BaseType;
+        requires IsBaseBR<typename T::BaseType>;
+    });
+};
+
+template <BaseRing R, int d>
 class GR {
     public:
-        GR operator+(const GR& o) const {
-            
+    using BaseType = std::conditional_t<is_BR_template<R>::value, R, typename R::BaseType>;
+
+    explicit GR<R,d>(const std::array<R>& poly): polys_(poly) {;}
+
+    GR<R,d>  {
+        polys_.fill(R::empty_val);
+    }
+    
+    
+        
+    public:
+        GR<R,d> operator+(const GR<R,d>& o) const {
+            std::array<R,d> polys;
+            for (int i = 0;i < d0_; i++) {
+                polys.emplace_back(o.polys_[i] + polys_[i]);
+            }
+            //TODO: 需要mask吗？不需要吧，maybe
+            return GR<R, d>(reduce(multiply(a, b)));
+            return GR<R,d>(polys);
         }
 
-        GR operator+=(const GR& o) {
+        GR<R,d> operator+=(const GR<R,d>& o) {
             return *this = (*this) + o;
         }
 
-        GR operator-(const GR& o) const {
+        GR<R,d> operator-(const GR<R,d>& o) const {
+            //TODO
         }
 
-        GR operator-=(const GR& o) {
-            return *this = (*this) + o;
+        GR<R,d> operator-=(const GR<R,d>& o) {
+            return *this = (*this) - o;
         }
 
-        GR operator*(const GR& o) const {
-
+        GR<R,d> operator*(const GR<R,d>& o) const {
+            std::vector<R> a = polys_;
+            std::vector<R> b = o.polys_;
+            //TODO: to further deal with a bigger than 64 bits
+            // TODO: reduce 怎么办？？？
+            //return GR<R, d>(reduce(multiply(a, b)));
         }
 
-        GR& operator*=(const GR& o) {
+        GR<R,d>& operator*=(const GR<R,d>& o) {
             return *this = (*this) * other;
         }
 
-        bool operator==(const GR& other) const {
-
+        bool operator==(const GR<R,d>& o) const {
+            return (polys_ == o.polys_);
         }
 
-        bool operator!=(const GR& other) const {
-            
+        bool operator!=(const GR<R,d>& o) const {
+            return (polys_ == o.polys_);
         }
-    
-    public:
-        lift();
-        root();
-        reduction();
-
-
     private:
-        /**
-         * GR(basering, k )
-        */
-        BR basering_;
-        int k_;
+        std::array<R, d> polys_;
+        static constexpr int d0_ = d;
 };
+
+
+// Include here to have all GF2k<k> defined already and avoid circularity
+#include "gflifttables.h"
+
+template <typename R, int k1, int k0>
+GR<R, k1> liftGF(const GR<R,k0>& base) {
+    static_assert(k1 % k0 == 0, "Incorrect lifting extension size");
+    auto b = base.force_int();
+    GR<R, k1> res(b & 1);
+    for (int i = 1; i < k; i++) {
+        b >>= 1;
+        if (b & 1) res += gflifttables::lift_v<k, k2>[i];
+    }
+    return res;
+}
 
 
 #endif
