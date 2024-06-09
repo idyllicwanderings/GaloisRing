@@ -10,8 +10,9 @@ bazel build //main:galois-ring
 ```
  The workaround `--sandbox_add_mount_pair=/tmp` is used for the issue of loading external gcc toolchain: https://github.com/bazelbuild/bazel/issues/20533. 
 
-Current test tree looks like:
+Our test structure looks like:
 
+```bash
 ├── basering
 ├── galoisring
 └── z2k
@@ -21,12 +22,12 @@ Current test tree looks like:
     ├── z2k-update-test.sh
     ├── z2k.cc
     └── z2k.sage
+```
 
-To run the tests, first run the corresponding bash script,
-then use 
+To run the tests, first run the corresponding bash script, then use 
+
 ```bash
 bazel test //path/to/your:test_target 
-
 ```
 for example, to test the $Z210$, use
 ```bash
