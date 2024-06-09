@@ -15,33 +15,34 @@ for base_d0 in D0_LIFT_DEG:
             return
         def find_irreducible(R1, d0):
             while true:
-                r1_ele = R1.random_element(degree=d0)
-                if r1_ele.is_irreducible():
+                r1_ele = R1.gen()^d0 + R1.random_element(degree=d0//2) #ensures it's monic & sparse
+                # r1_ele = R1.random_element(degree=d0 - 1) + R1.gen()^d0  #ensures it's monic
+                if r1_ele.is_primitive():
                     F2 = R1.quo(r1_ele)
                     R2 = F2[ALPHABET[layer - 1]]     
                     return F2, R2         
         for lift_d1 in LIFT_DEG[layer]:
             R1 = prev_R
             if layer == 1:  
+                # TODO: should we use primitive instead? 思考
                 F2 = R1.quo(R1.irreducible_element(lift_d1, algorithm="first_lexicographic"))
                 R2 = F2[ALPHABET[layer - 1]]
             else:
                 F2, R2 = find_irreducible(R1, lift_d1)      
-            def modulus_to_list(moduli, layer):
-                if layer == 0:  #单独判断base_d0 = 1，因为int没有list.
-                    return moduli if not hasattr(moduli, 'list') else moduli.list()
-                return [modulus_to_list(term, layer - 1) for term in moduli.list()]
             modulus[tuple(prev_degs) + (lift_d1,)] = modulus_to_list(F2.modulus(), layer)
-            #print(prev_degs + [lift_d1])
-            #print(F2.modulus())
             recurse_build(layer + 1, R2, prev_degs + [lift_d1])
     F1 = GF(2^base_d0, 'ζ', modulus="minimal_weight")
     R1 = F1['δ']
     prev_degs = [base_d0]
+    def modulus_to_list(moduli, layer):
+        if layer == 0:  #单独判断base_d0 = 1，因为int没有list.
+            return moduli if not hasattr(moduli, 'list') else moduli.list()
+        return [modulus_to_list(term, layer - 1) for term in moduli.list()]
+    modulus[tuple(prev_degs)] = modulus_to_list(F1.modulus(), 0)
     recurse_build(1, R1, prev_degs)
     
 
-# print(modulus)
+print(modulus)
 #TODO: test the correctness
 '''def test():
     for deg in modulus.keys():

@@ -7,6 +7,7 @@
 #include "lib/gring.h"
 #include <glog/logging.h>
 
+constexpr int k = 5;
 
 // class Z2KTest : public ::testing::Test {
 //     protected:
@@ -29,7 +30,6 @@
 // };
 
 // TODO: 写一个bash script，先更改in中的参数，然后跑sage，然后更改z2k.cc参数k，跑test，最后加到.bazelrc
-constexpr int k = 13;
 
 TEST(Z2KTest, Add) {
     // TODO: find a way to instantiaze the template k??

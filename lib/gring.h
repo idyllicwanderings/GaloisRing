@@ -356,10 +356,8 @@ class GR {
         GR<R,d> operator+(const GR<R,d>& o) const {
             std::array<R,d> polys;
             for (int i = 0;i < d0_; i++) {
-                polys.emplace_back(o.polys_[i] + polys_[i]);
+                polys[i] = polys_[i] + o.polys_[i];
             }
-            //TODO: 需要mask吗？不需要吧，maybe
-            return GR<R, d>(reduce(multiply(a, b)));
             return GR<R,d>(polys);
         }
 
@@ -368,7 +366,11 @@ class GR {
         }
 
         GR<R,d> operator-(const GR<R,d>& o) const {
-            //TODO
+            std::array<R,d> polys;
+            for (int i = 0;i < d0_; i++) {
+                polys[i] = polys_[i] - o.polys_[i];
+            }
+            return GR<R,d>(polys);
         }
 
         GR<R,d> operator-=(const GR<R,d>& o) {
@@ -378,6 +380,10 @@ class GR {
         GR<R,d> operator*(const GR<R,d>& o) const {
             std::vector<R> a = polys_;
             std::vector<R> b = o.polys_;
+            std::array<R,d> polys;
+            for (int i = 0;i < d0_; i++) {
+                polys[i] = polys_[i] - o.polys_[i];
+            }
             //TODO: to further deal with a bigger than 64 bits
             // TODO: reduce 怎么办？？？
             //return GR<R, d>(reduce(multiply(a, b)));
