@@ -22,7 +22,8 @@ cc_test(
     ],
     data = ["expected_out_add",
             "expected_out_multiply",
-            # "z2k-update-test.sh"
+            # TODO: BUILD ERROR: $HOME environment not found by SAGE
+            #":z2k-update-testfile"
             ],
     tags = ["requires-update"],
 )

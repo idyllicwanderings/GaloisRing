@@ -10,7 +10,6 @@
 #include <iomanip>
 
 #include <algorithm>
-#include <vector>
 #include <array>
 
 #include <concepts>
@@ -77,46 +76,65 @@ namespace arith {
             return responses[k];
         }
     };
-
+    
+    // TODO: 想想这个怎么搞。
     template <int k>
     constexpr auto reduction_polynomial() {
         return reduction_polynomial_impl<k, num_reduction_monomials<k>()>::value();
     }
             
-    template <int k, typename T>
-    vector<T> reduce_once(const std::vector<T>& x, int red) { // Trinomial
-        int n = x.size();
-        std::vector<T> hi(n, 0);  // hi poly terms
-        hi.insert(hi.begin() + k, x.begin(), x.begin() + n - k);
-        std::vector<T> low(x);    // low poly terms
-        std::fill_n(low.begin(), n - k, 0);
-        std::vector<T> hired(n, 0);     // hi << red
-        hired.insert(hired.begin() + red, hi.begin(), hi.begin() + n - red);
-        std::vector<T> res;
-        for (int i = 0; i < n;i++) {
-            res = low[i] - hi[i] - hired[i];
-        }
-        return res;
-    }
+    // template <int k, typename T>
+    // vector<T> reduce_once(const std::vector<T>& x, int red) { // Trinomial
+    //     int n = x.size();
+    //     std::vector<T> hi(n, 0);  // hi poly terms
+    //     hi.insert(hi.begin() + k, x.begin(), x.begin() + n - k);
+    //     std::vector<T> low(x);    // low poly terms
+    //     std::fill_n(low.begin(), n - k, 0);
+    //     std::vector<T> hired(n, 0);     // hi << red
+    //     hired.insert(hired.begin() + red, hi.begin(), hi.begin() + n - red);
+    //     std::vector<T> res;
+    //     for (int i = 0; i < n;i++) {
+    //         res = low[i] - hi[i] - hired[i];
+    //     }
+    //     return res;
+    // }
 
-    template <int k, typename T>
-    T reduce_once(const std::vector<T>& x, const std::tuple<int, int, int>& red) { // Pentanomial
-        int n = x.size();
-        std::vector<T> hi(n, 0);  // hi poly terms
-        hi.insert(hi.begin() + k, x.begin(), x.begin() + n - k);
-        std::vector<T> low(x);    // low poly terms
-        std::fill_n(low.begin(),n - k, 0);
-        std::vector<T> hired1(n, 0);     // hi << red
-        hired1.insert(hired1.begin() + std::get<0>(red), hi.begin(), hi.begin() + n - std::get<0>(red));
-        std::vector<T> hired2(n, 0);     // hi << red
-        hired2.insert(hired2.begin() + std::get<1>(red), hi.begin(), hi.begin() + n - std::get<1>(red));
-        std::vector<T> hired3(n, 0);     // hi << red
-        hired3.insert(hired3.begin() + std::get<2>(red), hi.begin(), hi.begin() + n - std::get<2>(red));
-        std::vector<T> res;
-        for (int i = 0; i < n;i++) {
-            res = low[i] - hi[i] - hired1[i] - hired2[i] - hired3[i];
+    // template <int k, typename T>
+    // T reduce_once(const std::vector<T>& x, const std::tuple<int, int, int>& red) { // Pentanomial
+    //     int n = x.size();
+    //     std::vector<T> hi(n, 0);  // hi poly terms
+    //     hi.insert(hi.begin() + k, x.begin(), x.begin() + n - k);
+    //     std::vector<T> low(x);    // low poly terms
+    //     std::fill_n(low.begin(),n - k, 0);
+    //     std::vector<T> hired1(n, 0);     // hi << red
+    //     hired1.insert(hired1.begin() + std::get<0>(red), hi.begin(), hi.begin() + n - std::get<0>(red));
+    //     std::vector<T> hired2(n, 0);     // hi << red
+    //     hired2.insert(hired2.begin() + std::get<1>(red), hi.begin(), hi.begin() + n - std::get<1>(red));
+    //     std::vector<T> hired3(n, 0);     // hi << red
+    //     hired3.insert(hired3.begin() + std::get<2>(red), hi.begin(), hi.begin() + n - std::get<2>(red));
+    //     std::vector<T> res;
+    //     for (int i = 0; i < n;i++) {
+    //         res = low[i] - hi[i] - hired1[i] - hired2[i] - hired3[i];
+    //     }
+    //     return res;
+    // }
+
+       // TODO: make red polynomial more efficient data structure since it's sparse
+    template <int n, int d, typename R> //R: base_ring, n: size of ring polynomial, d: extension degree
+    std::array<R, n> reduce_once(const std::array<R, n>& poly_x, const std::array<R, d>& red /* (indx, R_val) */) {
+        std::array<R, n> high;  // TODO: new a zero value in R
+        std::copy(poly_x.begin() + d, poly_x.end(), high.begin());
+
+        std::array<R, n> low;   // TODO: new a zero value in R
+        std::copy(poly_x.begin(), poly_x.begin() + d, low.begin());
+
+        //TODO: red polynomial do not pass on its 最高项， 所以这里是没有最高项的modulus
+        for (int i = 0;i < n - d; i++) {
+            for (int shift = 0; shift < d;shift++) {
+                low[shift + i] -= red[shift] * high[i];
+            }
         }
-        return res;
+        return low;
     }
 
     /**
@@ -127,8 +145,30 @@ namespace arith {
         constexpr auto red = reduction_polynomial<k>();
         if constexpr(k <= 32) {
             std::uint64_t y = reduce_once<k,std::uint64_t>(x,red);
-        } 
+        }
         // TODO: bigger bits
+    }
+
+    template <int n, int d, typename R>
+    T reduce(const std::array<R, n>& x) {
+        // TODO: constexpr auto red = reduction_polynomial<d>();
+        auto& low = reduce_once<n, d, R>(x, red);
+        low = reduce_once<n, d, std::uint64_t>(low, red);
+        // truncate to d terms
+        std::array<R, d> res;
+        std::copy(low.begin(), low.begin() + d, res().begin());
+        return res;
+    }
+
+    template <int n, typename R>
+    std::array<R, n * 2 - 1> multiply(const std::array<R, n>& a, std::array<R, n>& b) {
+        std::array<R, n * 2 - 1> mult;
+        for (int i = 0; i < n;i++) {
+            for (int j = 0; j < n; j++) {
+                mult[i + j] += a[i] * b[j];
+            }
+        }
+        return mult;
     }
 
 };
@@ -212,20 +252,6 @@ class Z2K {
         F force_int() const {
             return val_;
         }
-    
-    public:
-        friend std::vector<Z2K<k>> multiply(const std::vector<Z2K<k>>& a, std::vector<Z2K<k>>& b) {
-            static_assert(a.size() == b.size(), "Inconsistent multiplication vector size!");
-            int n = a.size();
-            std::vector<Z2K<k>> mult(n * 2 - 1, 0);
-            for (int i = 0; i < n;i++) {
-                for (int j = 0; j < n; j++) {
-                    mult[i + j] += a[i] * b[j];
-                }
-            }
-            return mult;
-        }
-
     private:
         F val_;
 
@@ -244,22 +270,24 @@ class BR
         using BaseType = void;
 
         template <typename T>
-        explicit BR<k,d>(const std::vector<T>& eles): polys_(eles) {}
+        explicit BR<k,d>(const std::array<T, d>& eles): polys_(eles) {}
 
-        explicit BR<k,d>(const std::vector<Z2K<k>>& eles): polys_(eles) {}
+        explicit BR<k,d>(const std::array<Z2K<k>, d>& eles): polys_(eles) {}
 
-        BR<k,d>  {
-            polys_.emplace_back(Z2K<k>());
+        BR<k,d>() {
+            polys_.fill(Z2K<k>());
         }
         
-        static BR<k,d> get_zero() {
-            // set every term in poly to zero
-            return BR<k,d>();
-        }
+        //TODO: set values of polys
+        // BR<k,d> zero() {
+        //     // set every term in poly to zero
+        //     std::fill_n(polys_.begin(), d, Z2K<k>());
+        //     return this;
+        // }
     
     public:
         BR<k,d> operator+(const BR<k,d>& o) const {
-            std::vector<Z2K<k>> polys;
+            std::array<Z2K<k>, d> polys;
             for (int i = 0;i < d; i++) {
                 polys.emplace_back(o.polys_[i] + polys_[i]);
             }
@@ -271,7 +299,7 @@ class BR
         }
 
         BR<k,d> operator-(const BR<k,d>& o) const {
-            std::vector<Z2K<k>> polys;
+            std::array<Z2K<k>, d> polys;
             for (int i = 0;i < d; i++) {
                 polys.emplace_back(polys_[i] - o.polys_[i]);
             }
@@ -283,8 +311,8 @@ class BR
         }
 
         BR<k,d> operator*(const BR<k,d>& o) const {
-            std::vector<Z2K<k>> a = polys_;
-            std::vector<Z2K<k>> b = o.polys_;
+            std::array<Z2K<k>, d> a = polys_;
+            std::array<Z2K<k>> b = o.polys_;
             //TODO: to further deal with a bigger than 64 bits
             return BR<k, d>(arith::reduce<k, F>(multiply(a, b)));
         }
@@ -333,7 +361,7 @@ concept IsBaseBR = is_BR_template<T>::value && !is_gr_template<T>::value;
 //TODO: make it more generic ring requirements by checking *, + and polynomial: demo.h example 2
 template<typename T>
 concept BaseRing = requires {
-    requires IsBaseBR<T> || (is_gr_template<T>::value && requires {
+    requires IsBaseBR<T> || (is_GR_template<T>::value && requires {
         typename T::BaseType;
         requires IsBaseBR<typename T::BaseType>;
     });
@@ -346,12 +374,10 @@ class GR {
 
     explicit GR<R,d>(const std::array<R>& poly): polys_(poly) {;}
 
-    GR<R,d>  {
-        polys_.fill(R::empty_val);
-    }
-    
-    
-        
+    GR<R,d>()  { polys_.fill(R());}
+
+    GR<R,d>(std::array<R, d> polys) : polys_(polys) {}
+
     public:
         GR<R,d> operator+(const GR<R,d>& o) const {
             std::array<R,d> polys;
@@ -378,15 +404,7 @@ class GR {
         }
 
         GR<R,d> operator*(const GR<R,d>& o) const {
-            std::vector<R> a = polys_;
-            std::vector<R> b = o.polys_;
-            std::array<R,d> polys;
-            for (int i = 0;i < d0_; i++) {
-                polys[i] = polys_[i] - o.polys_[i];
-            }
-            //TODO: to further deal with a bigger than 64 bits
-            // TODO: reduce 怎么办？？？
-            //return GR<R, d>(reduce(multiply(a, b)));
+            return GR<R, d>(reduce(multiply(polys_, o.polys_)));
         }
 
         GR<R,d>& operator*=(const GR<R,d>& o) {
@@ -400,26 +418,29 @@ class GR {
         bool operator!=(const GR<R,d>& o) const {
             return (polys_ == o.polys_);
         }
+
     private:
-        std::array<R, d> polys_;
+        // TODO: copy, move constructor for all classes. ANNOYING
+        std::array<R, d> polys_;   // from x^0 to x^(d-1), modulus UP TO x^d
         static constexpr int d0_ = d;
+        int layer_;  //TODO: 计算出layer
 };
 
 
-// Include here to have all GF2k<k> defined already and avoid circularity
-#include "gflifttables.h"
+// // Include here to have all GF2k<k> defined already and avoid circularity
+// #include "grlifttables.h"
 
-template <typename R, int k1, int k0>
-GR<R, k1> liftGF(const GR<R,k0>& base) {
-    static_assert(k1 % k0 == 0, "Incorrect lifting extension size");
-    auto b = base.force_int();
-    GR<R, k1> res(b & 1);
-    for (int i = 1; i < k; i++) {
-        b >>= 1;
-        if (b & 1) res += gflifttables::lift_v<k, k2>[i];
-    }
-    return res;
-}
+// template <typename R, int k1, int k0>
+// GR<R, k1> liftGF(const GR<R,k0>& base) {
+//     static_assert(k1 % k0 == 0, "Incorrect lifting extension size");
+//     auto b = base.force_int();
+//     GR<R, k1> res(b & 1);
+//     for (int i = 1; i < k; i++) {
+//         b >>= 1;
+//         if (b & 1) res += gflifttables::lift_v<k, k2>[i];
+//     }
+//     return res;
+// }
 
 
 #endif
