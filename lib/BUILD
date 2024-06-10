@@ -6,9 +6,9 @@ cc_library(
             "random.h",
             "gring.h"],
     visibility = ["//main:__pkg__",
-                  "//log:__pkg__",
-                  "//test:__subpackages__",
-                ],
+        "//log:__pkg__",
+        "//test:__subpackages__",
+        ],
     deps = [
         "@com_github_gflags_gflags//:gflags",
         "@glog",

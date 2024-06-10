@@ -30,8 +30,17 @@ To run the tests, first run the corresponding bash script, then use
 bazel test //path/to/your:test_target 
 ```
 for example, to test the $Z210$, use
+ ```bash
+cd ./test/z2k
+./z2k-update-test.sh z2k.cc 10 100
+cd ../../
+ ```
+then run 
 ```bash
+bazel test //test/z2k:z2k-test
+```
+<!-- ```bash
 bazel test //test/z2k:z2k-test \
     --define k=10 \
     --define testcase_num=100 
-```
+``` -->
