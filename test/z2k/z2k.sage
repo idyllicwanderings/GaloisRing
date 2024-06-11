@@ -1,14 +1,14 @@
 import sys
 
 def testadd(d):  ## test Z2K addition
-    F1 = GF(2^d, name="z", modulus="minimal_weight", repr='int')
+    F1 = Zmod(2^d)
     a = F1.random_element()
     b = F1.random_element()
     return [str(a), str(b), str(a + b)]
 
 
 def testmul(d):  ## test Z2K addition
-    F1 = GF(2^d, name="z", modulus="minimal_weight", repr='int')
+    F1 = Zmod(2^d)
     a = F1.random_element()
     b = F1.random_element()
     return [str(a), str(b), str(a * b)]

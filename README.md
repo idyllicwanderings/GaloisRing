@@ -14,9 +14,13 @@ Our test structure looks like:
 
 ```bash
 ├── basering
+│   ├── br-update-test.sh
+│   ├── br.cc
+│   ├── br.sage
+│   ├── expected_out_add
+│   └── expected_out_multiply
 ├── galoisring
 └── z2k
-    ├── BUILD
     ├── expected_out_add
     ├── expected_out_multiply
     ├── z2k-update-test.sh
