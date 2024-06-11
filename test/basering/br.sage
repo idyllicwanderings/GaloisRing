@@ -10,18 +10,28 @@ def mkring(k, d):
 def testadd(F2):  ## test BR addition
     a = F2.random_element()
     b = F2.random_element()
-    return [str(a), str(b), str(a + b)]
-
+    return [str(a.list()), str(b.list()), str((a + b).list())]
 
 def testsub(F2):  ## test BR subtraction
     a = F2.random_element()
     b = F2.random_element()
-    return [str(a), str(b), str(a - b)]
+    return [str(a.list()), str(b.list()), str((a - b).list())]
 
 def testmul(F2):  ## test BR multiply
     a = F2.random_element()
     b = F2.random_element()
-    return [str(a), str(b), str(a * b)]
+    return [str(a.list()), str(b.list()), str((a * b).list())]]
+
+def writetable(a, b, c):
+    with open("brtables.h", "w") as f:
+        f.write("""
+            #pragma once
+            #include <cstdint>
+            #include "lib/gring.h"
+        """ % "\n")
+    #TODO: finish the rest
+
+    
 
 if __name__ == "__main__":
     n = int(sys.argv[1])
@@ -30,5 +40,5 @@ if __name__ == "__main__":
     muloradd = sys.argv[4] == "multiply"   #TODO: include subtraction
     R = mkring(k,d)
     for _ in range(n):
-        sys.stdout.write(" ".join(testmul(R)) + '\n' if muloradd else " ".join(testadd(R)) + '\n')
+        sys.stdout.write(", ".join(testmul(R)) + '\n' if muloradd else ", ".join(testadd(R)) + '\n')
     #sys.stdout.write('Test ended'+ '\n')

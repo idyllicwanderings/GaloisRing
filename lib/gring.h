@@ -331,7 +331,7 @@ namespace reduce {
 
     // TODO: test this
     // TODO: more constraints?????? idk 
-    template <int k, int d, Ring R>
+    template <int k, int d, typename R>
     std::array<R, d> reduce_once(const std::array<R, d>& x, int red) { // Trinomial
         std::array<R, d> high;   // high poly terms
         std::copy(x.begin() + k, x.end(), high.begin());
@@ -348,8 +348,8 @@ namespace reduce {
         return res;
     }
 
-    template <int k, int d, Ring T>
-    std::array<R, d> reduce_once(const std::array<T, d>& x, const std::tuple<int, int, int>& red) { // Pentanomial
+    template <int k, int d, typename R>
+    std::array<R, d> reduce_once(const std::array<R, d>& x, const std::tuple<int, int, int>& red) { // Pentanomial
         std::array<R, d> high;   // high poly terms
         std::copy(x.begin() + k, x.end(), high.begin());
         std::array<R, d> low;   // low poly terms

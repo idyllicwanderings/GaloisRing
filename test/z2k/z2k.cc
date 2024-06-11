@@ -7,7 +7,7 @@
 #include "lib/gring.h"
 #include <glog/logging.h>
 
-constexpr int k = 5;
+constexpr int k = 15;
 
 TEST(Z2KTest, Add) {
     ifstream out_file;
