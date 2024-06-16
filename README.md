@@ -43,8 +43,9 @@ then run
 ```bash
 bazel test //test/z2k:z2k-test
 ```
-<!-- ```bash
+```bash
 bazel test //test/z2k:z2k-test \
     --define k=10 \
     --define testcase_num=100 
-``` -->
+
+ -->

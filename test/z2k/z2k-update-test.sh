@@ -9,6 +9,7 @@ MATH_FILE="z2k.sage"
 K="$2"
 TEST_NUM="$3"
 
+export HOME="$TMPDIR"
 sage $MATH_FILE $TEST_NUM $K add >> expected_out_add
 sage $MATH_FILE $TEST_NUM $K multiply >> expected_out_multiply
 sed -i "/constexpr int k/ s/constexpr int k.*/constexpr int k = $K;/" "$TEST_FILE"

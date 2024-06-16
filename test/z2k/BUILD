@@ -4,8 +4,8 @@ genrule(
     srcs = ["z2k.cc", 
         "z2k-update-test.sh"],
     outs = ["z2k-param.cc"],  
-    cmd = ''' ./$(location z2k-update-test.sh) $(location z2k.cc) $(k) $(testcase_num)
-        && cp $(location z2k-param.cc) && echo \"WHAT THE FUCK!\" 
+    cmd = ''' ./$(location z2k-update-test.sh) $(location z2k.cc) $(k) $(testcase_num) \
+        && cp $(location z2k-param.cc) 
         ''',
     # tags = ["manual"],  
 )
