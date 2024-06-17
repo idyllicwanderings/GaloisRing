@@ -86,6 +86,42 @@ namespace arith {
 };
 
 
+template <int d, int... ds>
+struct reduction_polynomial() {
+    static constexpr int count = sizeof...(ds);
+    reduction_polynomial<ds...>();
+    std::array<d, ds>
+};
+
+template <int d>
+void reduction_polynomial() {
+    std::cout << Last << std::endl;
+}
+
+// 递归展开模板参数包，打印每个参数的值
+template <int First, int... Rest>
+void printValues() {
+    std::cout << First << ", ";
+    printValues<Rest...>();
+}
+
+
+    template <int k>
+    struct reduction_polynomial_impl<k, 5> {
+        using type = std::tuple<int, int, int>;
+        constexpr static type value() {
+            type responses[] = {{}, {}, {0, 0, 0}, {0, 0, 0}, {0, 0, 0}, {0, 0, 0}, {0, 0, 0}, {0, 0, 0}, {1, 3, 4}, {0, 0, 0}, {0, 0, 0}, {0, 0, 0}, {0, 0, 0}, {1, 3, 4}, {0, 0, 0}, {0, 0, 0}, {1, 3, 5}, {0, 0, 0}, {0, 0, 0}, {1, 2, 5}, {0, 0, 0}, {0, 0, 0}, {0, 0, 0}, {0, 0, 0}, {1, 3, 4}, {0, 0, 0}, {1, 3, 4}, {1, 2, 5}, {0, 0, 0}, {0, 0, 0}, {0, 0, 0}, {0, 0, 0}, {2, 3, 7}, {0, 0, 0}, {0, 0, 0}, {0, 0, 0}, {0, 0, 0}, {1, 4, 6}, {1, 5, 6}, {0, 0, 0}, {3, 4, 5}, {0, 0, 0}, {0, 0, 0}, {3, 4, 6}, {0, 0, 0}, {1, 3, 4}, {0, 0, 0}, {0, 0, 0}, {2, 3, 5}, {0, 0, 0}, {2, 3, 4}, {1, 3, 6}, {0, 0, 0}, {1, 2, 6}, {0, 0, 0}, {0, 0, 0}, {2, 4, 7}, {0, 0, 0}, {0, 0, 0}, {2, 4, 7}, {0, 0, 0}, {1, 2, 5}, {0, 0, 0}, {0, 0, 0}, {1, 3, 4}, {0, 0, 0}, {0, 0, 0}, {1, 2, 5}, {0, 0, 0}, {2, 5, 6}, {1, 3, 5}, {0, 0, 0}, {3, 9, 10}, {0, 0, 0}, {0, 0, 0}, {1, 3, 6}, {0, 0, 0}, {2, 5, 6}, {3, 5, 6}, {0, 0, 0}, {2, 4, 9}, {0, 0, 0}, {1, 3, 8}, {2, 4, 7}, {0, 0, 0}, {1, 2, 8}, {0, 0, 0}, {0, 0, 0}, {2, 6, 7}, {0, 0, 0}, {0, 0, 0}, {1, 5, 8}, {0, 0, 0}, {0, 0, 0}, {0, 0, 0}, {0, 0, 0}, {6, 9, 10}, {0, 0, 0}, {0, 0, 0}, {1, 3, 6}, {0, 0, 0}, {1, 6, 7}, {0, 0, 0}, {0, 0, 0}, {1, 3, 4}, {0, 0, 0}, {0, 0, 0}, {4, 7, 9}, {0, 0, 0}, {2, 4, 5}, {0, 0, 0}, {0, 0, 0}, {3, 4, 5}, {0, 0, 0}, {2, 3, 5}, {5, 7, 8}, {1, 2, 4}, {1, 2, 5}, {0, 0, 0}, {0, 0, 0}, {1, 3, 4}, {0, 0, 0}, {1, 2, 6}, {0, 0, 0}, {0, 0, 0}, {5, 6, 7}, {0, 0, 0}, {0, 0, 0}, {1, 2, 7}};
+            return responses[k];
+        }
+    };
+    
+    // TODO: 想想这个GR存储方式怎么搞。。。
+    template <int k>
+    constexpr auto reduction_polynomial() {
+        return reduction_polynomial_impl<k, num_reduction_monomials<k>()>::value();
+    }
+
+
 /**
  * 
  * Z2K(F, 1)
@@ -186,12 +222,22 @@ class BR
         using BaseType = void;
 
         template <typename T>
-        explicit BR<k,d>(const std::array<T, d>& eles): polys_(eles) {}
+        explicit BR<k, d>(const std::array<T, d>& eles): polys_(eles) {}
 
-        explicit BR<k,d>(const std::array<Z2K<k>, d>& eles): polys_(eles) {}
+        explicit BR<k, d>(const std::array<Z2K<k>, d>& eles): polys_(eles) {}
 
-        BR<k,d>() {
+        BR<k, d>() {
             polys_.fill(Z2K<k>());
+        }
+
+        template <typename T>
+        explicit BR<k, d>(std::initializer_list<T> eles) {
+            if (eles.size() != n) {
+                throw std::out_of_range("Wrong size of d provided");
+            }
+            for (int i = 0;i < d;i++) {
+                polys_[i] = Z2K<k>(eles[i]);
+            }
         }
     
     public:
@@ -426,13 +472,21 @@ namespace reduce {
 template <BaseRing R, int d>
 class GR {
     public:
-    using BaseType = std::conditional_t<is_BR_template<R>::value, R, typename R::BaseType>;
+        using BaseType = std::conditional_t<is_BR_template<R>::value, R, typename R::BaseType>;
 
-    explicit GR<R,d>(const std::array<R>& poly): polys_(poly) {;}
+        explicit GR<R,d>(const std::array<R>& poly): polys_(poly) {;}
 
-    GR<R,d>()  { polys_.fill(R());}
+        GR<R,d>()  { polys_.fill(R());}
 
-    GR<R,d>(std::array<R, d> polys) : polys_(polys) {}
+        GR<R,d>(std::array<R, d> polys) : polys_(polys) {}
+
+        template <typename T>
+        explicit GR<R, d>(std::initializer_list<T> eles) {
+            if (eles.size() != n) {
+                throw std::out_of_range("Wrong size of d provided");
+            }
+            std::copy(ele.begin(), ele.end(), polys_.begin());
+        }
 
     public:
         GR<R,d> operator+(const GR<R,d>& o) const {
@@ -483,20 +537,20 @@ class GR {
 };
 
 
-// // Include here to have all GF2k<k> defined already and avoid circularity
-// #include "grlifttables.h"
 
-// template <typename R, int k1, int k0>
-// GR<R, k1> liftGF(const GR<R,k0>& base) {
-//     static_assert(k1 % k0 == 0, "Incorrect lifting extension size");
-//     auto b = base.force_int();
-//     GR<R, k1> res(b & 1);
-//     for (int i = 1; i < k; i++) {
-//         b >>= 1;
-//         if (b & 1) res += gflifttables::lift_v<k, k2>[i];
-//     }
-//     return res;
-// }
+#include "brlifttables.h" // br tables for lifting
+
+template <int d, int k0, int k1>
+BR<d, k1> liftGR(const BR<d, k0>& base) {
+    static_assert(k1 % k0 == 0, "No subring of correct size exists");
+    // TODO:
+    return res;
+}
+
+
+
+
+
 
 
 #endif

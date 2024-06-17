@@ -7,7 +7,7 @@ ALPHABET = ['α','β','γ']
 MAX_LAYER = 3   # = 4 liftings at most
 # GR(BR,k)
 
-modulus = {}
+TOWERS = {}
 
 for base_d0 in D0_LIFT_DEG:
     def recurse_build(layer, prev_R, prev_degs):
@@ -29,7 +29,7 @@ for base_d0 in D0_LIFT_DEG:
                 R2 = F2[ALPHABET[layer - 1]]
             else:
                 F2, R2 = find_irreducible(R1, lift_d1)      
-            modulus[tuple(prev_degs) + (lift_d1,)] = modulus_to_list(F2.modulus(), layer)
+            TOWERS[tuple(prev_degs) + (lift_d1,)] = modulus_to_list(F2.modulus(), layer)
             recurse_build(layer + 1, R2, prev_degs + [lift_d1])
     F1 = GF(2^base_d0, 'ζ', modulus="minimal_weight")
     R1 = F1['δ']
@@ -38,39 +38,43 @@ for base_d0 in D0_LIFT_DEG:
         if layer == 0:  #单独判断base_d0 = 1，因为int没有list.
             return moduli if not hasattr(moduli, 'list') else moduli.list()
         return [modulus_to_list(term, layer - 1) for term in moduli.list()]
-    modulus[tuple(prev_degs)] = modulus_to_list(F1.modulus(), 0)
+    TOWERS[tuple(prev_degs)] = modulus_to_list(F1.modulus(), 0)
     recurse_build(1, R1, prev_degs)
     
 
-print(modulus)
-#TODO: test the correctness
+#print(modulus)
 '''def test():
     for deg in modulus.keys():
         print(deg) 
 '''
 
+print("------------------------------------generate completed-----------------------------------")
+#print(EMBEDDINGS)
+
 textual_embeddings = []
-impl_embeddings_decl = []
-impl_embeddings_def = []
-for k, v in modulus.items():
-    textual_embeddings.append(
-        f"template <> inline const GR<{k[1]}> lift_v<{k[0]}, {k[1]}>[{k[0]}] = "
-        + "{%s};" % ",".join("GR<%d>{%du}" % (k[1], x) for x in v))
+for d, v in TOWERS.items():  #(d0, d1, d2, ...) GR<GR<BR<k,d0>(s1),d1)(s2),d>(s3)
+    def enum_build(d, s, layer):
+        if layer == 1:
+            return f"GR<{k}, {d1}>({{{', '.join(f'{x}u' for x in s)}}})" for s in v]
+        return f"GR<"+ enum_build(s?, layer - 1) + ", {d[layer - 1]}>({s})"
+    r_powers = enum_build(d, v, d.size()) 
+    textual_embeddings.append(f"template <> inline const BR<{k}, {d1}> lift_v<{k}, {d0}, {d1}>[{d0}] = {{{', '.join(r_powers)}}};")
 
-
-with open("grmodtables.h", "w") as f:
+with open("grtowertables.h", "w") as f:
     f.write("""
 // This file was automatically generated, changes may be overwritten
 #pragma once
 #include <cstdint>
+// Only to keep everything looking nice if you somehow would include the file directly; it's circular otherwise
 #include "gring.h"
 
-namespace grmodtables {
-    template <int k1, int k2> extern const GR<k2> lift_v[k1];
+namespace grtowertables {
+    template <int k, int d0, int d1> extern const BR<k, d1> lift_v[d0];
     %s
-} // namespace grmodtables
+} // namespace grtowertables
 """ % "\n    ".join(textual_embeddings))
 
+print("------------------------------------writefile completed----------------------------------")
 
 
 
