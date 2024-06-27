@@ -27,7 +27,7 @@ def lift2k(k, Rs_moduli, Rl_moduli, r1, algorithm = 'log'):  #k, the Rsmall's po
     else:
         M = Matrix(Zmod(2^(k // 2)), [[ZZ(c.coefficient(dic)) // 2^(k // 2) for dic in coeff] for c in f_r2.list()])
         b = vector(Zmod(2^(k // 2)), [ZZ((-1) * c.constant_coefficient()) // 2^(k // 2) for c in f_r2.list()])
-    z_assignment = M.solve_right(b)
+    z_assignment = M.solve_right(b) 
     r2 = Rlarge([x.subs({g:ZZ(a) for g, a in zip(PRb.gens(), z_assignment)}) for x in r2_symbolic.list()])
     assert f(r2) == 0
     return r2
