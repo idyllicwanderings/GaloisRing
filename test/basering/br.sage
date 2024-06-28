@@ -7,17 +7,17 @@ def mkring(k, d):
     F2 = R1.quotient(moduli)
     return F2
 
-def testadd(F2):  ## test BR addition
+def testadd(F2):  ## test GR1E addition
     a = F2.random_element()
     b = F2.random_element()
     return [str(a.list()), str(b.list()), str((a + b).list())]
 
-def testsub(F2):  ## test BR subtraction
+def testsub(F2):  ## test GR1E subtraction
     a = F2.random_element()
     b = F2.random_element()
     return [str(a.list()), str(b.list()), str((a - b).list())]
 
-def testmul(F2):  ## test BR multiply
+def testmul(F2):  ## test GR1E multiply
     a = F2.random_element()
     b = F2.random_element()
     return [str(a.list()), str(b.list()), str((a * b).list())]]

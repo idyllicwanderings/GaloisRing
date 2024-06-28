@@ -4,7 +4,7 @@
 #include <cstdint>
 
 template<int k, int d>
-struct BR {
+struct GR1E {
     using BaseType = void; //WHY?
 
     std::array<uint8_t, k> polys_; // 无符号整数数组成员
@@ -12,7 +12,7 @@ struct BR {
     using F = uint8_t;
 
     // 定义 operator-=
-    BR<k, d>& operator-=(const  BR<k, d>& o) {
+    GR1E<k, d>& operator-=(const  GR1E<k, d>& o) {
         for (int i = 0; i < k; ++i) {
             polys_[i] -= o.polys_[i];
         }
@@ -20,8 +20,8 @@ struct BR {
     }
 
     // 定义 operator-
-    BR<k, d> operator-(const  BR<k, d>& o) const {
-        BR<k, d> result = *this;
+    GR1E<k, d> operator-(const  GR1E<k, d>& o) const {
+        GR1E<k, d> result = *this;
         result -= o;
         return result;
     }
@@ -35,7 +35,7 @@ struct GR;
 template<typename T>
 struct is_br_template : std::false_type {};
 template<int k, int d>
-struct is_br_template<BR<k, d>> : std::true_type {};
+struct is_br_template<GR1E<k, d>> : std::true_type {};
 
 
 template<typename T>
@@ -45,13 +45,13 @@ struct is_gr_template<GR<R, k>> : std::true_type {};
 
 
 template<typename T>
-concept IsBaseBR = is_br_template<T>::value && !is_gr_template<T>::value;
+concept IsBaseGR1E = is_br_template<T>::value && !is_gr_template<T>::value;
 
 template<typename T>
 concept ValidR = requires {
-    requires IsBaseBR<T> || (is_gr_template<T>::value && requires {
+    requires IsBaseGR1E<T> || (is_gr_template<T>::value && requires {
         typename T::BaseType;
-        requires IsBaseBR<typename T::BaseType>;
+        requires IsBaseGR1E<typename T::BaseType>;
     });
 };
 
@@ -67,7 +67,7 @@ concept ValidR = requires {
 
 template<ValidR R, int k> 
 struct GR<R,k> {
-    // 将 R 的最终 BR 类型通过别名暴露出来
+    // 将 R 的最终 GR1E 类型通过别名暴露出来
     using BaseType = std::conditional_t<is_br_template<R>::value, R, typename R::BaseType>;
     using F = uint8_t;
 
@@ -77,8 +77,8 @@ static_assert(ring<GR<int, 5>>, "GR<int, 5> is ring");
 
 int main() {
 
-    GR<BR<1, 2>, 3> gr1; 
-    GR<GR<BR<1, 2>, 5>, 3> gr2; 
+    GR<GR1E<1, 2>, 3> gr1; 
+    GR<GR<GR1E<1, 2>, 5>, 3> gr2; 
 
     //GR<GR<1, 2>, 3> gr_wrong;  
 

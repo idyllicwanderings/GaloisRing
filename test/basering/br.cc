@@ -12,11 +12,11 @@
 // constexpr int k = 5;
 
 
-// TODO: 用 const BR测试。
-TEST(BRTest, Add) {
+// TODO: 用 const GR1E测试。
+TEST(GR1ETest, Add) {
 }
 
-TEST(BRTest, Multiply) {
+TEST(GR1ETest, Multiply) {
 }
 
 int main(int argc, char **argv) {

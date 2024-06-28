@@ -1,6 +1,6 @@
 # Galois Ring
 
-### Preliminary Libraries
+### Preliminary LiGR1Earies
 Bazel
 
 ### Run
@@ -14,9 +14,9 @@ Our test structure looks like:
 
 ```bash
 ├── basering
-│   ├── br-update-test.sh
-│   ├── br.cc
-│   ├── br.sage
+│   ├── GR1E-update-test.sh
+│   ├── GR1E.cc
+│   ├── GR1E.sage
 │   ├── expected_out_add
 │   └── expected_out_multiply
 ├── galoisring

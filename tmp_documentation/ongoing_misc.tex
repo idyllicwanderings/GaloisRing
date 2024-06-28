@@ -71,11 +71,15 @@ We are using the SHA-3 function family to construct a random oracle, which works
 \begin{itemize}
 \item fix a seed
 \item initialize a counter
-\item H(seed || counter)
-\item count += 1
+\item $H(seed \|\| counter)$
+\item $count += 1$
 \end{itemize}
 
-or use a PRNG to generate a 
+or 
+(currently I am using, but I dont see why I use a PRNG in-between, I think i can use the method above instead)
+
+call a PRNG api(its own inner state or just refresh seed with $seed \|\| counter$) to calculate H(PRNG(seed with sufficient entropy)).
+
 
 \section{LSSS}
 

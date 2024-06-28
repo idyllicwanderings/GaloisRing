@@ -45,32 +45,32 @@ for base_d0 in D0_LIFT_DEG:
 print("------------------------------------generate completed-----------------------------------")
 # for example: (3, 2, 4): [[[1, 1, 1], [0, 0, 1]], [[0, 1, 1], [0, 0, 1]], [[1, 0, 0],
 # [1, 1, 0]], [[0, 0, 0], [0, 0, 0]], [[1, 0, 0], [0, 0, 0]]],
-# the 1st layer: BR<k,3>({1,1,1})
-# 2nd layer: GR<BR<k,3>, 2>({BR<k,3>({1,1,1}), BR<k,3>({0,0,1})})
-# 3rd layer: GR<GR<BR<k,3>, 2>,4>({
-#             GR<BR<k,3>, 2>({BR<k,3>({1,1,1}), BR<k,3>({0,0,1})}), \
-#             GR<BR<k,3>, 2>({BR<k,3>({0,1,1}), BR<k,3>({0,0,1})}), \
-#             GR<BR<k,3>, 2>({BR<k,3>({1,0,0}), BR<k,3>({1,1,0})}), \
-#             GR<BR<k,3>, 2>({BR<k,3>({0,0,0}), BR<k,3>({0,0,0})}), \
-#             GR<BR<k,3>, 2>({BR<k,3>({0,0,0}), BR<k,3>({0,0,0})}), \    
+# the 1st layer: GR1E<k,3>({1,1,1})
+# 2nd layer: GR<GR1E<k,3>, 2>({GR1E<k,3>({1,1,1}), GR1E<k,3>({0,0,1})})
+# 3rd layer: GR<GR<GR1E<k,3>, 2>,4>({
+#             GR<GR1E<k,3>, 2>({GR1E<k,3>({1,1,1}), GR1E<k,3>({0,0,1})}), \
+#             GR<GR1E<k,3>, 2>({GR1E<k,3>({0,1,1}), GR1E<k,3>({0,0,1})}), \
+#             GR<GR1E<k,3>, 2>({GR1E<k,3>({1,0,0}), GR1E<k,3>({1,1,0})}), \
+#             GR<GR1E<k,3>, 2>({GR1E<k,3>({0,0,0}), GR1E<k,3>({0,0,0})}), \
+#             GR<GR1E<k,3>, 2>({GR1E<k,3>({0,0,0}), GR1E<k,3>({0,0,0})}), \    
 #             })
 # TODO: ring check in ZK4Z2K using layers of embedding might lose some 映射结构。。？所以暂时只能做一层。
-# template <int k, int d0, int... d1> extern const GR<GR<BR<>>???>?? NO.
+# template <int k, int d0, int... d1> extern const GR<GR<GR1E<>>???>?? NO.
 # or we can write every case of k, d0, d1
 
 
 
-textual_towerings = [] #(d0, d1, d2, ...) GR<GR<BR<k,d0>(s1),d1)(s2),d>(s3)
+textual_towerings = [] #(d0, d1, d2, ...) GR<GR<GR1E<k,d0>(s1),d1)(s2),d>(s3)
 textual_declares = [] 
 for deg, moduli in TOWERS.items():
     def enum_build(data, layer = 1):
         n = len(data)  
         if not isinstance(data, list) or not isinstance(data[0], list):
             global prev_tem
-            prev_tem = f"BR<k, {n}>"
-            return "BR<k, {}>({{{}}})".format(len(data), ', '.join(f"{x}u" for x in data))
+            prev_tem = f"GR1E<k, {n}>"
+            return "GR1E<k, {}>({{{}}})".format(len(data), ', '.join(f"{x}u" for x in data))
         inner_strs = [enum_build(i, layer + 1) for i in data]
-        inner_tem = "BR<k, {n}>" if layer == 1 else f"GR< {prev_tem}, {len(data[0])}>"
+        inner_tem = "GR1E<k, {n}>" if layer == 1 else f"GR< {prev_tem}, {len(data[0])}>"
         prev_tem = inner_tem
         return f"GR< {inner_tem}, {n}>({{{', '.join(inner_strs)}}})"
     textual_towerings.append(f"template <int k> inline const moduli<k, " +", ".join(str(x) for x in deg) + "> = " + enum_build(moduli, layer = len(deg)) + f";")
@@ -86,10 +86,10 @@ with open("grtowertables.h", "w") as f:
 #include "gring.h"
 
 namespace grtowertables {
-    template <int k, int d0, int d1> extern const BR<k, d0> moduli;
-    template <int k, int d0, int d1> extern const GR<BR<k, d1>, d0> moduli;
-    template <int k, int d0, int d1, int d2> extern const GR<GR<BR<k, d1>, d0>, d2> moduli;
-    template <int k, int d0, int d1, int d2, int d3> extern const GR<GR<GR<BR<k, d1>, d0>, d2>, d3> moduli;
+    template <int k, int d0, int d1> extern const GR1E<k, d0> moduli;
+    template <int k, int d0, int d1> extern const GR<GR1E<k, d1>, d0> moduli;
+    template <int k, int d0, int d1, int d2> extern const GR<GR<GR1E<k, d1>, d0>, d2> moduli;
+    template <int k, int d0, int d1, int d2, int d3> extern const GR<GR<GR<GR1E<k, d1>, d0>, d2>, d3> moduli;
     
     %s
 } // namespace grtowertables
