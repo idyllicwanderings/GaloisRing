@@ -19,7 +19,7 @@
 
 #include "random.h"
 
-#include "KeccakHash.h"
+#include "SimpleFIPS202.h"
 
 namespace arith {
 
@@ -50,22 +50,29 @@ namespace arith {
     seed() {
         
     }
-    
+
+    // TODO: figure out a seed and length
     template <typename T>
-    T random(Kecca_PRG& seed) {
-        // T res;
-        // gen.get_random_bytes(reinterpret_cast<uint8_t*>(&res), sizeof(T));
-        // return res;
-        // write setseed to KeccakPNG
-        Keccak_HashInstance hi;
-        Keccak_HashInitialize_SHA3_512(&hi);
-        for (int i = 0; i < input_chunks_cnt; i++) {
-            result = Keccak_HashUpdate(&hi, input[i], strlen((const char *) input[i]) * 8);
+    T random(const unsigned char *seed) {
+        unsigned char res[ceil(sizeof(T) / 8)];
+        
+        if (SHA3_256(res, seed, strlen((const char *)seed))) {
+            // Hashing failed.
+            counter ++;
         }
-        int outputByteLen = 32;  // TODO: define an output
-        unsigned char res[outputByteLen];
-        Keccak_HashFinal(&hi, res);
         return res;
+
+        // Keccak_HashInstance hi;
+        // Keccak_HashInitialize_SHA3_128(&hi);
+        // for (int i = 0; i < input_chunks_cnt; i++) {
+        //     result = Keccak_HashUpdate(&hi, input[i], strlen((const char *) input[i]) * 8);
+        // }
+        // int outputByteLen = 32;  // TODO: define an output
+        // unsigned char res[outputByteLen]; 
+        // //output has a length of one Z2K element, which is decided by size T
+        // //in fact at most 128 bits
+        // Keccak_HashFinal(&hi, res);
+        // return res;
     }
     
     template <int k>
@@ -103,42 +110,6 @@ namespace arith {
     }
 
 };
-
-
-template <int d, int... ds>
-struct reduction_polynomial() {
-    static constexpr int count = sizeof...(ds);
-    reduction_polynomial<ds...>();
-    std::array<d, ds>
-};
-
-template <int d>
-void reduction_polynomial() {
-    std::cout << Last << std::endl;
-}
-
-// 递归展开模板参数包，打印每个参数的值
-template <int First, int... Rest>
-void printValues() {
-    std::cout << First << ", ";
-    printValues<Rest...>();
-}
-
-
-    template <int k>
-    struct reduction_polynomial_impl<k, 5> {
-        using type = std::tuple<int, int, int>;
-        constexpr static type value() {
-            type responses[] = {{}, {}, {0, 0, 0}, {0, 0, 0}, {0, 0, 0}, {0, 0, 0}, {0, 0, 0}, {0, 0, 0}, {1, 3, 4}, {0, 0, 0}, {0, 0, 0}, {0, 0, 0}, {0, 0, 0}, {1, 3, 4}, {0, 0, 0}, {0, 0, 0}, {1, 3, 5}, {0, 0, 0}, {0, 0, 0}, {1, 2, 5}, {0, 0, 0}, {0, 0, 0}, {0, 0, 0}, {0, 0, 0}, {1, 3, 4}, {0, 0, 0}, {1, 3, 4}, {1, 2, 5}, {0, 0, 0}, {0, 0, 0}, {0, 0, 0}, {0, 0, 0}, {2, 3, 7}, {0, 0, 0}, {0, 0, 0}, {0, 0, 0}, {0, 0, 0}, {1, 4, 6}, {1, 5, 6}, {0, 0, 0}, {3, 4, 5}, {0, 0, 0}, {0, 0, 0}, {3, 4, 6}, {0, 0, 0}, {1, 3, 4}, {0, 0, 0}, {0, 0, 0}, {2, 3, 5}, {0, 0, 0}, {2, 3, 4}, {1, 3, 6}, {0, 0, 0}, {1, 2, 6}, {0, 0, 0}, {0, 0, 0}, {2, 4, 7}, {0, 0, 0}, {0, 0, 0}, {2, 4, 7}, {0, 0, 0}, {1, 2, 5}, {0, 0, 0}, {0, 0, 0}, {1, 3, 4}, {0, 0, 0}, {0, 0, 0}, {1, 2, 5}, {0, 0, 0}, {2, 5, 6}, {1, 3, 5}, {0, 0, 0}, {3, 9, 10}, {0, 0, 0}, {0, 0, 0}, {1, 3, 6}, {0, 0, 0}, {2, 5, 6}, {3, 5, 6}, {0, 0, 0}, {2, 4, 9}, {0, 0, 0}, {1, 3, 8}, {2, 4, 7}, {0, 0, 0}, {1, 2, 8}, {0, 0, 0}, {0, 0, 0}, {2, 6, 7}, {0, 0, 0}, {0, 0, 0}, {1, 5, 8}, {0, 0, 0}, {0, 0, 0}, {0, 0, 0}, {0, 0, 0}, {6, 9, 10}, {0, 0, 0}, {0, 0, 0}, {1, 3, 6}, {0, 0, 0}, {1, 6, 7}, {0, 0, 0}, {0, 0, 0}, {1, 3, 4}, {0, 0, 0}, {0, 0, 0}, {4, 7, 9}, {0, 0, 0}, {2, 4, 5}, {0, 0, 0}, {0, 0, 0}, {3, 4, 5}, {0, 0, 0}, {2, 3, 5}, {5, 7, 8}, {1, 2, 4}, {1, 2, 5}, {0, 0, 0}, {0, 0, 0}, {1, 3, 4}, {0, 0, 0}, {1, 2, 6}, {0, 0, 0}, {0, 0, 0}, {5, 6, 7}, {0, 0, 0}, {0, 0, 0}, {1, 2, 7}};
-            return responses[k];
-        }
-    };
-    
-    // TODO: 想想这个GR存储方式怎么搞。。。
-    template <int k>
-    constexpr auto reduction_polynomial() {
-        return reduction_polynomial_impl<k, num_reduction_monomials<k>()>::value();
-    }
 
 
 /**
@@ -249,7 +220,7 @@ class GR1e
 {
     public: 
         using F = typename arith::datatype<arith::type_idx<k>()>::type;
-        using BaseRingType = void;
+        using BaseType = void;
 
         template <typename T>
         explicit GR1e<k, d>(const std::array<T, d>& eles): polys_(eles) {}
@@ -401,8 +372,8 @@ concept BaseGR1e = is_GR1e<T>::value && !is_GRT1e<T>::value;
 template<typename T>
 concept BaseRing = requires {
     requires BaseGR1e<T> || (is_GRT1e<T>::value && requires {
-        typename T::BaseRingType;
-        requires BaseGR1e<typename T::BaseRingType>;
+        typename T::BaseType;
+        requires BaseGR1e<typename T::BaseType>;
     });
 };
 
@@ -526,8 +497,8 @@ namespace reduce {
 template <BaseRing R, int d>
 class GRT1e {
     public:
-        // TODO: think up of a better naming for BaseRingType
-        using BaseRingType = std::conditional_t<is_GR1e<R>::value, R, typename R::BaseRingType>;
+        // TODO: think up of a better naming for BaseType
+        using BaseType = std::conditional_t<is_GR1e<R>::value, R, typename R::BaseType>;
 
         explicit GRT1e<R,d>(const std::array<R>& poly): polys_(poly) {;}
 
@@ -606,7 +577,7 @@ class GRT1e {
         // TODO: copy, move constructor for all classes?
         std::array<R, d> polys_;   // from x^0 to x^(d-1), modulus UP TO x^d
         static constexpr int d0_ = d;
-        static constexpr int tower_depth_ = 1 + (is_GR1e<BaseRingType>::value ? 0 : BaseRingType::tower_depth_);
+        static constexpr int tower_depth_ = 1 + (is_GR1e<BaseType>::value ? 0 : BaseType::tower_depth_);
 };
 
 

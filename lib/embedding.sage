@@ -96,8 +96,8 @@ print("------------------------------------generate completed-------------------
 textual_embeddings = []
 for key, v in EMBEDDINGS.items():
     k, d0, d1 = key # k[1] terms, 一个term里面有k[2]个int
-    r_powers = [f"GR1E<{k}, {d1}>({{{', '.join(f'{x}u' for x in s)}}})" for s in v]  #{{是用来转义{
-    textual_embeddings.append(f"template <> inline const GR1E<{k}, {d1}> lift_v<{k}, {d0}, {d1}>[{d0}] = {{{', '.join(r_powers)}}};")
+    r_powers = [f"GR1e<{k}, {d1}>({{{', '.join(f'{x}u' for x in s)}}})" for s in v]  #{{是用来转义{
+    textual_embeddings.append(f"template <> inline const GR1e<{k}, {d1}> lift_v<{k}, {d0}, {d1}>[{d0}] = {{{', '.join(r_powers)}}};")
 
 with open("brlifttables.h", "w") as f:
     f.write("""
@@ -108,7 +108,7 @@ with open("brlifttables.h", "w") as f:
 #include "gring.h"
 
 namespace brlifttables {
-    template <int k, int d0, int d1> extern const GR1E<k, d1> lift_v[d0];
+    template <int k, int d0, int d1> extern const GR1e<k, d1> lift_v[d0];
     %s
 } // namespace brlifttables
 """ % "\n    ".join(textual_embeddings))
