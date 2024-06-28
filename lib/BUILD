@@ -14,5 +14,5 @@ cc_library(
         "@glog",
         "@xkcp//:xkcp",
     ],
-    linkopts = ["-L", "$(GENDIR)/third_party/XKCP/ -lXKCP"],  
+    linkopts = ["-L", "$(GENDIR)/third_party/XKCP/ -lXKCP"],  #TODO: test correctness
 )

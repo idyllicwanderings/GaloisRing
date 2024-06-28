@@ -44,10 +44,21 @@ namespace arith {
         return (T(1) << (k % (8 * sizeof(T)))) - 1;
     }
     
+    // TODO: use Keccak instead
+    // TODO: figure out a way to use input string array
     template <typename T>
-    T random(PRNG& gen) {
-        T res;
-        gen.get_random_bytes(reinterpret_cast<uint8_t*>(&res), sizeof(T));
+    T random(int input_chunks_cnt) {
+        // T res;
+        // gen.get_random_bytes(reinterpret_cast<uint8_t*>(&res), sizeof(T));
+        // return res;
+        Keccak_HashInstance hi;
+        Keccak_HashInitialize_SHA3_512(&hi);
+        for (int i = 0; i < input_chunks_cnt; i++) {
+            result = Keccak_HashUpdate(&hi, input[i], strlen((const char *) input[i]) * 8);
+        }
+        int outputByteLen = 32;  // TODO: define an output
+        unsigned char res[outputByteLen];
+        Keccak_HashFinal(&hi, res);
         return res;
     }
     
@@ -198,7 +209,10 @@ class Z2K
             return res;
         }
 
-        //TODO: from_bits
+        //TODO: write from chunks of bits length
+        static Z2K<k> random(PRNG& gen) {
+            return Z2K<k>(random<F>(gen));
+        }
 
         /**
         * To be used only when needing access to the underlying bits, really

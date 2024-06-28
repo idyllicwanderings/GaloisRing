@@ -1,0 +1,91 @@
+%&latex
+\documentclass{article}
+
+\begin{document}
+
+%+Title
+\title{Article Title}
+\author{Author}
+\date{\today}
+\maketitle
+%-Title
+
+
+
+\section{Embedding in GF}
+
+linear map $\sigma: GF(2^{k}) \rightarrow GF(2^{k_1}), $
+
+first we have an integer of $k$ bits i.e. $(\alpha_{k-1}, \cdots, \alpha_{0})$
+representing the following polynomials $\alpha_{k-1} x^{k-1} + \cdots + \alpha_{0}$, then we try to find a subfield of the larger field which is isomorphic to the smaller field. 
+
+We factorize the reduction polynomial of finite field $GF(2^k)$ in the larger field $GF(2^{k_1})$ and take any root $e$. Then we derive the $k$th powers of the root, namely $(e^0, e^1, \cdots, e^{k-1})$. 
+
+For any element $base = (\alpha_{k-1}, \cdots, \alpha_{0}) \in GF(2^k)$, the lifting element in $GF(2^{k_1})$
+is 
+
+
+
+r as the root of reduction polynomial f of GF2k
+
+$\sigma(r) = e$
+
+$f(r) = a_{k-1}\cdot r^{k-1} + \cdots + a_0 = 0$
+ 
+$\sigma(base) = \sigma( a_{k-1}\cdot x^{k-1} + \cdots + a_0) 
+= \sigma(a_{k-1}\cdot x^{k-1}) + \cdots + \sigma(a_{0}})
+= a_{k-1}\cdot \sigma(x^{k-1}) + \cdots + a_{0} \cdot \sigma(1)}
+= a_{k-1}\cdot e^{k-1} + \cdots + a_{0} \cdot e^{0} } $
+
+Okay. 
+$$ F 
+= \sigma(\alpha_{k-1}, \cdots, \alpha_{0})
+= \alpha_{k-1} \cdot e^{k} + \cdots + \alpha_{0} \cdot e^{0}
+= 
+
+$$
+
+\section{ZK4Z2K paper}
+
+\subsection{MPC protocol}
+the MPC protocol's purpose is to verify the evaluation of given circuit C is honest-In essence, this protocol does not compute the circuit C, but only checks that the values given by the input party are consistent with an honest evaluation of C.
+
+Linear gates are calculated locally and non-linear are checked using the subprotcols. Linear calculations are preserved using the t-privacy?
+
+\subsection{MPCitH}
+using Ishai's compilation method. The prover executes multiple parties in its head, and the prover provides the answer to any query to the hint oracle $O_H$(a hint oracle which provides the parties with a sharing of an arbitrary secret value from the input party).
+
+\subsection{sacrificed check}
+the sacrificed check is to check whether the prover is cheating with the multiplication result $z$ or the hint oracle $O_H$. The main idea is to use one input gate $y$, generate secret values to check if $a y = c$ to check if the secret values are correct, i.e. the hint oracle does not cheat. Then it randomizes a vector using $O_R$ and sacrifices a secret value to mask the other multiplication input gate $x$
+
+\subsection{inner multiplication check}
+
+\section{fast embedding}
+
+TODO: write down the in-depth description of the method by robin
+\section{Random Oracle}
+We are using the SHA-3 function family to construct a random oracle, which works as follows:
+
+\begin{itemize}
+\item generate a seed, then get a PRNG from that seed
+\item initialize a counter
+\item H(seed || counter)
+\item count += 1
+\end{itemize}
+
+
+\section{LSSS}
+
+
+
+
+%+Bibliography
+\begin{thebibliography}{99}
+\bibitem{Label1} ...
+\bibitem{Label2} ...
+\end{thebibliography}
+%-Bibliography
+
+\end{document}
+
+

@@ -1,0 +1,77 @@
+%&latex
+\documentclass{report}
+
+%+Make Index
+\usepackage{makeidx}
+\usepackage{amsfonts}
+
+
+\makeindex
+%-Make Index
+
+\begin{document}
+
+%+Title
+\title{\Huge\bf BBQ19 Notes}
+\author{Xiyue}
+\date{\today}
+\maketitle
+%-Title
+
+
+\section{Overview}
+BBQ19 is an improvement on the PoK scheme in KKW17. The application to AES is to reduce the number of S-box's nonzeros $y = F_k(x)$ to reduce the key size. In order to do that, this scheme is better in its communication costs, so that it has a better signature size[why?].
+
+The MPCitH paradigm is a 3-round NIZKPoK variant.
+
+\subsubsection{Round 1}
+
+During the first stage, the protocol masks the multiplication inputs by secret sharing and generates a random multiplication tuples. Apart from this, the party also obtains a correction values. 
+
+The online phase, the parties distribute the witness inputs, compute the circuit C (verifier knows C!) by recalling the multiplication tuples whenever it's encountered with multiplication. Whenever it is in need of a randome value, use seed(why? something shares?) to generates the randomness. Once the parties all compute the shared outputs, they jointly reconstruct the output y. [How do they do this? the msg is actually the y_i? p3-p4]
+
+
+
+
+\subsubsection{Round 2}
+
+the verifier first chooses a challenge set \mathcal{T}, then for each party, it chooses a vector and sends the corresponding vector to the prover. 
+
+The provers pre-process the values according to th vector. Then it sends the seed and the state information to the verifier.
+
+The verification is done by 
+
+1) for each $t \in T$, use its initial state information to reconstruct the witness inputs. And then its uses values to recompute the online phase. Compute the hashing.
+
+2) for each $t \notin T$, re-generate the hash like an honest prover. 
+
+3) Combining the two hashes from the two steps above, check if the $h^* = H(hs,hm)$. [the prover never sends h^*? yes]
+
+
+
+\section{Application to the picnic siganture}
+
+
+KeyGen: randomize $x, k$, compute the AES $y = F_k(x)$, $pk = (y,x)$ and $sk = k$.
+
+Sign: Given a message m, signature $\delta \leftarrow Prove(pk,k)$, i.e. the pk is the output y and the F is the circuit(pk x known) and the k is the witness? the challenge ($\tau, i_t$) is based on $H(\delta, m)$, where $\delta$ is the messages send by round 1 of the proof. [why? So signature is actually the h^*?]
+
+Verify: Compute VerifyProof(pk,$\delta$) and the challenge as $H(\delta, m)$. Return 1 if verifyproof is 1. [why?wait, then where does the m come from? is it included in the signature?]
+
+
+
+%+Bibliography
+\begin{thebibliography}{99}
+\bibitem{Label1} ...
+\bibitem{Label2} ...
+\end{thebibliography}
+%-Bibliography
+
+%+MakeIndex
+\printindex
+%-MakeIndex
+
+
+\end{document}
+
+
