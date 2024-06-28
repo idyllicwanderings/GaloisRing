@@ -12,5 +12,7 @@ cc_library(
     deps = [
         "@com_github_gflags_gflags//:gflags",
         "@glog",
+        "@xkcp//:xkcp",
     ],
+    linkopts = ["-L", "$(GENDIR)/third_party/XKCP/ -lXKCP"],  
 )

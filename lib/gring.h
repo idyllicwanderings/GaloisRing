@@ -19,6 +19,8 @@
 
 #include "random.h"
 
+#include "KeccakHash.h"
+
 namespace arith {
 
     template <int k>

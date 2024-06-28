@@ -45,9 +45,25 @@ http_archive(
     ],
 )
 
+#genrule
 load("@bazel_skylib//:workspace.bzl", "bazel_skylib_workspace")
 
 bazel_skylib_workspace()
+
+#XKCP
+new_local_repository(
+    name = "xkcp",
+    path = "third_party/XKCP",
+    build_file_content = 
+    """ cc_library(
+        name = "xkcp",
+        srcs = glob(["**/*.c"]),
+        hdrs = glob(["**/*.h"]),
+        includes = ["."],
+        visibility = ["//visibility:public"],
+        copts = ["-std=c20"], )
+    """,
+)
 
 #the rest 
 load("@aspect_gcc_toolchain//toolchain:repositories.bzl", "gcc_toolchain_dependencies")
