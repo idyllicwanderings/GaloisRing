@@ -1,10 +1,9 @@
 # This file generates the primitive polynomial of towering of GR via the towering of finite fields
 
-D0_LIFT_DEG = [i for i in range(2, 10)] #TODO: 不支持d0 = 1。
+D0_LIFT_DEG = [i for i in range(2, 4)] #TODO: 不支持d0 = 1。
 LIFT_DEG = [[i for i in range(2, 6)], [i for i in range(2, 6)], [i for i in range(2, 6)]]
 ALPHABET = ['α','β','γ']
 MAX_LAYER = 4   # = 4 liftings at most
-BASE_K = [ i for i in range(1, 65)]
 
 TOWERS = {}
 
@@ -58,22 +57,23 @@ print("------------------------------------generate completed-------------------
 # template <int k, int d0, int... d1> extern const GR<GR<GR1e<>>???>?? NO.
 # or we can write every case of k, d0, d1
 
-
+print(TOWERS)
 
 textual_towerings = [] #(d0, d1, d2, ...) GR<GR<GR1e<k,d0>(s1),d1)(s2),d>(s3)
 textual_declares = [] 
 for deg, moduli in TOWERS.items():
-    def enum_build(data, layer = 1):
+    def enum_build(data, layer = 0):
         n = len(data)  
         if not isinstance(data, list) or not isinstance(data[0], list):
             global prev_tem
             prev_tem = f"GR1e<k, {n}>"
-            return "GR1e<k, {}>({{{}}})".format(len(data), ', '.join(f"{x}u" for x in data))
-        inner_strs = [enum_build(i, layer + 1) for i in data]
-        inner_tem = "GR1e<k, {n}>" if layer == 1 else f"GRT1e< {prev_tem}, {len(data[0])}>"
+            return f"GR1e<k, {n}>", "GR1e<k, {}>({{{}}})".format(len(data), ', '.join(f"{x}u" for x in data))
+        inner_strs = [enum_build(i, layer + 1)[1] for i in data]
+        inner_tem = "GR1e<k, {n}>" if layer == 0 else f"GRT1e< {prev_tem}, {len(data[0])}>"
         prev_tem = inner_tem
-        return f"GRT1e< {inner_tem}, {n}>({{{', '.join(inner_strs)}}})"
-    textual_towerings.append(f"template <int k> inline const moduli<k, " +", ".join(str(x) for x in deg) + "> = " + enum_build(moduli, layer = len(deg)) + f";")
+        return f"GRT1e< {inner_tem}, {n}>", f"GRT1e< {inner_tem}, {n}>({{{', '.join(inner_strs)}}})"
+    mtype, mval = enum_build(moduli, layer = len(deg))
+    textual_towerings.append(f"template <int k> inline const " + mtype + " moduli<k, " +", ".join(str(x) for x in deg) + "> = " + mval + f";")
         
 
 

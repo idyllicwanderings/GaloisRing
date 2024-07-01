@@ -179,8 +179,7 @@ namespace detail {
         if (k <= 8) return 0;
         else if (k <= 16) return 1;
         else if (k <= 32) return 2;
-        else if (k <= 64) return 3;
-        else return 4;
+        else return 3;
     }
 
     template <int idx> struct datatype;
@@ -188,7 +187,6 @@ namespace detail {
     template <> struct datatype<1> {using type = uint16_t;};
     template <> struct datatype<2> {using type = uint32_t;};
     template <> struct datatype<3> {using type = uint64_t;};
-    template <> struct datatype<4> {using type = int128;};
 
     template <typename T, int k>
     constexpr T make_mask() {
@@ -427,6 +425,7 @@ class GF2k {
     public:
         template <typename T>
         explicit GF2k<k>(const T& el) : m_val(F(el) & MASK) {}
+
         GF2k<k>() : m_val(0) {}
 
         static GF2k<k> random(PRNG& gen) {

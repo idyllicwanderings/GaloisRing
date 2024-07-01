@@ -11,9 +11,11 @@
 
 #include <algorithm>
 #include <array>
-
+#include <initializer_list>
 #include <concepts>
 #include <type_traits>
+
+#include <stdexcept>
 
 #include <glog/logging.h>
 
@@ -115,12 +117,10 @@ namespace arith {
 /**
  * 
  * Z2k(F, 1)
- * Only supports k = 2 to 32
+ * Only supports k = 1 to 64
 */
 template<int k>
-requires requires {
-    1 <= k && k <= 64;
-}
+requires( 1 <= k && k <= 64 )
 class Z2k 
 {
     public:
@@ -136,8 +136,8 @@ class Z2k
         explicit Z2k<k>(const T& ele): val_(F(ele) & MASK) {}
 
         explicit Z2k<k>(F f, bool /*skip mask*/) : val_(std::move(f & MASK)) {}
-        
-        Z2k<k>() : val_(0) {}
+
+        Z2k() : val_(0) {}
 
     public:
         Z2k<k> operator+(const Z2k& o) const {
@@ -197,8 +197,6 @@ class Z2k
             return Z2k<k>(random<F>(gen));
         }
 
-
-
         /**
         * To be used only when needing access to the underlying bits, really
         */
@@ -212,10 +210,7 @@ class Z2k
 
 
 template<int k, int d>
-requires requires {
-    1 <= k && k <= 64;
-    1 <= d && d <= 32;
-}
+requires ( 1 <= k && k <= 64 && 1 <= d && d <= 32)
 class GR1e 
 {
     public: 
@@ -224,20 +219,18 @@ class GR1e
 
         template <typename T>
         explicit GR1e<k, d>(const std::array<T, d>& eles): polys_(eles) {}
-
         explicit GR1e<k, d>(const std::array<Z2k<k>, d>& eles): polys_(eles) {}
-
-        GR1e<k, d>() {
-            polys_.fill(Z2k<k>());
-        }
+        GR1e() { polys_.fill(Z2k<k>());}
 
         template <typename T>
         explicit GR1e<k, d>(std::initializer_list<T> eles) {
-            if (eles.size() != n) {
+            if (eles.size() != d) {
                 throw std::out_of_range("Wrong size of d provided");
             }
-            for (int i = 0;i < d;i++) {
-                polys_[i] = Z2k<k>(eles[i]);
+            int i = 0;
+            for (const auto& ele : eles) {  // initializer list's element only accessed by iterator
+                polys_[i] = Z2k<k>(ele);
+                i++;
             }
         }
     
@@ -500,23 +493,21 @@ class GRT1e {
         // TODO: think up of a better naming for BaseType
         using BaseType = std::conditional_t<is_GR1e<R>::value, R, typename R::BaseType>;
 
-        explicit GRT1e<R,d>(const std::array<R>& poly): polys_(poly) {;}
+        explicit GRT1e<R, d>(const std::array<R, d>& poly): polys_(poly) {;}
 
-        GRT1e<R,d>()  { polys_.fill(R());}
-
-        GRT1e<R,d>(std::array<R, d> polys) : polys_(polys) {}
+        GRT1e()  { polys_.fill(R());}
 
         template <typename T>
         explicit GRT1e<R, d>(std::initializer_list<T> eles) {
             if (eles.size() != d) {
                 throw std::out_of_range("Unmatched extenssion degree provided");
             }
-            std::copy(ele.begin(), ele.end(), polys_.begin());
+            std::copy(eles.begin(), eles.end(), polys_.begin());
         }
 
 
     public:
-        GRT1e<R,d> operator+(const GRT1e<R,d>& o) const {
+        GRT1e<R, d> operator+(const GRT1e<R, d>& o) const {
             std::array<R,d> polys;
             for (int i = 0;i < d0_; i++) {
                 polys[i] = polys_[i] + o.polys_[i];
@@ -524,11 +515,11 @@ class GRT1e {
             return GRT1e<R,d>(polys);
         }
 
-        GRT1e<R,d> operator+=(const GRT1e<R,d>& o) {
+        GRT1e<R, d> operator+=(const GRT1e<R, d>& o) {
             return *this = (*this) + o;
         }
 
-        GRT1e<R,d> operator-(const GRT1e<R,d>& o) const {
+        GRT1e<R, d> operator-(const GRT1e<R, d>& o) const {
             std::array<R,d> polys;
             for (int i = 0;i < d0_; i++) {
                 polys[i] = polys_[i] - o.polys_[i];
@@ -536,11 +527,11 @@ class GRT1e {
             return GRT1e<R,d>(polys);
         }
 
-        GRT1e<R,d> operator-=(const GRT1e<R,d>& o) {
+        GRT1e<R, d> operator-=(const GRT1e<R, d>& o) {
             return *this = (*this) - o;
         }
 
-        GRT1e<R,d> operator*(const GRT1e<R,d>& o) const {
+        GRT1e<R, d> operator*(const GRT1e<R, d>& o) const {
             return GRT1e<R, d>(reduce(multiply(polys_, o.polys_)));
         }
 
@@ -548,11 +539,11 @@ class GRT1e {
             return *this = (*this) * other;
         }
 
-        bool operator==(const GRT1e<R,d>& o) const {
+        bool operator==(const GRT1e<R, d>& o) const {
             return (polys_ == o.polys_);
         }
 
-        bool operator!=(const GRT1e<R,d>& o) const {
+        bool operator!=(const GRT1e<R, d>& o) const {
             return (polys_ == o.polys_);
         }
 
