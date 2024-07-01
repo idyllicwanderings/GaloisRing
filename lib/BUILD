@@ -4,7 +4,11 @@ cc_library(
     name = "gen-table",
     hdrs = ["aes.h",
             "random.h",
-            "gring.h"],
+            "gring.h",
+            "grtowertables.h",
+            "brlifttables.h",
+            "exseqtables.h",
+            ],
     visibility = ["//main:__pkg__",
         "//log:__pkg__",
         "//test:__subpackages__",
@@ -16,3 +20,5 @@ cc_library(
     ],
     linkopts = ["-L", "$(GENDIR)/third_party/XKCP/ -lXKCP"],  #TODO: test correctness
 )
+
+

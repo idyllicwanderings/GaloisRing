@@ -6,6 +6,7 @@ K_DEG = [i for i in range(1, 4)]
 #TODO: 
 # 1. no towering for now
 # 2. complexity too high
+# 3. calculate any 1/(a_i - a_j)
 
 EX = {}
 INV = {}
