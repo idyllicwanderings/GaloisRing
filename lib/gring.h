@@ -436,7 +436,7 @@ namespace reduce {
         std::array<R, n> high;  // TODO: new a zero value in R
         std::copy(poly_x.begin() + d, poly_x.end(), high.begin());
 
-        std::array<R, n> low;   // TODO: new a zero value in R
+        std::array<R, n> low;   
         std::copy(poly_x.begin(), poly_x.begin() + d, low.begin());
 
         //TODO: red polynomial do not pass on its 最高项， 所以这里是没有最高项的modulus

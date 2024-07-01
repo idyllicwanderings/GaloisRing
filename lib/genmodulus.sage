@@ -1,6 +1,6 @@
 # This file generates the primitive polynomial of towering of GR via the towering of finite fields
 
-D0_LIFT_DEG = [i for i in range(2, 4)] #TODO: 不支持d0 = 1。
+D0_LIFT_DEG = [i for i in range(2, 10)] #TODO: 不支持d0 = 1。
 LIFT_DEG = [[i for i in range(2, 6)], [i for i in range(2, 6)], [i for i in range(2, 6)]]
 ALPHABET = ['α','β','γ']
 MAX_LAYER = 4   # = 4 liftings at most
@@ -42,38 +42,27 @@ for base_d0 in D0_LIFT_DEG:
         recurse_build(1, R1, prev_degs, max_layer0)
 
 print("------------------------------------generate completed-----------------------------------")
-# for example: (3, 2, 4): [[[1, 1, 1], [0, 0, 1]], [[0, 1, 1], [0, 0, 1]], [[1, 0, 0],
-# [1, 1, 0]], [[0, 0, 0], [0, 0, 0]], [[1, 0, 0], [0, 0, 0]]],
-# the 1st layer: GR1e<k,3>({1,1,1})
-# 2nd layer: GR<GR1e<k,3>, 2>({GR1e<k,3>({1,1,1}), GR1e<k,3>({0,0,1})})
-# 3rd layer: GR<GR<GR1e<k,3>, 2>,4>({
-#             GR<GR1e<k,3>, 2>({GR1e<k,3>({1,1,1}), GR1e<k,3>({0,0,1})}), \
-#             GR<GR1e<k,3>, 2>({GR1e<k,3>({0,1,1}), GR1e<k,3>({0,0,1})}), \
-#             GR<GR1e<k,3>, 2>({GR1e<k,3>({1,0,0}), GR1e<k,3>({1,1,0})}), \
-#             GR<GR1e<k,3>, 2>({GR1e<k,3>({0,0,0}), GR1e<k,3>({0,0,0})}), \
-#             GR<GR1e<k,3>, 2>({GR1e<k,3>({0,0,0}), GR1e<k,3>({0,0,0})}), \    
-#             })
 # TODO: ring check in ZK4Z2K using layers of embedding might lose some 映射结构。。？所以暂时只能做一层。
 # template <int k, int d0, int... d1> extern const GR<GR<GR1e<>>???>?? NO.
 # or we can write every case of k, d0, d1
 
-print(TOWERS)
 
 textual_towerings = [] #(d0, d1, d2, ...) GR<GR<GR1e<k,d0>(s1),d1)(s2),d>(s3)
 textual_declares = [] 
 for deg, moduli in TOWERS.items():
-    def enum_build(data, layer = 0):
-        n = len(data)  
-        if not isinstance(data, list) or not isinstance(data[0], list):
-            global prev_tem
-            prev_tem = f"GR1e<k, {n}>"
-            return f"GR1e<k, {n}>", "GR1e<k, {}>({{{}}})".format(len(data), ', '.join(f"{x}u" for x in data))
-        inner_strs = [enum_build(i, layer + 1)[1] for i in data]
-        inner_tem = "GR1e<k, {n}>" if layer == 0 else f"GRT1e< {prev_tem}, {len(data[0])}>"
-        prev_tem = inner_tem
-        return f"GRT1e< {inner_tem}, {n}>", f"GRT1e< {inner_tem}, {n}>({{{', '.join(inner_strs)}}})"
-    mtype, mval = enum_build(moduli, layer = len(deg))
-    textual_towerings.append(f"template <int k> inline const " + mtype + " moduli<k, " +", ".join(str(x) for x in deg) + "> = " + mval + f";")
+    def enum_build(data, deg, layer = 0):
+        if layer == 0 and len(deg) == 1:
+            return f"Z2k<k>", "{{{}}}".format(", ".join(f"Z2k<k>({x}u)" for x in data))
+        if layer == 0:
+            return f"GR1e<k, {deg[0]}>", "GR1e<k, {}>({{{}}})".format(deg[0], ", ".join(f"{x}u" for x in data))
+        inner_strs = [enum_build(i, deg, layer - 1)[1] for i in data]
+        prev_tem = enum_build(data[0], deg, layer - 1)[0] 
+        if layer == len(deg) - 1:
+            return f"{prev_tem}", f"{{{', '.join(inner_strs)}}}"
+        inner_tem = f"GRT1e< {prev_tem}, {len(data[0])}>"
+        return inner_tem, f"{inner_tem}({{{', '.join(inner_strs)}}})"
+    mtype, mval = enum_build(moduli, deg, len(deg) - 1)
+    textual_towerings.append(f"template <int k> inline const std::array<" + mtype + f", {deg[-1] + 1}> "+ "moduli<k, " +", ".join(str(x) for x in deg) + f"> = " + mval + f";")
         
 
 
@@ -86,10 +75,11 @@ with open("grtowertables.h", "w") as f:
 #include "gring.h"
 
 namespace grtowertables {
-    template <int k, int d0, int d1> extern const GR1e<k, d0> moduli;
-    template <int k, int d0, int d1> extern const GRT1e<GR1e<k, d1>, d0> moduli;
-    template <int k, int d0, int d1, int d2> extern const GRT1e<GRT1e<GR1e<k, d1>, d0>, d2> moduli;
-    template <int k, int d0, int d1, int d2, int d3> extern const GRT1e<GRT1e<GRT1e<GR1e<k, d1>, d0>, d2>, d3> moduli;
+    template <int k, int d0> extern const std::array<Z2k<k>, d0 + 1> moduli;
+    template <int k, int d0, int d1> extern const std::array<GR1e<k, d0>, d1 + 1> moduli;
+    template <int k, int d0, int d1, int d2> extern const std::array <GRT1e <GR1e<k, d0>, d1>, d2 + 1> moduli;
+    template <int k, int d0, int d1, int d2, int d3> extern const std::array< GRT1e <GRT1e <GR1e<k, d1>, d0>, d2>, d3 + 1> moduli;
+    template <int k, int d0, int d1, int d2, int d3, int d4> extern const std::array< GRT1e <GRT1e <GRT1e <GR1e<k, d0>, d1>, d2>, d3>, d4 + 1> moduli;
     
     %s
 } // namespace grtowertables
