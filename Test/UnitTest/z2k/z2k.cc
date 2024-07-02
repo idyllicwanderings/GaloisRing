@@ -43,14 +43,7 @@
 //     }
 // }
 
-// int main(int argc, char **argv) {
-//     ::testing::InitGoogleTest(&argc, argv);
-//     return RUN_ALL_TESTS();
-// }
-
-
-
-#include "config.h"
+// TODO: #include "config.h"
 #ifdef Has_Z2K
 
 #include <assert>
@@ -58,7 +51,7 @@
 #include <stdlib>
 #include <string>
 
-#define flavor 100
+#define case 100
 
 #ifdef XKCP_has_Sponge_Keccak_width200
     #define prefix KeccakWidth200
@@ -72,8 +65,19 @@ void writeTestZ2k() {
 
 }
 
-void selfTestAdd() {
+void selfTestAdd(int ) {
+    unsigned char checksum[checksumByteSize];
 
+    performTestSponge(rate, capacity, flavor, checksum);
+    assert(memcmp(expected, checksum, checksumByteSize) == 0);
+}
+
+void selfTestSponge(unsigned int rate, unsigned int capacity, int flavor, const unsigned char *expected)
+{
+    unsigned char checksum[checksumByteSize];
+
+    performTestSponge(rate, capacity, flavor, checksum);
+    assert(memcmp(expected, checksum, checksumByteSize) == 0);
 }
 
 void selfTestMult() {
@@ -87,14 +91,10 @@ void testAddition()
     writeTestSponge();
 #endif
 
-    for(flavor = 1; flavor <= 3; flavor++) {
-        if (flavor == flavor_OneCall)
-            flavorString = "Testing sponge in one call";
-
 #ifdef Z2K_has_Addition_64bits_lower
-    UT_startTest("Z2K with k bits lower than 64 bits", flavorString);
-    selfTestSponge(32, 768, flavor, "\xd6\x0a\x95\x77\xb8\x75\x75\xab"); /* Keccak[r=32, c=768] */
-    selfTestSponge(64, 736, flavor, "\xb7\xb8\xeb\xe0\x28\xa8\x73\xca"); /* Keccak[r=64, c=736] */
+    UT_startTest("Z2K with k bits lower than 64 bits", caseString);
+    selfTestSponge(32, 768, case, "\xd6\x0a\x95\x77\xb8\x75\x75\xab"); /* Keccak[r=32, c=768] */
+    selfTestSponge(64, 736, case, "\xb7\xb8\xeb\xe0\x28\xa8\x73\xca"); /* Keccak[r=64, c=736] */
     UT_endTest();
 #endif
 

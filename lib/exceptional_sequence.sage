@@ -5,17 +5,13 @@ K_DEG = [i for i in range(1, 4)]
 
 #TODO: 
 # 1. no towering for now
-# 2. complexity too high
-# 3. calculate any 1/(a_i - a_j)
 
 EX = {}
-INV = {}
 for base_k in K_DEG:
     for ext_d0 in D0_DEG:
         EX[(base_k, ext_d0)] = [list(i) for i in it.product(range(2), repeat=ext_d0)]
-        Z = Zmod(2^base_k)['x']
+        '''Z = Zmod(2^base_k)['x']
         R.<x> = Z.quotient(GF(2^ext_d0, name='x', modulus="minimal_weight").modulus())
-        INV[(base_k, ext_d0)] = []
         for s in EX[(base_k, ext_d0)]:
             a = R(s)
             if a == 0:
@@ -28,12 +24,7 @@ for base_k in K_DEG:
             inv = (a*y - 1).roots(multiplicities=False)[0].list()
 
             INV[(base_k, ext_d0)].append(inv)
-        '''Z = Zmod(base_k)['x']
-        m = GF(2^ext_d0, modulus="minimal_weight").modulus()
-        for s in EX[ext_d0]:
-            Z(EX[ext_d0]).inverse_mod(Z.ideal(Z(m.list())))  
         '''
-
 
 print("------------------------------------generate completed-----------------------------------")
 
@@ -43,9 +34,9 @@ textual_sequence = []
 for key, seq in EX.items():
     k, d1 = key
     seq_poly = [f"GR1e<{k}, {d1}>({{{', '.join(f'{x}u' for x in s)}}})" for s in seq] 
-    inv_poly = [f"GR1e<{k}, {d1}>({{{', '.join(f'{x}u' for x in s)}}})" for s in INV[key]] 
+    #inv_poly = [f"GR1e<{k}, {d1}>({{{', '.join(f'{x}u' for x in s)}}})" for s in INV[key]] 
     textual_sequence.append(f"template <> inline const GR1e<{k}, {d1}> exseq_v<{k}, {d1}, {d1}>[{d1}] = {{{', '.join(seq_poly)}}};")
-    textual_sequence.append(f"template <> inline const GR1e<{k}, {d1}> exinv_v<{k}, {d1}, {d1}>[{d1}] = {{{', '.join(inv_poly)}}};")
+    #textual_sequence.append(f"template <> inline const GR1e<{k}, {d1}> exinv_v<{k}, {d1}, {d1}>[{d1}] = {{{', '.join(inv_poly)}}};")
 
 with open("exseqtables.h", "w") as f:
     f.write("""

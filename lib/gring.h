@@ -53,6 +53,17 @@ namespace arith {
         
     }
 
+    template<T>
+    std::vector<bool> to_bits(T a) {
+        size_t d = sizeof(T);
+        std::vector<bool> res;
+        for (int i = 0; i < d; i++) {
+            res[i] = a & 1;
+            a >>= 1;
+        }
+        return res;
+    }
+
     // TODO: figure out a seed and length
     template <typename T>
     T random(const unsigned char *seed) {
@@ -277,15 +288,24 @@ class GR1e
         bool operator!=(const GR1e<k, d>& o) const {
             return (polys_ != o.polys_);
         }
-        
-        // construct from given bits by genmodulus.sage
-        static GR1e<k, d> from_modulus(const F& bits) {
 
-            // std::array<Z2k<k>, d> a;
-            // for (int i = 0; i < std::min(64, d); i++) {
-            //     a = Z2k<k>(bits[i]);
-            // }
-            // return GR1e<k, d>(a);
+
+
+        GR1e<k, d> fast_exp(GR1e<k, d>& a, std::vector<bool> exp) {
+            GR1e<k, d> res = zero();
+            for (int i = size(exp) - 1; i >= 0; i--) {
+                if (exp[i]) res *= a;
+                a *= a;
+            }
+            return res;
+        }
+        
+        GR1e<k, d> inv(const GR1e<k, d>& o) {
+            std::vector<bool> exp1 = arith::to_bits(static_cast<uint32_t>(2^d - 1));
+            std::vector<bool> exp2 = arith::to_bits(static_cast<uint64_t>(2^(k - 1) - 1));
+            res = fast_exp(fast_exp(o, exp1), exp2);
+            assert(res * o != one(), "This ring element has no inverse");
+            return res;
         }
 
         static GR1e<k, d> from_bits(const std::array<F, d>& bits) {
@@ -314,6 +334,14 @@ class GR1e
             std::array<Z2k<k>, d> res;
             for (int i = 0; i < d; i++) {
                 res[i] = Z2k<k>(0); 
+            }
+            return GR1e<k, d>(res); 
+        }
+
+        static GR1e<k, d> one() {
+            std::array<Z2k<k>, d> res;
+            for (int i = 0; i < d; i++) {
+                res[i] = Z2k<k>(1); 
             }
             return GR1e<k, d>(res); 
         }
@@ -563,6 +591,7 @@ class GRT1e {
             }
             return GRT1e<R, d>(res); 
         }
+
 
     private:
         // TODO: copy, move constructor for all classes?

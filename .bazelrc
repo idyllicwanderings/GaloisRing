@@ -1,2 +1,0 @@
-test --cxxopt=-std=c++14 --test_output=all  --sandbox_add_mount_pair=/tmp
-build --sandbox_add_mount_pair=/tmp

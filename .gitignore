@@ -1,5 +1,9 @@
 .vscode
-bazel-*
-MODULE.*
 *.sage.py
+demo
 
+# cmkr
+build*/
+cmake-build*/
+CMakerLists.txt
+CMakeLists.txt.user
