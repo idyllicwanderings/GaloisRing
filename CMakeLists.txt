@@ -25,3 +25,15 @@ if(CMAKE_CURRENT_SOURCE_DIR STREQUAL CMAKE_SOURCE_DIR)
 endif()
 
 project(galois_ring)
+
+
+set(CMAKE_CXX_STANDARD 20)
+
+include_directories(lib)
+
+
+add_executable(main_executable src/demo.cpp)
+
+
+add_subdirectory(test)
+

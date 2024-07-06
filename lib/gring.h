@@ -289,8 +289,6 @@ class GR1e
             return (polys_ != o.polys_);
         }
 
-
-
         GR1e<k, d> fast_exp(GR1e<k, d>& a, std::vector<bool> exp) {
             GR1e<k, d> res = zero();
             for (int i = size(exp) - 1; i >= 0; i--) {
@@ -314,6 +312,8 @@ class GR1e
                 a = Z2k<k>(bits[i]);
             }
             return GR1e<k, d>(a);
+    
+
         }
 
         
@@ -499,7 +499,6 @@ namespace reduce {
         return res;
     }
     
-    // TODO: requires写一个。
     template <int n, typename R>
     std::array<R, n * 2 - 1> multiply(const std::array<R, n>& a, std::array<R, n>& b) {
         std::array<R, n * 2 - 1> mult;
