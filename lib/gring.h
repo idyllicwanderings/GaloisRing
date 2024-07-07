@@ -312,8 +312,6 @@ class GR1e
                 a = Z2k<k>(bits[i]);
             }
             return GR1e<k, d>(a);
-    
-
         }
 
         

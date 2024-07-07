@@ -1,7 +1,7 @@
 # This file generates the primitive polynomial of towering of GR via the towering of finite fields
 
-D0_LIFT_DEG = [i for i in range(2, 10)] #TODO: 不支持d0 = 1。
-LIFT_DEG = [[i for i in range(2, 6)], [i for i in range(2, 6)], [i for i in range(2, 6)]]
+D0_LIFT_DEG = [i for i in range(2, 8)] #TODO: 不支持d0 = 1。
+LIFT_DEG = [[i for i in range(2, 5)], [i for i in range(2, 5)], [i for i in range(2, 5)]]
 ALPHABET = ['α','β','γ']
 MAX_LAYER = 4   # = 4 liftings at most
 
@@ -22,7 +22,8 @@ def recurse_build(layer, prev_R, prev_degs, max_layer0):
             if r1_ele.is_primitive():
                 F2 = R1.quo(r1_ele)
                 R2 = F2[ALPHABET[layer - 1]]     
-                return F2, R2         
+                return F2, R2  
+                       
     for lift_d1 in LIFT_DEG[layer]:
         R1 = prev_R
         if layer == 1:   # TODO: should we use primitive instead? 思考
@@ -84,5 +85,14 @@ namespace grtowertables {
     %s
 } // namespace grtowertables
 """ % "\n    ".join(textual_towerings))
+
+
+
+
+with open("grtowertables.sage", "w") as f:
+    f.write("""
+# only for storing the towering tables.
+TOWERS = %s
+""" % "\n    ".join(str(TOWERS)))
 
 print("------------------------------------writefile completed----------------------------------")
