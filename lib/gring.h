@@ -64,6 +64,16 @@ namespace arith {
         return res;
     }
 
+    template<T>
+    T fast_exp(T& a, std::vector<bool> exp) {
+        T res = zero();  //TODO: replace zero with default value
+        for (int i = size(exp) - 1; i >= 0; i--) {
+            if (exp[i]) res *= a;
+            a *= a;
+        }
+        return res;
+    }
+
     // TODO: figure out a seed and length
     template <typename T>
     T random(const unsigned char *seed) {
@@ -288,21 +298,12 @@ class GR1e
         bool operator!=(const GR1e<k, d>& o) const {
             return (polys_ != o.polys_);
         }
-
-        GR1e<k, d> fast_exp(GR1e<k, d>& a, std::vector<bool> exp) {
-            GR1e<k, d> res = zero();
-            for (int i = size(exp) - 1; i >= 0; i--) {
-                if (exp[i]) res *= a;
-                a *= a;
-            }
-            return res;
-        }
         
-        GR1e<k, d> inv(const GR1e<k, d>& o) {
-            std::vector<bool> exp1 = arith::to_bits(static_cast<uint32_t>(2^d - 1));
-            std::vector<bool> exp2 = arith::to_bits(static_cast<uint64_t>(2^(k - 1) - 1));
-            res = fast_exp(fast_exp(o, exp1), exp2);
-            assert(res * o != one(), "This ring element has no inverse");
+        GR1e<k, d> inv() {
+            //TODO: enable 128 bits
+            std::vector<bool> exp1 = arith::to_bits(static_cast<uint64_t>((2^d - 1) * 2^(k - 1) - 1));
+            res = arith::fast_exp(arith::fast_exp(*this, exp1), exp2);
+            assert(res * (*this) != one(), "This ring element has no inverse");
             return res;
         }
 
@@ -589,11 +590,19 @@ class GRT1e {
             return GRT1e<R, d>(res); 
         }
 
+        GRT1e<R, d> inv() {
+            //TODO: enable 128 bits
+            std::vector<bool> exp1 = arith::to_bits(static_cast<uint64_t>((2^ d_prod_ - 1) * 2^(k - 1) - 1));
+            res = arith::fast_exp(arith::fast_exp<GRT1e<R, d>>(*this, exp1), exp2);
+            assert(res * (*this) != one(), "This ring element has no inverse");
+            return res;
+        }
 
     private:
         // TODO: copy, move constructor for all classes?
         std::array<R, d> polys_;   // from x^0 to x^(d-1), modulus UP TO x^d
         static constexpr int d0_ = d;
+        static constexpr int d_prod_ = d * BaseType::d0_;
         static constexpr int tower_depth_ = 1 + (is_GR1e<BaseType>::value ? 0 : BaseType::tower_depth_);
 };
 

@@ -81,7 +81,7 @@
 
     $(2^d - 1) * 2^{k - 1} - 1$
 
-    64 bit
+    64 bit：要回到之前的问题上，128bit怎么搞。
 
 - [ ] 快速幂实现inverse for GR towering:
 

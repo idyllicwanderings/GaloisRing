@@ -154,4 +154,25 @@ def test_mul_towering():
 test_mul_towering() #PASS
 
 
-#TODO: 写一个生成sequence的函数。写到头文件里。别给我乱auto generate的东西，闭嘴吧你
+#TODO: 写一个生成sequence的函数。写到头文件里。别给我乱auto generate的东西，闭嘴吧你、
+
+
+with open("sequence.h", "w") as f:
+    f.write("""
+// This file was automatically generated, changes may be overwritten
+#pragma once
+#include <cstdint>
+// Only to keep everything looking nice if you somehow would include the file directly; it's circular otherwise
+#include "gring.h"
+
+namespace exseqtables {
+    template <int k, int d0> extern const std::array<Z2k<k>, d0 + 1> moduli;
+    template <int k, int d0, int d1> extern const std::array<GR1e<k, d0>, d1 + 1> moduli;
+    template <int k, int d0, int d1, int d2> extern const std::array <GRT1e <GR1e<k, d0>, d1>, d2 + 1> moduli;
+    template <int k, int d0, int d1, int d2, int d3> extern const std::array< GRT1e <GRT1e <GR1e<k, d1>, d0>, d2>, d3 + 1> moduli;
+    template <int k, int d0, int d1, int d2, int d3, int d4> extern const std::array< GRT1e <GRT1e <GRT1e <GR1e<k, d0>, d1>, d2>, d3>, d4 + 1> moduli;
+    
+    %s
+} // namespace exseqtables
+""" % "\n    ".join(textual_towerings))
+
