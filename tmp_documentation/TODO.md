@@ -1,3 +1,5 @@
+### 小项目清单
+
 - [x] 写一下initilization list(BR, Z2K, GR)+ 测试
 
 - [x] 写一个polynomial mult 接口
@@ -33,7 +35,7 @@
   ```
 
   concept requires 
-  
+
   ```c++
   Z2k<>(): val_(0) {} // constructor correct
   Z2k<k>(): val_(0) {}  //wrong
@@ -90,17 +92,17 @@
   - [ ] 固定GR test里sage script的 polynomial alphabet
   - [ ] 写GRT1e test(固定polynomial) 
   - [ ] 按照sage规则写一个写GR1e GRT1e的operator<<重载
-  
-- [ ] sage GR towering
+
+- [x] sage GR towering
 
   - [x] 写完sage GR towering生成
-  
+
   - [x] 改成fixed modulus list（可选）
-  
-  - [x] 测试一层towering是否可以用robin那个结论
-  
-  - [x] 写生成.h的sequence存储
-  
+
+  - [x] 测试一层/多层towering是否可以用robin那个结论
+
+  - [x] 写C++里面的全排列生成（exceptional sequence），也就是sequence generation on the flys
+
     
 
 
