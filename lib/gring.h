@@ -18,11 +18,7 @@
 
 #include <stdexcept>
 
-#include <glog/logging.h>
-
-#include "random.h"
-
-#include "SimpleFIPS202.h"
+// #include "SimpleFIPS202.h"
 
 namespace arith {
  
@@ -155,12 +151,9 @@ namespace arith {
     // TODO: use Keccak instead
     // TODO: figure out a way to use input string array
     //  Prefix_SpongePRG_Fetch(Prefix_SpongePRG_Instance *instance, unsigned char *out, unsigned int outByteLen);
-    seed() {
-        
-    }
 
-    template<T>
-    std::vector<bool> to_bits(T a) {
+    template<typename T>
+    std::vector<bool> to_bits(T& a) {
         size_t d = sizeof(T);
         std::vector<bool> res;
         for (int i = 0; i < d; i++) {
@@ -170,9 +163,9 @@ namespace arith {
         return res;
     }
 
-    template<T>
+    template<typename T>
     T fast_exp(T& a, std::vector<bool> exp) {
-        T res = zero();  //TODO: replace zero with default value
+        T res;  
         for (int i = size(exp) - 1; i >= 0; i--) {
             if (exp[i]) res *= a;
             a *= a;
@@ -180,9 +173,9 @@ namespace arith {
         return res;
     }
 
-    template<T>
+    template<typename T>
     T fast_exp_fermat(T&a, int d, int k) {
-        T res = zero();  //TODO: replace zero with default value
+        T res; 
         for (int i = 0; i < k + d - 2; i++) {
             if (i != k - 1) res *= a;
             a *= a;
@@ -193,15 +186,15 @@ namespace arith {
     // TODO: figure out a seed and length
     template <typename T>
     T random(const unsigned char *seed) {
-        unsigned char res[ceil(sizeof(T) / 8)];
+        // unsigned char res[ceil(sizeof(T) / 8)];
         
-        if (SHA3_256(res, seed, strlen((const char *)seed))) 
-        // not using bytes and careful with strlen 
-        {
-            // Hashing failed.
-            counter ++;
-        }
-        return res;
+        // if (SHA3_256(res, seed, strlen((const char *)seed))) 
+        // // not using bytes and careful with strlen 
+        // {
+        //     // Hashing failed.
+        //     counter ++;
+        // }
+        // return res;
 
         // Keccak_HashInstance hi;
         // Keccak_HashInitialize_SHA3_128(&hi);
@@ -215,6 +208,87 @@ namespace arith {
         // Keccak_HashFinal(&hi, res);
         // return res;
     }
+
+};
+
+
+/**
+ * 
+ * Z2k(F, 1)
+ * Only supports k = 1 to 64
+*/
+template<int k>
+requires( 1 <= k && k <= 64 )
+class Z2k 
+{
+    public:
+        using F = typename arith::datatype<arith::type_idx<k>()>::type;
+        static inline F MASK = arith::make_mask<F, k>();
+
+        template <typename T>
+        explicit Z2k<k>(const T& ele): val_(F(ele) & MASK) {}
+
+        explicit Z2k<k>(F f, bool /*skip mask*/) : val_(std::move(f & MASK)) {}
+
+        Z2k() : val_(0) {}
+
+        Z2k<k> operator+(const Z2k& o) const { return Z2k<k>(val_ + o.val_, false); }
+
+        Z2k<k> operator+=(const Z2k& o) { return *this = (*this) + o; }
+
+        Z2k<k> operator-(const Z2k& o) const { return Z2k<k>(val_ - o.val_, false); }
+
+        Z2k<k> operator-=(const Z2k& o) { return *this = (*this) + o; }
+
+        Z2k<k> operator*(const Z2k& o) const {
+            F a = val_;
+            F b = o.val_;
+            //TODO: to further deal with a bigger than 64 bits
+            return Z2k<k>((a * b) & MASK);
+        }
+
+        Z2k<k>& operator*=(const Z2k& o) { return *this = (*this) * o; }
+
+        bool operator==(const Z2k& o) const { return (val_ == o.val_); }
+
+        bool operator!=(const Z2k& o) const { return (val_ != o.val_); }
+
+        std::array<bool, k> to_bits() const {
+            std::array<bool, k> res;
+            F a = val_;
+            for (int i = 0; i < k; i++) {
+                res[i] = a & 1;
+                a >>= 1;
+            }
+            return res;
+        }
+
+        static Z2k<k> from_bits(const std::array<bool, k>& bits) {
+           std::int64_t a = 0;
+            for (int i = 0; i < std::min(64, k); i++) {
+                a |= std::int64_t(bits[i]) << i;
+            }
+            return Z2k<k>(F(a), true);   
+        }
+
+        // static Z2k<k> random(PRNG& gen) {
+        //     return Z2k<k>(random<F>(gen));
+        // }
+
+        /**
+        * To be used only when needing access to the underlying bits, really
+        */
+        F force_int() const {
+            return val_;
+        }
+    private:
+        F val_;
+
+};
+
+
+
+namespace ops {
     
     template <int k>
     constexpr int num_reduction_monomials() {
@@ -249,303 +323,6 @@ namespace arith {
     constexpr auto reduction_polynomial() {
         return reduction_polynomial_impl<k, num_reduction_monomials<k>()>::value();
     }
-
-};
-
-
-/**
- * 
- * Z2k(F, 1)
- * Only supports k = 1 to 64
-*/
-template<int k>
-requires( 1 <= k && k <= 64 )
-class Z2k 
-{
-    public:
-        using F = typename arith::datatype<arith::type_idx<k>()>::type;
-        
-    private:
-        static_assert(2 <= k && k <= 32, "Unsupported Base Ring F");
-
-    public:
-        static inline F MASK = arith::make_mask<F, k>();
-
-        template <typename T>
-        explicit Z2k<k>(const T& ele): val_(F(ele) & MASK) {}
-
-        explicit Z2k<k>(F f, bool /*skip mask*/) : val_(std::move(f & MASK)) {}
-
-        Z2k() : val_(0) {}
-
-    public:
-        Z2k<k> operator+(const Z2k& o) const {
-            return Z2k<k>(val_ + o.val_, false);
-        }
-
-        Z2k<k> operator+=(const Z2k& o) {
-            return *this = (*this) + o;
-        }
-
-        Z2k<k> operator-(const Z2k& o) const {
-            return Z2k<k>(val_ - o.val_, false);
-        }
-
-        Z2k<k> operator-=(const Z2k& o) {
-            return *this = (*this) + o;
-        }
-
-        Z2k<k> operator*(const Z2k& o) const {
-            F a = val_;
-            F b = o.val_;
-            //TODO: to further deal with a bigger than 64 bits
-            return Z2k<k>((a * b) & MASK);
-        }
-
-        Z2k<k>& operator*=(const Z2k& o) {
-            return *this = (*this) * o;
-        }
-
-        bool operator==(const Z2k& o) const {
-            return (val_ == o.val_);
-        }
-
-        bool operator!=(const Z2k& o) const {
-            return (val_ != o.val_);
-        }
-
-        std::array<bool, k> to_bits() const {
-            std::array<bool, k> res;
-            F a = val_;
-            for (int i = 0; i < k; i++) {
-                res[i] = a & 1;
-                a >>= 1;
-            }
-            return res;
-        }
-
-        static Z2k<k> from_bits(const std::array<bool, k>& bits) {
-           std::int64_t a = 0;
-            for (int i = 0; i < std::min(64, k); i++) {
-                a |= std::int64_t(bits[i]) << i;
-            }
-            return Z2k<k>(F(a), true);   
-        }
-
-        static Z2k<k> random(PRNG& gen) {
-            return Z2k<k>(random<F>(gen));
-        }
-
-        /**
-        * To be used only when needing access to the underlying bits, really
-        */
-        F force_int() const {
-            return val_;
-        }
-    private:
-        F val_;
-
-};
-
-
-template<int k, int d>
-requires ( 1 <= k && k <= 64 && 1 <= d && d <= 32)
-class GR1e 
-{
-    public: 
-        using F = typename arith::datatype<arith::type_idx<k>()>::type;
-        using BaseType = void;
-
-        template <typename T>
-        explicit GR1e<k, d>(const std::array<T, d>& eles): polys_(eles) {}
-        explicit GR1e<k, d>(const std::array<Z2k<k>, d>& eles): polys_(eles) {}
-        GR1e() { polys_.fill(Z2k<k>());}
-
-        template <typename T>
-        explicit GR1e<k, d>(std::initializer_list<T> eles) {
-            if (eles.size() != d) {
-                throw std::out_of_range("Wrong size of d provided");
-            }
-            int i = 0;
-            for (const auto& ele : eles) {  // initializer list's element only accessed by iterator
-                polys_[i] = Z2k<k>(ele);
-                i++;
-            }
-        }
-    
-    public:
-        GR1e<k, d> operator+(const GR1e<k, d>& o) const {
-            std::array<Z2k<k>, d> polys;
-            for (int i = 0;i < d; i++) {
-                polys.emplace_back(o.polys_[i] + polys_[i]);
-            }
-            return BK<k,d>(polys);
-        }
-
-        GR1e<k, d> operator+=(const GR1e<k, d>& o) {
-            return *this = (*this) + o;
-        }
-
-        GR1e<k, d> operator-(const GR1e<k, d>& o) const {
-            std::array<Z2k<k>, d> polys;
-            for (int i = 0;i < d; i++) {
-                polys.emplace_back(polys_[i] - o.polys_[i]);
-            }
-            return BK<k,d>(polys);
-        }
-
-        GR1e<k, d> operator-=(const GR1e<k, d>& o) {
-            return *this = (*this) + o;
-        }
-
-        GR1e<k, d> operator*(const GR1e<k, d>& o) const {
-            std::array<Z2k<k>, d> a = polys_;
-            std::array<Z2k<k>, d> b = o.polys_;
-            //TODO: to further deal with a bigger than 64 bits
-            return GR1e<k, d>(arith::reduce<k, F>(multiply(a, b)));
-        }
-
-        GR1e<k, d>& operator*=(const GR1e<k, d>& o) {
-            return *this = (*this) * o;
-        }
-
-        bool operator==(const GR1e<k, d>& o) const {
-            return (polys_ == o.polys_);
-        }
-
-        bool operator!=(const GR1e<k, d>& o) const {
-            return (polys_ != o.polys_);
-        }
-        
-        GR1e<k, d> inv() {
-            res = arith::fast_exp_fermat(*this, d, k);
-            assert(res * (*this) != one(), "This ring element has no inverse");
-            return res;
-        }
-
-        static GR1e<k, d> from_bits(const std::array<F, d>& bits) {
-            std::array<Z2k<k>, d> a;
-            for (int i = 0; i < std::min(64, d); i++) {
-                a = Z2k<k>(bits[i]);
-            }
-            return GR1e<k, d>(a);
-        }
-
-        
-        std::array<t, d> to_bits() const {
-            // TODO
-            return res;
-        }
-
-        static GR1e<k, d> random(PRNG& gen) {
-            std::array<F, d> res;
-            for (int i = 0; i < d; i++) {
-                res[i] = random<F>(gen); //TODO: the generator elements
-            }
-            return GR1e<k, d>(res); // auto masked
-        }
-
-        static GR1e<k, d> zero() {
-            std::array<Z2k<k>, d> res;
-            for (int i = 0; i < d; i++) {
-                res[i] = Z2k<k>(0); 
-            }
-            return GR1e<k, d>(res); 
-        }
-
-        static GR1e<k, d> one() {
-            std::array<Z2k<k>, d> res;
-            for (int i = 0; i < d; i++) {
-                res[i] = Z2k<k>(1); 
-            }
-            return GR1e<k, d>(res); 
-        }
-
-        template <int m>
-        std::array<GR1e<k, d>, m> exceptional_seq() {
-            std::array<GR1e<k, d>, m> res;
-            static_assert(m <= 2^d, "the ring only has a maximal sequence of at most 2^d length");
-            for (int i = 0; i < m; i++) { 
-                std::array<F, d> seq;  
-                for (int j = 0; j < d; j++) {
-                    seq[j] = (i >> j) & 1; //extract jth bit
-                }
-                res[i] = GR1e<k, d>(seq);
-            }
-            return res;
-        }
-
-        friend ostream &operator<<(ostream &o, const GR1e<k, d>&r)
-        { 
-            for (int i = d - 1;i > 1;i++) {
-                if (r.polys_[i] == 1) { o << "βbar^" << i << " + "; }
-                else if (r.polys_[i] == 0) { continue; }
-                else { o << r.polys_[i] << "*" << "βbar^" << i << " + "; }
-            }
-            if (r.polys_[1] == 1) { o << "βbar" << " + "; }
-            else if (r.polys_[1] != 0) { o << r.polys_[1] << "*" << "βbar" << " + "; }
-            if (r.polys_[0] != 0) o << r.polys_[0];
-            return o;            
-        }
-
-    private:
-        std::array<Z2k<k>, d> polys_;
-        static constexpr int d0_ = d;
-        static constexpr int k_ = k;
-
-};
-
-
-/**
- * (GRT1e(GR1e, k))
-*/
-
-template<typename T>
-struct is_GR1e : std::false_type {};
-template<int k, int d>
-struct is_GR1e<GR1e<k, d>> : std::true_type {};
-
-//declaration of GRT1e
-template<typename R, int k>
-struct GRT1e;
-template<typename T>
-struct is_GRT1e : std::false_type {};
-template<typename R, int k>
-struct is_GRT1e<GRT1e<R, k>> : std::true_type {};
-
-
-template<typename T>
-concept BaseGR1e = is_GR1e<T>::value && !is_GRT1e<T>::value;
-
-//check if BaseRing ends with GR1e
-//TODO: make it more generic ring requirements by checking *, + and polynomial: demo.h example 2
-template<typename T>
-concept BaseRing = requires {
-    requires BaseGR1e<T> || (is_GRT1e<T>::value && requires {
-        typename T::BaseType;
-        requires BaseGR1e<typename T::BaseType>;
-    });
-};
-
-
-namespace reduce {
-
-    template <typename T>
-    concept Ring = requires(T t, const T& o) {
-         // check *, + 
-        { t.operator-=(o) } -> std::same_as<T&>;
-        { t.operator-(o) } -> std::same_as<T>;
-        { t.operator+=(o) } -> std::same_as<T&>;
-        { t.operator+(o) } -> std::same_as<T>;
-        { t.operator*=(o) } -> std::same_as<T&>;
-        { t.operator*(o) } -> std::same_as<T>;
-        { t.operator==(o) } -> std::same_as<std::bool>;
-        { t.operator!=(o) } -> std::same_as<std::bool>;
-
-        // // check if there's a ring polynomial stored in an array
-        std::convertible_to<decltype(T::polys_ ), std::array<typename T::F, T::d>>;
-        std::unsigned_integral<typename decltype(T::polys_)::value_type>;
-    };
 
     // TODO: test this
     // TODO: more constraints?????? idk 
@@ -612,14 +389,15 @@ namespace reduce {
     T reduce(const std::uint64_t& x) {
         constexpr auto red = reduction_polynomial<k>();
         if constexpr(k <= 32) {
-            std::uint64_t y = reduce_once<k,std::uint64_t>(x,red);
+            std::uint64_t y = reduce_once<k,std::uint64_t>(x, red);
         }
         // TODO: bigger bits
     }
 
     template <int n, int d, typename R>
-    T reduce(const std::array<R, n>& x) {
-        // TODO: constexpr auto red = reduction_polynomial<d>();
+    R reduce(const std::array<R, n>& x) {
+        // TODO
+        constexpr auto red = reduction_polynomial<d>();
         auto& low = reduce_once<n, d, R>(x, red);
         low = reduce_once<n, d, std::uint64_t>(low, red);
         // truncate to d terms
@@ -640,14 +418,176 @@ namespace reduce {
     }
 }
 
+
+template<int k, int d>
+requires ( 1 <= k && k <= 64 && 1 <= d && d <= 32)
+class GR1e 
+{
+    public: 
+        using F = typename arith::datatype<arith::type_idx<k>()>::type;
+        using BaseType = void;
+
+        template <typename T>
+        explicit GR1e<k, d>(const std::array<T, d>& eles): polys_(eles) {}
+        explicit GR1e<k, d>(const std::array<Z2k<k>, d>& eles): polys_(eles) {}
+        GR1e() { polys_.fill(Z2k<k>());}
+
+        template <typename T>
+        explicit GR1e<k, d>(std::initializer_list<T> eles) {
+            if (eles.size() != d) {
+                throw std::out_of_range("Wrong size of d provided");
+            }
+            int i = 0;
+            for (const auto& ele : eles) {  // initializer list's element only accessed by iterator
+                polys_[i] = Z2k<k>(ele);
+                i++;
+            }
+        }
+    
+    public:
+        GR1e<k, d> operator+(const GR1e<k, d>& o) const {
+            std::array<Z2k<k>, d> polys;
+            for (int i = 0;i < d; i++) {
+                polys.emplace_back(o.polys_[i] + polys_[i]);
+            }
+            return BK<k,d>(polys);
+        }
+
+        GR1e<k, d> operator+=(const GR1e<k, d>& o) { return *this = (*this) + o; }
+
+        GR1e<k, d> operator-(const GR1e<k, d>& o) const {
+            std::array<Z2k<k>, d> polys;
+            for (int i = 0;i < d; i++) {
+                polys.emplace_back(polys_[i] - o.polys_[i]);
+            }
+            return BK<k,d>(polys);
+        }
+
+        GR1e<k, d> operator-=(const GR1e<k, d>& o) { return *this = (*this) + o; }
+
+        GR1e<k, d> operator*(const GR1e<k, d>& o) const {
+            std::array<Z2k<k>, d> a = polys_;
+            std::array<Z2k<k>, d> b = o.polys_;
+            //TODO: to further deal with a bigger than 64 bits
+            return GR1e<k, d>(ops::reduce<k, F>(multiply(a, b)));
+        }
+
+        GR1e<k, d>& operator*=(const GR1e<k, d>& o) { return *this = (*this) * o; }
+
+        bool operator==(const GR1e<k, d>& o) const { return (polys_ == o.polys_); }
+
+        bool operator!=(const GR1e<k, d>& o) const { return (polys_ != o.polys_); }
+        
+        GR1e<k, d> inv() {
+            GR1e<k, d> res = arith::fast_exp_fermat<GR1e<k, d>>(*this, d, k);
+            assert(res * (*this) != one());
+            return res;
+        }
+
+        static GR1e<k, d> from_bits(const std::array<F, d>& bits) {
+            std::array<Z2k<k>, d> a;
+            for (int i = 0; i < std::min(64, d); i++) {
+                a = Z2k<k>(bits[i]);
+            }
+            return GR1e<k, d>(a);
+        }
+
+        // std::array<k, d> to_bits() const {
+        //     // TODO
+        //     return res;
+        // }
+
+        // static GR1e<k, d> random(PRNG& gen) {
+        //     std::array<F, d> res;
+        //     for (int i = 0; i < d; i++) {
+        //         res[i] = random<F>(gen); //TODO: the generator elements
+        //     }
+        //     return GR1e<k, d>(res); // auto masked
+        // }
+
+        static GR1e<k, d> zero() {
+            std::array<Z2k<k>, d> res;
+            for (int i = 0; i < d; i++) {
+                res[i] = Z2k<k>(0); 
+            }
+            return GR1e<k, d>(res); 
+        }
+
+        static GR1e<k, d> one() {
+            std::array<Z2k<k>, d> res;
+            for (int i = 0; i < d; i++) {
+                res[i] = Z2k<k>(1); 
+            }
+            return GR1e<k, d>(res); 
+        }
+
+        template <int m>
+        std::array<GR1e<k, d>, m> exceptional_seq() {
+            std::array<GR1e<k, d>, m> res;
+            static_assert(m <= 2^d, "the ring only has a maximal sequence of at most 2^d length");
+            for (int i = 0; i < m; i++) { 
+                std::array<F, d> seq;  
+                for (int j = 0; j < d; j++) {
+                    seq[j] = (i >> j) & 1; //extract jth bit
+                }
+                res[i] = GR1e<k, d>(seq);
+            }
+            return res;
+        }
+
+        friend std::ostream &operator<<(std::ostream &o, const GR1e<k, d>&r)
+        { 
+            for (int i = d - 1;i > 1;i++) {
+                if (r.polys_[i] == 1) { o << "βbar^" << i << " + "; }
+                else if (r.polys_[i] == 0) { continue; }
+                else { o << r.polys_[i] << "*" << "βbar^" << i << " + "; }
+            }
+            if (r.polys_[1] == 1) { o << "βbar" << " + "; }
+            else if (r.polys_[1] != 0) { o << r.polys_[1] << "*" << "βbar" << " + "; }
+            if (r.polys_[0] != 0) o << r.polys_[0];
+            return o;            
+        }
+
+    private:
+        std::array<Z2k<k>, d> polys_;
+        static constexpr int d0_ = d;
+        static constexpr int k_ = k;
+
+};
+
+/**
+ * (GRT1e(GR1e, k))
+*/
+template<typename T>
+struct is_gr_template : std::false_type {};
+template<int k, int d>
+struct is_gr_template<GR1e<k, d>> : std::true_type {};
+
+template<typename R, int d>
+class GRT1e;
+template<typename T>
+struct is_grt_template : std::false_type {};
+template<typename R, int d>
+struct is_grt_template<GRT1e<R, d>> : std::true_type {};
+
+
+template<typename T>
+concept IsBaseRing = is_gr_template<T>::value && !is_grt_template<T>::value;
+
+template<typename T>
+concept BaseRing = IsBaseRing<T> || (is_grt_template<T>::value && requires {
+    typename T::BaseType;
+    requires IsBaseRing<typename T::BaseType>;
+});
+
 /**
  * Towering of Galois Ring
  */
 template <BaseRing R, int d>
-class GRT1e {
+class GRT1e<R, d> {
     public:
         // TODO: think up of a better naming for BaseType
-        using BaseType = std::conditional_t<is_GR1e<R>::value, R, typename R::BaseType>;
+        using BaseType = std::conditional_t<is_gr_template<R>::value, R, typename R::BaseType>;
 
         explicit GRT1e<R, d>(const std::array<R, d>& poly): polys_(poly) {;}
 
@@ -691,8 +631,8 @@ class GRT1e {
             return GRT1e<R, d>(reduce(multiply(polys_, o.polys_)));
         }
 
-        GRT1e<R,d>& operator*=(const GRT1e<R,d>& o) {
-            return *this = (*this) * other;
+        GRT1e<R, d>& operator*=(const GRT1e<R,d>& o) {
+            return *this = (*this) * o;
         }
 
         bool operator==(const GRT1e<R, d>& o) const {
@@ -703,13 +643,13 @@ class GRT1e {
             return (polys_ == o.polys_);
         }
 
-        static GRT1e<R, d> random(PRNG& gen) {
-            std::array<R, d> res;
-            for (int i = 0; i < d; i++) {
-                res[i] = R::random(gen); //TODO: gen
-            }
-            return GRT1e<R, d>(res); // auto masked
-        }
+        // static GRT1e<R, d> random(PRNG& gen) {
+        //     std::array<R, d> res;
+        //     for (int i = 0; i < d; i++) {
+        //         res[i] = R::random(gen); //TODO: gen
+        //     }
+        //     return GRT1e<R, d>(res); // auto masked
+        // }
 
         // TODO: write a constructor for zero()
         static GRT1e<R, d> zero() {
@@ -720,9 +660,15 @@ class GRT1e {
             return GRT1e<R, d>(res); 
         }
 
+        static GRT1e<R, d> one() {
+            std::array<R, d> res;
+            //TODO
+            return GRT1e<R, d>(res); 
+        }
+
         GRT1e<R, d> inv() {
-            res = arith::fast_exp_fermat(*this, d_prod_, k);
-            assert(res * (*this) != one(), "This ring element has no inverse");
+            GRT1e<R, d> res = arith::fast_exp_fermat<GRT1e<R, d>>(*this, d_prod_, k_);
+            assert(res * (*this) != one());
             return res;
         }
 
@@ -731,8 +677,8 @@ class GRT1e {
             std::array<GRT1e<R, d>, m> res;
             // TODO: modify m_in int type, TODO: ceil is not static
             static constexpr uint64_t m_in =  static_cast<uint64_t>(
-                    std::ceil(static_cast<double>(std::pow(static_cast<double>m, 1.0/d))));
-            auto base_seqs = R::exceptional_seq<m_in>();
+                    std::ceil(static_cast<double>(std::pow(static_cast<double>(m), 1.0/d))));
+            auto base_seqs = R::template exceptional_seq<m_in>();
             static_assert(m <= 2^d_prod_, "the ring only has a maximal sequence of at most 2^{d1 d2 ..dn} length");
             for (int i = 0; i < m; i++) { 
                 std::array<R, d> seq;  
@@ -752,18 +698,18 @@ class GRT1e {
         static constexpr int k_ = R::k_;
         static constexpr int d0_ = d;
         static constexpr int d_prod_ = d * R::d0_;
-        static constexpr int tower_depth_ = 1 + (is_GR1e<BaseType>::value ? 0 : BaseType::tower_depth_);
+        static constexpr int tower_depth_ = 1 + (is_gr_template<BaseType>::value ? 0 : BaseType::tower_depth_);
 };
 
 
-#include "brlifttables.h" // br tables for lifting
+// #include "brlifttables.h" // br tables for lifting
 
-template <int d, int k0, int k1>
-GR1e<d, k1> liftGRT1e(const GR1e<d, k0>& base) {
-    static_assert(k1 % k0 == 0, "No subring of correct size exists");
-    // TODO:
-    return res;
-}
+// template <int d, int k0, int k1>
+// GR1e<d, k1> liftGRT1e(const GR1e<d, k0>& base) {
+//     static_assert(k1 % k0 == 0, "No subring of correct size exists");
+//     // TODO:
+//     return res;
+// }
 
 
 
