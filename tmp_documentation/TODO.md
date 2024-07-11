@@ -102,18 +102,13 @@
   
 - [ ] GRT1e test
 
-  - [ ] sage test script
+  - [x] sage test script
   - [ ] C++ output scirpt
   
-  
-  
-  
-  
-  
-  
-  
-  
-  
+- [x] inv的fast exponentiation改一下。不要存储
+
+  - [x] GRT1E增加一个k的成员函数。
+
 
 
 

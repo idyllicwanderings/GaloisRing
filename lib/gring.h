@@ -180,6 +180,16 @@ namespace arith {
         return res;
     }
 
+    template<T>
+    T fast_exp_fermat(T&a, int d, int k) {
+        T res = zero();  //TODO: replace zero with default value
+        for (int i = 0; i < k + d - 2; i++) {
+            if (i != k - 1) res *= a;
+            a *= a;
+        }
+        return res;
+    }
+
     // TODO: figure out a seed and length
     template <typename T>
     T random(const unsigned char *seed) {
@@ -408,9 +418,7 @@ class GR1e
         }
         
         GR1e<k, d> inv() {
-            //TODO: enable 128 bits, actually only needs 64 + 32 = 96 bits
-            std::vector<bool> exp = arith::to_bits(static_cast<arith::int128>((2^d - 1) * 2^(k - 1) - 1));
-            res = arith::fast_exp(*this, exp);
+            res = arith::fast_exp_fermat(*this, d, k);
             assert(res * (*this) != one(), "This ring element has no inverse");
             return res;
         }
@@ -483,6 +491,7 @@ class GR1e
     private:
         std::array<Z2k<k>, d> polys_;
         static constexpr int d0_ = d;
+        static constexpr int k_ = k;
 
 };
 
@@ -712,8 +721,7 @@ class GRT1e {
         }
 
         GRT1e<R, d> inv() {
-            std::vector<bool> exp = arith::to_bits(static_cast<arith::int128>((2^ d_prod_ - 1) * 2^(k - 1) - 1));
-            res = arith::fast_exp(*this, exp);
+            res = arith::fast_exp_fermat(*this, d_prod_, k);
             assert(res * (*this) != one(), "This ring element has no inverse");
             return res;
         }
@@ -741,8 +749,9 @@ class GRT1e {
     private:
         // TODO: copy, move constructor for all classes?
         std::array<R, d> polys_;   // from x^0 to x^(d-1), modulus UP TO x^d
+        static constexpr int k_ = R::k_;
         static constexpr int d0_ = d;
-        static constexpr int d_prod_ = d * BaseType::d0_;
+        static constexpr int d_prod_ = d * R::d0_;
         static constexpr int tower_depth_ = 1 + (is_GR1e<BaseType>::value ? 0 : BaseType::tower_depth_);
 };
 
