@@ -185,7 +185,9 @@ namespace arith {
     T random(const unsigned char *seed) {
         unsigned char res[ceil(sizeof(T) / 8)];
         
-        if (SHA3_256(res, seed, strlen((const char *)seed))) {
+        if (SHA3_256(res, seed, strlen((const char *)seed))) 
+        // not using bytes and careful with strlen 
+        {
             // Hashing failed.
             counter ++;
         }
