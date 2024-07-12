@@ -1,7 +1,14 @@
 EMBEDDINGS = {}
+'''
+# for real use:
 BASE_K = [i for i in range(1, 65)]
 LIFT_D0 = [i for i in range(2, 33)]
-LIFT_D1 = 32
+'''
+
+#for test 
+BASE_K = [i for i in range(2, 7)]
+LIFT_D0 = [i for i in range(2, 7)]
+LIFT_D1 = 7
 
 def modulus_poly(k):
     return GF(2^k, 'ζ', modulus="minimal_weight").modulus()
@@ -99,7 +106,7 @@ for key, v in EMBEDDINGS.items():
     r_powers = [f"GR1e<{k}, {d1}>({{{', '.join(f'{x}u' for x in s)}}})" for s in v]  #{{是用来转义{
     textual_embeddings.append(f"template <> inline const GR1e<{k}, {d1}> lift_v<{k}, {d0}, {d1}>[{d0}] = {{{', '.join(r_powers)}}};")
 
-with open("brlifttables.h", "w") as f:
+with open("grlifttables.h", "w") as f:
     f.write("""
 // This file was automatically generated, changes may be overwritten
 #pragma once
@@ -107,10 +114,10 @@ with open("brlifttables.h", "w") as f:
 // Only to keep everything looking nice if you somehow would include the file directly; it's circular otherwise
 #include "gring.h"
 
-namespace brlifttables {
+namespace grlifttables {
     template <int k, int d0, int d1> extern const GR1e<k, d1> lift_v[d0];
     %s
-} // namespace brlifttables
+} // namespace grlifttables
 """ % "\n    ".join(textual_embeddings))
 
 print("------------------------------------writefile completed----------------------------------")

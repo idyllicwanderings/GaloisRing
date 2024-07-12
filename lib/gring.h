@@ -232,6 +232,7 @@ class Z2k
 
         Z2k() : val_(0) {}
 
+    public:
         Z2k<k> operator+(const Z2k& o) const { return Z2k<k>(val_ + o.val_, false); }
 
         Z2k<k> operator+=(const Z2k& o) { return *this = (*this) + o; }
@@ -477,6 +478,11 @@ class GR1e
         bool operator==(const GR1e<k, d>& o) const { return (polys_ == o.polys_); }
 
         bool operator!=(const GR1e<k, d>& o) const { return (polys_ != o.polys_); }
+
+        Z2k<k>& operator[](int i) const {
+            if( i < 0 || i >= d ) { throw std::out_of_range("Index out of range"); }
+            return polys_[i];
+        }
         
         GR1e<k, d> inv() {
             GR1e<k, d> res = arith::fast_exp_fermat<GR1e<k, d>>(*this, d, k);
@@ -702,19 +708,21 @@ class GRT1e<R, d> {
 };
 
 
-// #include "brlifttables.h" // br tables for lifting
+#include "grlifttables.h"
 
-// template <int d, int k0, int k1>
-// GR1e<d, k1> liftGRT1e(const GR1e<d, k0>& base) {
-//     static_assert(k1 % k0 == 0, "No subring of correct size exists");
-//     // TODO:
-//     return res;
-// }
-
-
-
-
-
+template <int k, int d0, int d1>
+GR1e<k, d1> liftGR(const GR1e<k, d0>& base) {
+    static_assert(d1 % d0 == 0, "No subring of correct size exists");
+    GR1e<k, d1> res;
+    for (int j = 0; j < d1; j++) {
+        Z2k<k> x_i;
+        for (int i = 0; i < d0; i++) {
+            x_i += base[i] * grlifttables::lift_v<k, d0, d1>[i][j];
+        }
+        res[j] = x_i;
+    }
+    return res;
+}
 
 
 
