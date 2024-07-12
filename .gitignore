@@ -1,6 +1,7 @@
 .vscode
 *.sage.py
 demo
+.h.gch
 
 # cmkr
 build*/
