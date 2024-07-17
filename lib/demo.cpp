@@ -3,88 +3,90 @@
 #include <array>
 #include <cstdint>
 #include <stdexcept>
+#include <tuple>
+#include <iostream>
 
-template<int k, int d>
-class GR1E {
-   public:
-    using BaseType = void; //WHY?
+// template<int k, int d>
+// class GR1E {
+//    public:
+//     using BaseType = void; //WHY?
 
-    std::array<uint8_t, k> polys_; // 无符号整数数组成员
-    static constexpr int d_ = d;
+//     std::array<uint8_t, k> polys_; // 无符号整数数组成员
+//     static constexpr int d_ = d;
 
-    // 定义 operator-=
-    GR1E<k, d>& operator-=(const  GR1E<k, d>& o) {
-        for (int i = 0; i < k; ++i) {
-            polys_[i] -= o.polys_[i];
-        }
-        return *this;
-    }
+//     // 定义 operator-=
+//     GR1E<k, d>& operator-=(const  GR1E<k, d>& o) {
+//         for (int i = 0; i < k; ++i) {
+//             polys_[i] -= o.polys_[i];
+//         }
+//         return *this;
+//     }
 
-    // 定义 operator-
-    GR1E<k, d> operator-(const  GR1E<k, d>& o) const {
-        GR1E<k, d> result = *this;
-        result -= o;
-        return result;
-    }
-};
-
-
-template<typename R, int k>
-class GR;
-
-
-template<typename T>
-struct is_br_template : std::false_type {};
-template<int k, int d>
-struct is_br_template<GR1E<k, d>> : std::true_type {};
-
-
-template<typename T>
-struct is_gr_template : std::false_type {};
-template<typename R, int k>
-struct is_gr_template<GR<R, k>> : std::true_type {};
-
-
-template<typename T>
-concept IsBaseGR1E = is_br_template<T>::value && !is_gr_template<T>::value;
-
-template<typename T>
-concept ValidR = requires {
-    requires IsBaseGR1E<T> || (is_gr_template<T>::value && requires {
-        typename T::BaseType;
-        requires IsBaseGR1E<typename T::BaseType>;
-    });
-};
-
-// more generic requires to include Z2K
-// template <typename R, auto X>
-// concept is_base_ring = requires(R r)
-// {
-//     std::array<X> val;
-//     []<R ring>(const std::optional<R>&) { } (r.operator+());
+//     // 定义 operator-
+//     GR1E<k, d> operator-(const  GR1E<k, d>& o) const {
+//         GR1E<k, d> result = *this;
+//         result -= o;
+//         return result;
+//     }
 // };
 
 
-
-template<ValidR R, int k> 
-class GR<R,k> {
-   public:
-    // 将 R 的最终 GR1E 类型通过别名暴露出来
-    using BaseType = std::conditional_t<is_br_template<R>::value, R, typename R::BaseType>;
-    //using F = uint8_t;
-
-};
+// template<typename R, int k>
+// class GR;
 
 
-int main() {
+// template<typename T>
+// struct is_br_template : std::false_type {};
+// template<int k, int d>
+// struct is_br_template<GR1E<k, d>> : std::true_type {};
 
-    GR<GR1E<1, 2>, 3> gr1; 
-    GR<GR<GR1E<1, 2>, 5>, 3> gr2; 
 
-    //GR<GR<1, 2>, 3> gr_wrong;  
+// template<typename T>
+// struct is_gr_template : std::false_type {};
+// template<typename R, int k>
+// struct is_gr_template<GR<R, k>> : std::true_type {};
 
-    return 0;
-}
+
+// template<typename T>
+// concept IsBaseGR1E = is_br_template<T>::value && !is_gr_template<T>::value;
+
+// template<typename T>
+// concept ValidR = requires {
+//     requires IsBaseGR1E<T> || (is_gr_template<T>::value && requires {
+//         typename T::BaseType;
+//         requires IsBaseGR1E<typename T::BaseType>;
+//     });
+// };
+
+// // more generic requires to include Z2K
+// // template <typename R, auto X>
+// // concept is_base_ring = requires(R r)
+// // {
+// //     std::array<X> val;
+// //     []<R ring>(const std::optional<R>&) { } (r.operator+());
+// // };
+
+
+
+// template<ValidR R, int k> 
+// class GR<R,k> {
+//    public:
+//     // 将 R 的最终 GR1E 类型通过别名暴露出来
+//     using BaseType = std::conditional_t<is_br_template<R>::value, R, typename R::BaseType>;
+//     //using F = uint8_t;
+
+// };
+
+
+// int main() {
+
+//     GR<GR1E<1, 2>, 3> gr1; 
+//     GR<GR<GR1E<1, 2>, 5>, 3> gr2; 
+
+//     //GR<GR<1, 2>, 3> gr_wrong;  
+
+//     return 0;
+// }
 
 
 
@@ -247,9 +249,86 @@ int main() {
 // int main() {
 //     Z2k<2> gr1(1);
 //     GR1e<2, 3> gr2({1u, 1u, 1u});
-//     //moduli<2> modu;
+//     moduli<2, 2, 3>;
 
 //     //GR<GR<1, 2>, 3> gr_wrong;  
 
 //     return 0;
 // }
+
+
+// ++++++++++++++++++++++++++++++++++++++++++ example 4++++++++++++++++++++++++++++++++++++++++++
+
+template<int k, int d>
+class GR1E {
+   public:
+    using BaseType = void;
+
+    std::array<uint8_t, k> polys_; 
+    static constexpr int d_ = d;
+    static constexpr std::tuple<> ds_ = {};
+
+};
+
+
+
+// template <int d1, typename R, int... ds>
+// int reduce() {
+//     return 1;      
+// }
+
+template <int d1, int len, std::array<int, len> T>
+int reduce() {
+    return 1;      
+}
+
+template<typename R, int d> 
+class GR {
+   public:
+    static constexpr auto ds_ = std::tuple_cat(R::ds_, std::make_tuple(std::integral_constant<int, d>{}));
+
+    void op() const {
+        //std::apply([](auto &&... args) { reduce<d, R, args...>(); }, ds_);
+        //reduce<d, R, dlist>();
+    }
+};
+
+
+template <typename... T> void my_func(const T&... tupleArgs) {
+    std::cout << "my_func called with values: ";
+    (std::cout << ... << tupleArgs);
+    std::cout << std::endl;
+}
+
+
+// template <int T1> void my_func1(int x1, int x2) {
+//     std::cout << "my_func1 called with values: ";
+//     (std::cout << T1);  
+//     std::cout << std::endl;
+// }
+
+template <int... T> void my_func1(int x1, int x2) {
+    std::cout << "my_func1 called with values: ";
+    std::cout << std::endl;
+}
+
+
+int main() {
+    std::tuple<int, float> my_tuple = {1, 2.0f};
+    std::apply([](auto &&... args) { my_func(args...); }, my_tuple);
+
+    static constexpr std::tuple<int, int> my_tuple1 = {1, 1};
+    std::apply([](auto &&... args) {  my_func1(args...); }, my_tuple1);
+
+    int l, std::array<int, l> T>
+
+
+    GR<GR1E<1, 2>, 3> gr1; 
+    GR<GR<GR1E<1, 2>, 5>, 3> gr2; 
+
+    gr2.op();
+
+    //GR<GR<1, 2>, 3> gr_wrong;  
+
+    return 0;
+}

@@ -37,7 +37,6 @@ def mkgrtowers(k, d_list, modulus_list = None):
         layer += 1
         RX, moduli = find_irreducible(RX, d_list[layer])
         moduli = modulus_to_list(moduli, layer) if modulus_list is None else modulus_list[tuple(k, d_list, )]
-        print("moduli: ", moduli)
         GRX = GR_list[layer - 1][ALPHABET[layer - 1]].quotient(build_modulus(GR_list, moduli, layer))
         GR_list.append(GRX)
     return GR_list[-1]
@@ -81,27 +80,37 @@ def testinv(GR, k, d, seq):  ## test GR1TE inverse
 
 if __name__ == "__main__":
     if len(sys.argv) < 4:
-        print("Usage: python3 test.py n k d1 d2 d3 ... mult|add|sub|inv")
+        print("Usage: sage genGRTowering.sage n k d1 d2 d3 ... mult|add|sub|inv")
 
     n = int(sys.argv[1])
     k = int(sys.argv[2])
-    d = [int(x) for x in sys.argv[3:-1]]
+   
+    for i, arg in enumerate(sys.argv[3:], start=3):
+        if arg in {"mult", "add", "sub", "inv"}:
+            d_end = i
+            break
+    else:
+        d_end = len(sys.argv)
+    d = [int(x) for x in sys.argv[3:d_end]]
+    operations = set(sys.argv[d_end:])
 
     GR = mkgrtowers(k, d) 
     seq_permutations = all_permutations(d)
 
-
-    if (sys.argv[-1] == "mult"):
-        for _ in range(n):
-            sys.stdout.write("    ".join(testmul(GR, k, d)) + '\n')
-    elif (sys.argv[-1] == "add"):
-        for _ in range(n):
-            sys.stdout.write("    ".join(testadd(GR, k, d)) + '\n')
-    elif (sys.argv[-1] == "sub"):
-        for _ in range(n):
-            sys.stdout.write("    ".join(testsub(GR, k, d)) + '\n')
-    elif (sys.argv[-1] == "inv"):
-        for _ in range(n):
-            sys.stdout.write("    ".join(testinv(GR, k, d, seq_permutations)) + '\n')
-    else:
-        print("Usage: python3 test.py n k d1 d2 d3 ... mult|add|sub|inv")
+    path = "../../TestVectors/"
+    if 'mult' in operations:
+        with open(path + "GRToweringMultiplication.txt", "w") as f:
+            for _ in range(n):
+                f.write(" ; ".join(testmul(GR, k, d)) + '\n')
+    if 'add' in operations:
+        with open(path + "GRToweringAddition.txt", "w") as f:
+            for _ in range(n):
+                f.write(" ; ".join(testadd(GR, k, d)) + '\n')
+    if 'sub' in operations:
+        with open(path + "GRToweringSubtraction.txt", "w") as f:
+            for _ in range(n):
+                f.write(" ; ".join(testsub(GR, k, d)) + '\n')
+    if 'inv' in operations:
+        with open(path + "GRToweringInverse.txt", "w") as f:
+            for _ in range(n):
+                f.write(" ; ".join(testinv(GR, k, d, seq_permutations)) + '\n')

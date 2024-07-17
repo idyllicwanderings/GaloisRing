@@ -10,7 +10,9 @@
 #include <iomanip>
 
 #include <algorithm>
+#include <stack>
 #include <array>
+#include <tuple>
 #include <initializer_list>
 #include <concepts>
 #include <cmath>
@@ -209,6 +211,13 @@ namespace arith {
         // return res;
     }
 
+    std::string trim(const std::string &s) {
+        auto start = s.find_first_not_of(" \t\n\r");
+        auto end = s.find_last_not_of(" \t\n\r");
+        return start == std::string::npos ? "" : s.substr(start, end - start + 1);
+    }
+}
+
 };
 
 
@@ -319,14 +328,11 @@ namespace ops {
         }
     };
     
-    // TODO: 想想这个GR存储方式怎么搞。。。
     template <int k>
     constexpr auto reduction_polynomial() {
         return reduction_polynomial_impl<k, num_reduction_monomials<k>()>::value();
     }
 
-    // TODO: test this
-    // TODO: more constraints?????? idk 
     template <int k, int d, typename R>
     std::array<R, d> reduce_once(const std::array<R, d>& x, int red) { // Trinomial
         std::array<R, d> high;   // high poly terms
@@ -386,21 +392,12 @@ namespace ops {
     /**
      * maximum 32 bits for now
     */
-    template <int k, typename T>
-    T reduce(const std::uint64_t& x) {
-        constexpr auto red = reduction_polynomial<k>();
-        if constexpr(k <= 32) {
-            std::uint64_t y = reduce_once<k,std::uint64_t>(x, red);
-        }
-        // TODO: bigger bits
-    }
-
-    template <int n, int d, typename R>
-    R reduce(const std::array<R, n>& x) {
-        // TODO
-        constexpr auto red = reduction_polynomial<d>();
+    template <int k, int n, int d, typename R, int... ds>
+    std::array<R, d> reduce(const std::array<R, n>& x) {
+        #include "grmodtables.h"
+        constexpr auto red = (sizeof...(ds) == 0)? reduction_polynomial<d>() : grmodtables::moduli<k, ds..., d>;
         auto& low = reduce_once<n, d, R>(x, red);
-        low = reduce_once<n, d, std::uint64_t>(low, red);
+        low = reduce_once<n, d, R>(low, red);
         // truncate to d terms
         std::array<R, d> res;
         std::copy(low.begin(), low.begin() + d, res().begin());
@@ -470,7 +467,7 @@ class GR1e
             std::array<Z2k<k>, d> a = polys_;
             std::array<Z2k<k>, d> b = o.polys_;
             //TODO: to further deal with a bigger than 64 bits
-            return GR1e<k, d>(ops::reduce<k, F>(multiply(a, b)));
+            return GR1e<k, d>(ops::reduce<k, 2*d - 1, d, Z2k<k>>(ops::multiply<d, Z2k<k>>(a, b)));
         }
 
         GR1e<k, d>& operator*=(const GR1e<k, d>& o) { return *this = (*this) * o; }
@@ -490,6 +487,17 @@ class GR1e
             return res;
         }
 
+        static GR1e<k, d> from_list(const std::string& str) {
+            std::array<Z2k<k>, d> res;
+            std::istringstream ss(str);
+            std::string cur;
+            int i = 0;
+            while (std::getline(ss, cur, ',')) {
+                res[i++] = Z2k<k>(trim(cur));
+            }
+            return GR1e<k, d>(res);
+        }
+
         static GR1e<k, d> from_bits(const std::array<F, d>& bits) {
             std::array<Z2k<k>, d> a;
             for (int i = 0; i < std::min(64, d); i++) {
@@ -497,11 +505,26 @@ class GR1e
             }
             return GR1e<k, d>(a);
         }
+        
+        std::array<F, d> force_list() const {
+            std::array<F, d> res;
+            for (int i = 0; i < d; i++) {
+                res[i] = polys_[i].force_int();
+            }
+            return res;
+        }
 
-        // std::array<k, d> to_bits() const {
-        //     // TODO
-        //     return res;
-        // }
+        std::string force_str() const {
+            std::ostringstream ss;
+            ss << "[";
+            for (int i = 0; i < d; i++) {
+                oss << polys_[i].force_int();
+                if (i == d - 1) break;
+                oss << ", ";
+            }
+            ss << "]";
+            return ss.str();
+        }
 
         // static GR1e<k, d> random(PRNG& gen) {
         //     std::array<F, d> res;
@@ -521,9 +544,7 @@ class GR1e
 
         static GR1e<k, d> one() {
             std::array<Z2k<k>, d> res;
-            for (int i = 0; i < d; i++) {
-                res[i] = Z2k<k>(1); 
-            }
+            res[0] = Z2k<k>(1); 
             return GR1e<k, d>(res); 
         }
 
@@ -558,6 +579,7 @@ class GR1e
         std::array<Z2k<k>, d> polys_;
         static constexpr int d0_ = d;
         static constexpr int k_ = k;
+        static constexpr std::tuple<std::integral_constant<int, d>> ds_ = {};
 
 };
 
@@ -585,6 +607,7 @@ concept BaseRing = IsBaseRing<T> || (is_grt_template<T>::value && requires {
     typename T::BaseType;
     requires IsBaseRing<typename T::BaseType>;
 });
+
 
 /**
  * Towering of Galois Ring
@@ -634,7 +657,8 @@ class GRT1e<R, d> {
         }
 
         GRT1e<R, d> operator*(const GRT1e<R, d>& o) const {
-            return GRT1e<R, d>(reduce(multiply(polys_, o.polys_)));
+            using dlist = tuple_to_integer_sequence<decltype(ds_)>;
+            return GRT1e<R, d>(ops::reduce<k_, 2*d - 1, d, R, dlist>(ops::multiply<d, R>(polys_, o.polys_)));
         }
 
         GRT1e<R, d>& operator*=(const GRT1e<R,d>& o) {
@@ -668,7 +692,7 @@ class GRT1e<R, d> {
 
         static GRT1e<R, d> one() {
             std::array<R, d> res;
-            //TODO
+            res[0] = R::one(); 
             return GRT1e<R, d>(res); 
         }
 
@@ -698,6 +722,49 @@ class GRT1e<R, d> {
             return res;
         }
 
+        static GRT1e<R, d> from_list(const std::string& str) {
+            std::array<R, d> res;
+            std::stack<char> sstack;
+            std::string cur;
+            int i = 0;
+            for (char ch: str) {
+                if (ch == '[') {
+                    if (!sstack.empty()) cur += ch; 
+                    sstack.push(ch);
+                } 
+                else if (ch == ']') {
+                    sstack.pop();
+                    if (!sstack.empty()) cur += ch;
+                    else {
+                        res[i++] = R::from_list(trim(cur));
+                        cur.clear();
+                    }
+                } 
+                else if (ch == ',' && sstack.size() == 1) {
+                    if (!cur.empty()) {
+                        res[i++] = R::from_list(trim(cur));
+                        cur.clear();
+                    }
+                } 
+                else {
+                    if (!sstack.empty()) cur += ch;
+                }
+            }
+            return GRT1e<R, d>(res);
+        }
+
+        std::string force_str() const {
+            std::ostringstream ss;
+            ss << "[";
+            for (int i = 0; i < d; i++) {
+                oss << polys_[i].force_str();
+                if (i == d - 1) break;
+                oss << ", ";
+            }
+            ss << "]";
+            return ss.str();
+        }
+
     private:
         // TODO: copy, move constructor for all classes?
         std::array<R, d> polys_;   // from x^0 to x^(d-1), modulus UP TO x^d
@@ -705,6 +772,8 @@ class GRT1e<R, d> {
         static constexpr int d0_ = d;
         static constexpr int d_prod_ = d * R::d0_;
         static constexpr int tower_depth_ = 1 + (is_gr_template<BaseType>::value ? 0 : BaseType::tower_depth_);
+        static constexpr  std::tuple<std::integral_constant<int, d>> ds_ = std::tuple_cat(R::ds_, std::make_tuple(std::integral_constant<int, d>{}))
+
 };
 
 
@@ -723,6 +792,8 @@ GR1e<k, d1> liftGR(const GR1e<k, d0>& base) {
     }
     return res;
 }
+
+
 
 
 

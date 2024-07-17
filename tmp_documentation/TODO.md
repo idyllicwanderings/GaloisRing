@@ -4,7 +4,7 @@
 
 - [x] 写一个polynomial mult 接口
 
-- [ ] 把googletest去掉，参考一下keccak，用makefile写test
+- [ ] 用makefile写test
 
 - [ ] 把error handling统一一下
 
@@ -87,9 +87,9 @@
 
 - [x] 快速幂实现inverse for GR towering:
 
-- [ ] GR1e GRT1e的test vector string
+- [x] GR1e GRT1e的test vector string
 
-  - [ ] 固定GR test里sage script的 polynomial alphabet
+  - [x] 固定GR test里sage script的 polynomial alphabet
   - [ ] 写GRT1e test(固定polynomial) 
   - [ ] 按照sage规则写一个写GR1e GRT1e的operator<<重载
 
@@ -111,8 +111,16 @@
 
 - [ ] gring.h编译通过
 
-  - [ ] 增加一个函数，把BRlifttables加进去
-  - [ ] 
+  - [x] 增加一个函数，把BRlifttables加进去
+  - [ ] 处理一下reduce
+  
+- [ ] RO
+
+  - [x] RO写一下。参见question 2
+  - [ ] 想法子把这个库build进来。咋搞
+  - [ ] test一下我的demo
+
+- [ ] 
 
 
 
@@ -158,4 +166,93 @@
 - [ ] 7.11 把以前的纸质资料都整理出来。
 
 
+
+### questions
+
+Hi happy weekend/holidays!!!
+
+I had a C++ metaprogramming question: how to pass a constant tuple into a variadic non-type (specifically int) template parameter pack?
+
+Here is the function I tried to implement:
+
+```c++
+template <int k, int n, int d, typename R, int... ds>
+std::array<R, d> reduce(const std::array<R, n>& x) {
+    #include "grmodtables.h"
+    constexpr auto red = (sizeof...(ds) == 0)? reduction_polynomial<d>() : grmodtables::moduli<k, ds..., d>;
+    //...
+    return res;
+}
+```
+
+I wrote a demo to show the simplified architecture of the ```GR1e``` (GR with one extension) and ```GRT1e``` (GR with towering) classes. I also tried to use `std::apply`, but since there are no input arguments, this approach doesn’t match the non-type template parameters.
+
+```c++
+
+template<int k, int d>
+class GR1E {
+   public:
+    static constexpr int d_ = d;
+    static constexpr std::tuple<> ds_ = {};
+
+};
+
+template <int d1, typename R, int... ds>
+int reduce() {
+    return 1;      
+}
+
+template<typename R, int d> 
+class GR {
+   public:
+    static constexpr auto ds_ = std::tuple_cat(R::ds_, std::make_tuple(std::integral_constant<int, d>{}));
+
+    void op() const {
+        std::apply([](auto &&... args) { reduce<d, R, args...>(); }, ds_); //failed
+    }
+};
+
+template <typename... T> void my_func(const T&... tupleArgs) {
+    std::cout << "my_func called with values: ";
+    (std::cout << ... << tupleArgs);
+    std::cout << std::endl;
+}
+
+template <int... T> void my_func1(int x1, int x2) {
+    std::cout << "my_func1 called with values: ";
+    std::cout << std::endl;
+}
+
+
+int main() {
+    std::tuple<int, float> my_tuple = {1, 2.0f};
+    std::apply([](auto &&... args) { my_func(args...); }, my_tuple);
+
+    // static constexpr std::tuple<int, int> my_tuple1 = {1, 1};
+    // std::apply([](auto &&... args) {  my_func1(args...); }, my_tuple1);
+
+    GR<GR1E<1, 2>, 3> gr1; 
+    GR<GR<GR1E<1, 2>, 5>, 3> gr2; 
+
+    gr2.op();
+    return 0;
+}
+
+```
+
+There's also an alternative like below, but that'd require modifications of other files & functions and is less flexible :/
+
+```c++
+template <int d1, int len, std::array<int, len> T>
+int reduce() {
+    //...
+    return 1;      
+}
+```
+
+
+
+##### question 2
+
+为啥可颂说SHAKE当做一个PRG？shake不是xof吗。。。
 

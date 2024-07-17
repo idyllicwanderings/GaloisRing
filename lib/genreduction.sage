@@ -63,11 +63,11 @@ for deg, moduli in TOWERS.items():
         inner_tem = f"GRT1e< {prev_tem}, {len(data[0])}>"
         return inner_tem, f"{inner_tem}({{{', '.join(inner_strs)}}})"
     mtype, mval = enum_build(moduli, deg, len(deg) - 1)
-    textual_towerings.append(f"template <int k> inline const std::array<" + mtype + f", {deg[-1] + 1}> "+ "moduli<k, " +", ".join(str(x) for x in deg) + f"> = " + mval + f";")
+    textual_towerings.append(f"template <int k> inline const std::array<" + mtype + f", {deg[-1] + 1}> "+ "reduction_polynomial<k, " +", ".join(str(x) for x in deg) + f"> = " + mval + f";")
         
 
 
-with open("grtowertables.h", "w") as f:
+with open("grmodtables.h", "w") as f:
     f.write("""
 // This file was automatically generated, changes may be overwritten
 #pragma once
@@ -75,24 +75,26 @@ with open("grtowertables.h", "w") as f:
 // Only to keep everything looking nice if you somehow would include the file directly; it's circular otherwise
 #include "gring.h"
 
-namespace grtowertables {
-    template <int k, int d0> extern const std::array<Z2k<k>, d0 + 1> moduli;
-    template <int k, int d0, int d1> extern const std::array<GR1e<k, d0>, d1 + 1> moduli;
-    template <int k, int d0, int d1, int d2> extern const std::array <GRT1e <GR1e<k, d0>, d1>, d2 + 1> moduli;
-    template <int k, int d0, int d1, int d2, int d3> extern const std::array< GRT1e <GRT1e <GR1e<k, d1>, d0>, d2>, d3 + 1> moduli;
-    template <int k, int d0, int d1, int d2, int d3, int d4> extern const std::array< GRT1e <GRT1e <GRT1e <GR1e<k, d0>, d1>, d2>, d3>, d4 + 1> moduli;
+namespace grmodtables {
+    template <int k, int d0> extern const std::array<Z2k<k>, d0 + 1> reduction_polynomial;
+    template <int k, int d0, int d1> extern const std::array<GR1e<k, d0>, d1 + 1> reduction_polynomial;
+    template <int k, int d0, int d1, int d2> extern const std::array <GRT1e <GR1e<k, d0>, d1>, d2 + 1> reduction_polynomial;
+    template <int k, int d0, int d1, int d2, int d3> extern const std::array< GRT1e <GRT1e <GR1e<k, d1>, d0>, d2>, d3 + 1> reduction_polynomial;
+    template <int k, int d0, int d1, int d2, int d3, int d4> extern const std::array< GRT1e <GRT1e <GRT1e <GR1e<k, d0>, d1>, d2>, d3>, d4 + 1> reduction_polynomial;
     
     %s
-} // namespace grtowertables
+} // namespace grmodtables
 """ % "\n    ".join(textual_towerings))
 
 
 
-
-with open("grtowertables.sage", "w") as f:
+# TODO
+'''
+with open("grmodtables.sage", "w") as f:
     f.write("""
 # only for storing the towering tables.
 TOWERS = %s
 """ % "\n    ".join(str(TOWERS)))
+'''
 
 print("------------------------------------writefile completed----------------------------------")
