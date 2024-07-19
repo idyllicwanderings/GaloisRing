@@ -10,11 +10,6 @@
 
 #include "testGRTowering.inc"
 
-void writeTestGRT() {
-
-}
-
-
 
 void testGR()
 {
@@ -176,10 +171,7 @@ void selfTestInverse(unsigned char * in_a, unsigned char *expected_a_inv) {
 
 void selfTestExeceptionalSequence() {
     //TODO
-}
 
-void selfTestLift() {
-    //TODO
 }
 
 

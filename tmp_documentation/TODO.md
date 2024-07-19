@@ -173,6 +173,8 @@ Hi happy weekend/holidays!!!
 
 I had a C++ metaprogramming question: how to pass a constant tuple into a variadic non-type (specifically int) template parameter pack?
 
+
+
 Here is the function I tried to implement:
 
 ```c++
@@ -248,6 +250,12 @@ int reduce() {
     //...
     return 1;      
 }
+```
+
+
+
+```c++
+
 ```
 
 

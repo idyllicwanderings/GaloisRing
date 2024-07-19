@@ -1,12 +1,13 @@
+#include "UnitTest.h"
 
 
-# define GRT_HAS_5_TOWERS
-#define k
-#define d1
-#define d2
-#define d3
-#define d4
-#define d5
+#define k 2
+#define d1 5
+#define d2 5
+#define d3 5
+#define d4 5
+#define d5 5
+#define GRT_HAS_5_TOWERS
 
 
 #ifdef UT_OUTPUT

@@ -7,7 +7,7 @@
 #include <iostream>
 
 // template<int k, int d>
-// class GR1E {
+// class Ring {
 //    public:
 //     using BaseType = void; //WHY?
 
@@ -15,7 +15,7 @@
 //     static constexpr int d_ = d;
 
 //     // 定义 operator-=
-//     GR1E<k, d>& operator-=(const  GR1E<k, d>& o) {
+//     Ring<k, d>& operator-=(const  Ring<k, d>& o) {
 //         for (int i = 0; i < k; ++i) {
 //             polys_[i] -= o.polys_[i];
 //         }
@@ -23,8 +23,8 @@
 //     }
 
 //     // 定义 operator-
-//     GR1E<k, d> operator-(const  GR1E<k, d>& o) const {
-//         GR1E<k, d> result = *this;
+//     Ring<k, d> operator-(const  Ring<k, d>& o) const {
+//         Ring<k, d> result = *this;
 //         result -= o;
 //         return result;
 //     }
@@ -38,7 +38,7 @@
 // template<typename T>
 // struct is_br_template : std::false_type {};
 // template<int k, int d>
-// struct is_br_template<GR1E<k, d>> : std::true_type {};
+// struct is_br_template<Ring<k, d>> : std::true_type {};
 
 
 // template<typename T>
@@ -48,13 +48,13 @@
 
 
 // template<typename T>
-// concept IsBaseGR1E = is_br_template<T>::value && !is_gr_template<T>::value;
+// concept IsBaseRing = is_br_template<T>::value && !is_gr_template<T>::value;
 
 // template<typename T>
 // concept ValidR = requires {
-//     requires IsBaseGR1E<T> || (is_gr_template<T>::value && requires {
+//     requires IsBaseRing<T> || (is_gr_template<T>::value && requires {
 //         typename T::BaseType;
-//         requires IsBaseGR1E<typename T::BaseType>;
+//         requires IsBaseRing<typename T::BaseType>;
 //     });
 // };
 
@@ -71,7 +71,7 @@
 // template<ValidR R, int k> 
 // class GR<R,k> {
 //    public:
-//     // 将 R 的最终 GR1E 类型通过别名暴露出来
+//     // 将 R 的最终 Ring 类型通过别名暴露出来
 //     using BaseType = std::conditional_t<is_br_template<R>::value, R, typename R::BaseType>;
 //     //using F = uint8_t;
 
@@ -80,8 +80,8 @@
 
 // int main() {
 
-//     GR<GR1E<1, 2>, 3> gr1; 
-//     GR<GR<GR1E<1, 2>, 5>, 3> gr2; 
+//     GR<Ring<1, 2>, 3> gr1; 
+//     GR<GR<Ring<1, 2>, 5>, 3> gr2; 
 
 //     //GR<GR<1, 2>, 3> gr_wrong;  
 
@@ -167,7 +167,7 @@
 
 // template<int k>
 // requires( 1 <= k && k <= 64 )
-// class Z2k 
+// class Z 
 // {
 //     public:
 //         using F = typename datatype<type_idx<k>()>::type;
@@ -175,11 +175,11 @@
 //         static inline F MASK = make_mask<F, k>();
 
 //         template <typename T>
-//         explicit Z2k<k>(const T& ele): val_(F(ele) & MASK) {}
+//         explicit Z<k>(const T& ele): val_(F(ele) & MASK) {}
 
-//         explicit Z2k<k>(F f, bool /*skip mask*/) : val_(std::move(f & MASK)) {}
+//         explicit Z<k>(F f, bool /*skip mask*/) : val_(std::move(f & MASK)) {}
 
-//         Z2k() : val_(0) {}
+//         Z() : val_(0) {}
 //     private:
 //         F val_;
 // };
@@ -188,32 +188,32 @@
 
 // template<int k, int d>
 // requires ( 1 <= k && k <= 64 && 1 <= d && d <= 32)
-// class GR1e 
+// class Ring 
 // {
 //     public: 
 //         template <typename T>
-//         explicit GR1e<k, d>(const std::array<T, d>& eles): polys_(eles) {}
+//         explicit Ring<k, d>(const std::array<T, d>& eles): polys_(eles) {}
 
-//         explicit GR1e<k, d>(const std::array<Z2k<k>, d>& eles): polys_(eles) {}
+//         explicit Ring<k, d>(const std::array<Z<k>, d>& eles): polys_(eles) {}
 
-//         GR1e() {
-//             polys_.fill(Z2k<k>());
+//         Ring() {
+//             polys_.fill(Z<k>());
 //         }
 
 //         template <typename T>
-//         explicit GR1e<k, d>(std::initializer_list<T> eles) {
+//         explicit Ring<k, d>(std::initializer_list<T> eles) {
 //             if (eles.size() != d) {
 //                 throw std::out_of_range("Wrong size of d provided");
 //             }
 //             int i = 0;
 //             for (const auto& ele : eles) {
-//                 polys_[i] = Z2k<k>(ele);
+//                 polys_[i] = Z<k>(ele);
 //                 ++i;
 //             }
 //         }
 
 //     private:
-//         std::array<Z2k<k>, d> polys_;
+//         std::array<Z<k>, d> polys_;
 //         static constexpr int d0_ = d;
 
 // };
@@ -223,14 +223,14 @@
 //  * Towering of Galois Ring
 //  */
 // template<typename R, int d> 
-// class GRT1e {
+// class RingExt {
 //     public:
-//         explicit GRT1e<R, d>(const std::array<R, d>& poly): polys_(poly) {;}
+//         explicit RingExt<R, d>(const std::array<R, d>& poly): polys_(poly) {;}
 
-//         GRT1e()  { polys_.fill(R());}
+//         RingExt()  { polys_.fill(R());}
 
 //         template <typename T>
-//         explicit GRT1e<R, d>(std::initializer_list<T> eles) {
+//         explicit RingExt<R, d>(std::initializer_list<T> eles) {
 //             if (eles.size() != d) {
 //                 throw std::out_of_range("Unmatched extenssion degree provided");
 //             }
@@ -242,13 +242,13 @@
 //         static constexpr int d0_ = d;
 // };
 
-// template <int k, int d0, int d1> extern const GRT1e<GR1e<k, d1>, d0> moduli;
-// template <int k> inline const GRT1e<GR1e<k, 2>, 3> moduli<k, 2, 3> = GRT1e<GR1e<k, 2>, 3>({GR1e<k, 2>({0u, 1u}), GR1e<k, 2>({0u, 1u}), GR1e<k, 2>({1u, 0u})});
+// template <int k, int d0, int d1>  const RingExt<Ring<k, d1>, d0> moduli;
+// template <int k> inline const RingExt<Ring<k, 2>, 3> moduli<k, 2, 3> = RingExt<Ring<k, 2>, 3>({Ring<k, 2>({0u, 1u}), Ring<k, 2>({0u, 1u}), Ring<k, 2>({1u, 0u})});
     
 
 // int main() {
-//     Z2k<2> gr1(1);
-//     GR1e<2, 3> gr2({1u, 1u, 1u});
+//     Z<2> gr1(1);
+//     Ring<2, 3> gr2({1u, 1u, 1u});
 //     moduli<2, 2, 3>;
 
 //     //GR<GR<1, 2>, 3> gr_wrong;  
@@ -259,76 +259,80 @@
 
 // ++++++++++++++++++++++++++++++++++++++++++ example 4++++++++++++++++++++++++++++++++++++++++++
 
-template<int k, int d>
-class GR1E {
-   public:
-    using BaseType = void;
 
-    std::array<uint8_t, k> polys_; 
+
+template <int k>
+class Z {
+    public:
+        explicit Z<k>(uint64_t& ele): val_(ele) {}
+
+        uint64_t val_;
+};
+
+template<int k, int d>
+class Ring {
+   public:
+    template <typename T>
+    explicit Ring<k, d>(std::initializer_list<T> eles) {
+        int i = 0;
+        for (const auto& ele : eles) {  
+            polys_[i] = Z<k>(ele);
+            i++;
+        }
+    }
+
+    std::array<Z<k>, d> polys_; 
     static constexpr int d_ = d;
     static constexpr std::tuple<> ds_ = {};
 
 };
 
 
-
-// template <int d1, typename R, int... ds>
-// int reduce() {
-//     return 1;      
-// }
-
-template <int d1, int len, std::array<int, len> T>
-int reduce() {
-    return 1;      
-}
+template <int k, int d1, typename R, int... ds>
+int reduce();
 
 template<typename R, int d> 
-class GR {
+class RingExt {
    public:
-    static constexpr auto ds_ = std::tuple_cat(R::ds_, std::make_tuple(std::integral_constant<int, d>{}));
+    template <typename T>
+    explicit RingExt<R, d>(std::initializer_list<T> eles) {
+        std::copy(eles.begin(), eles.end(), polys_.begin());
+    }
 
     void op() const {
         //std::apply([](auto &&... args) { reduce<d, R, args...>(); }, ds_);
-        //reduce<d, R, dlist>();
+        reduce<3, d, R, ds_>();
     }
+
+    static constexpr auto ds_ = std::tuple_cat(R::ds_, std::make_tuple(std::integral_constant<int, d>{}));
+    std::array<R, d> polys_; 
 };
 
 
-template <typename... T> void my_func(const T&... tupleArgs) {
-    std::cout << "my_func called with values: ";
-    (std::cout << ... << tupleArgs);
-    std::cout << std::endl;
+
+template <int k, int d0>  const std::array<Z<k>, d0 + 1> polynomial;
+template <int k, int d0, int d1>  const std::array<Ring<k, d0>, d1 + 1> polynomial;
+template <int k, int d0, int d1, int d2>  const std::array <RingExt <RingExt<k, d0>, d1>, d2 + 1> polynomial;
+// more d0, d1, d2 here....
+
+template <int k> inline const std::array<Z<k>, 3> polynomial<k, 2> = {Z<k>(1u), Z<k>(1u), Z<k>(1u)};
+template <int k> inline const std::array<Ring<k, 2>, 3> polynomial<k, 2, 2> = {Ring<k, 2>({0u, 1u}), Ring<k, 2>({0u, 1u}), Ring<k, 2>({1u, 0u})};
+// more d0, d1, d2 here....
+
+template <int k, int d1, typename R, int... ds>
+int reduce()
+{
+    constexpr auto red = polynomial<k, d1, ds...>;
+    // calculations on R, does not matter
+    return 1;      
 }
-
-
-// template <int T1> void my_func1(int x1, int x2) {
-//     std::cout << "my_func1 called with values: ";
-//     (std::cout << T1);  
-//     std::cout << std::endl;
-// }
-
-template <int... T> void my_func1(int x1, int x2) {
-    std::cout << "my_func1 called with values: ";
-    std::cout << std::endl;
-}
-
 
 int main() {
-    std::tuple<int, float> my_tuple = {1, 2.0f};
-    std::apply([](auto &&... args) { my_func(args...); }, my_tuple);
 
-    static constexpr std::tuple<int, int> my_tuple1 = {1, 1};
-    std::apply([](auto &&... args) {  my_func1(args...); }, my_tuple1);
+    RingExt<Ring<1, 2>, 3> r1; 
+    RingExt<RingExt<Ring<1, 2>, 5>, 3> r2; 
 
-    int l, std::array<int, l> T>
-
-
-    GR<GR1E<1, 2>, 3> gr1; 
-    GR<GR<GR1E<1, 2>, 5>, 3> gr2; 
-
-    gr2.op();
-
-    //GR<GR<1, 2>, 3> gr_wrong;  
+    r2.op();
 
     return 0;
 }

@@ -63,7 +63,7 @@ for deg, moduli in TOWERS.items():
         inner_tem = f"GRT1e< {prev_tem}, {len(data[0])}>"
         return inner_tem, f"{inner_tem}({{{', '.join(inner_strs)}}})"
     mtype, mval = enum_build(moduli, deg, len(deg) - 1)
-    textual_towerings.append(f"template <int k> inline const std::array<" + mtype + f", {deg[-1] + 1}> "+ "reduction_polynomial<k, " +", ".join(str(x) for x in deg) + f"> = " + mval + f";")
+    textual_towerings.append(f"template <int k> inline const std::array<" + mtype + f", {deg[-1] + 1}> "+ "reduction_polynomial<k, " + mtype + f" , {deg[-1]} > = " + mval + f";")
         
 
 
@@ -76,12 +76,7 @@ with open("grmodtables.h", "w") as f:
 #include "gring.h"
 
 namespace grmodtables {
-    template <int k, int d0> extern const std::array<Z2k<k>, d0 + 1> reduction_polynomial;
-    template <int k, int d0, int d1> extern const std::array<GR1e<k, d0>, d1 + 1> reduction_polynomial;
-    template <int k, int d0, int d1, int d2> extern const std::array <GRT1e <GR1e<k, d0>, d1>, d2 + 1> reduction_polynomial;
-    template <int k, int d0, int d1, int d2, int d3> extern const std::array< GRT1e <GRT1e <GR1e<k, d1>, d0>, d2>, d3 + 1> reduction_polynomial;
-    template <int k, int d0, int d1, int d2, int d3, int d4> extern const std::array< GRT1e <GRT1e <GRT1e <GR1e<k, d0>, d1>, d2>, d3>, d4 + 1> reduction_polynomial;
-    
+    template <int k, typename R, int d0> extern const std::array<R, d0 + 1> reduction_polynomial;
     %s
 } // namespace grmodtables
 """ % "\n    ".join(textual_towerings))

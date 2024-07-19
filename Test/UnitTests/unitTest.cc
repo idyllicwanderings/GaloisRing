@@ -1,7 +1,7 @@
 #include <cstdlib>
 #include <string>
 #include <iostream>
-#include "utest.h"
+#include "UnitTest.h"
 
 void UT_startTest(const char *s, const char *info)
 {

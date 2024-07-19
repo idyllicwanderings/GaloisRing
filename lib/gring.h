@@ -147,6 +147,7 @@ namespace arith {
 
     template <typename T, int k>
     constexpr T make_mask() {
+        if (k % (8 * sizeof(T)) == 0) return (T(0)) - 1;
         return (T(1) << (k % (8 * sizeof(T)))) - 1;
     }
     
@@ -280,10 +281,11 @@ class Z2k
             }
             return Z2k<k>(F(a), true);   
         }
-
-        // static Z2k<k> random(PRNG& gen) {
-        //     return Z2k<k>(random<F>(gen));
-        // }
+        
+        static Z2k<k> random() {
+            // TODO
+            return Z2k<k>(random_bits(k)); 
+        }
 
         /**
         * To be used only when needing access to the underlying bits, really
@@ -389,31 +391,33 @@ namespace ops {
         return low;
     }
 
-    /**
-     * maximum 32 bits for now
-    */
-    template <int k, int n, int d, typename R, int... ds>
+    
+    //template <int k, int n, typename R, int dlen, std::array<int, dlen> ds>
+    template <int k, int n, int d, typename R>
     std::array<R, d> reduce(const std::array<R, n>& x) {
         #include "grmodtables.h"
-        constexpr auto red = (sizeof...(ds) == 0)? reduction_polynomial<d>() : grmodtables::moduli<k, ds..., d>;
+        constexpr auto red = (sizeof...(ds) == 0)? reduction_polynomial<d>() : grmodtables::reduction_polynomial<k, R, d>;
         auto& low = reduce_once<n, d, R>(x, red);
         low = reduce_once<n, d, R>(low, red);
         // truncate to d terms
+        
         std::array<R, d> res;
         std::copy(low.begin(), low.begin() + d, res().begin());
         return res;
     }
     
     template <int n, typename R>
-    std::array<R, n * 2 - 1> multiply(const std::array<R, n>& a, std::array<R, n>& b) {
+    std::array<R, n * 2 - 1> multiply(const std::array<R, n>& a, const std::array<R, n>& b) {
         std::array<R, n * 2 - 1> mult;
-        for (int i = 0; i < n;i++) {
+        for (int i = 0; i < n; i++) {
             for (int j = 0; j < n; j++) {
                 mult[i + j] += a[i] * b[j];
             }
         }
         return mult;
     }
+
+    
 }
 
 
@@ -526,13 +530,13 @@ class GR1e
             return ss.str();
         }
 
-        // static GR1e<k, d> random(PRNG& gen) {
-        //     std::array<F, d> res;
-        //     for (int i = 0; i < d; i++) {
-        //         res[i] = random<F>(gen); //TODO: the generator elements
-        //     }
-        //     return GR1e<k, d>(res); // auto masked
-        // }
+        static GR1e<k, d> random() {
+            std::array<R, d> res;
+            for (int i = 0; i < d; i++) {
+                res[i] = Z2k<k>::random(); 
+            }
+            return GR1e<k, d>(res); 
+        }
 
         static GR1e<k, d> zero() {
             std::array<Z2k<k>, d> res;
@@ -579,7 +583,6 @@ class GR1e
         std::array<Z2k<k>, d> polys_;
         static constexpr int d0_ = d;
         static constexpr int k_ = k;
-        static constexpr std::tuple<std::integral_constant<int, d>> ds_ = {};
 
 };
 
@@ -673,13 +676,13 @@ class GRT1e<R, d> {
             return (polys_ == o.polys_);
         }
 
-        // static GRT1e<R, d> random(PRNG& gen) {
-        //     std::array<R, d> res;
-        //     for (int i = 0; i < d; i++) {
-        //         res[i] = R::random(gen); //TODO: gen
-        //     }
-        //     return GRT1e<R, d>(res); // auto masked
-        // }
+        static GRT1e<R, d> random() {
+            std::array<R, d> res;
+            for (int i = 0; i < d; i++) {
+                res[i] = R::random(); 
+            }
+            return GRT1e<R, d>(res); 
+        }
 
         // TODO: write a constructor for zero()
         static GRT1e<R, d> zero() {
@@ -766,14 +769,11 @@ class GRT1e<R, d> {
         }
 
     private:
-        // TODO: copy, move constructor for all classes?
         std::array<R, d> polys_;   // from x^0 to x^(d-1), modulus UP TO x^d
         static constexpr int k_ = R::k_;
         static constexpr int d0_ = d;
         static constexpr int d_prod_ = d * R::d0_;
         static constexpr int tower_depth_ = 1 + (is_gr_template<BaseType>::value ? 0 : BaseType::tower_depth_);
-        static constexpr  std::tuple<std::integral_constant<int, d>> ds_ = std::tuple_cat(R::ds_, std::make_tuple(std::integral_constant<int, d>{}))
-
 };
 
 
