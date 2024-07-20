@@ -217,7 +217,6 @@ namespace arith {
         auto end = s.find_last_not_of(" \t\n\r");
         return start == std::string::npos ? "" : s.substr(start, end - start + 1);
     }
-}
 
 };
 
@@ -283,8 +282,8 @@ class Z2k
         }
         
         static Z2k<k> random() {
-            // TODO
-            return Z2k<k>(random_bits(k)); 
+            // TODO:return Z2k<k>(random_bits(k)); 
+            return Z2k<k>(0);
         }
 
         /**
@@ -298,6 +297,11 @@ class Z2k
 
 };
 
+template<int k, int d>
+class GR1e;
+
+template<typename R, int d>
+class GRT1e;
 
 
 namespace ops {
@@ -391,18 +395,18 @@ namespace ops {
         return low;
     }
 
-    
+
+    #include "grmodtables.h"
     //template <int k, int n, typename R, int dlen, std::array<int, dlen> ds>
     template <int k, int n, int d, typename R>
     std::array<R, d> reduce(const std::array<R, n>& x) {
-        #include "grmodtables.h"
-        constexpr auto red = (sizeof...(ds) == 0)? reduction_polynomial<d>() : grmodtables::reduction_polynomial<k, R, d>;
+        constexpr auto red = (std::is_same_v<R, Z2k<k>>)? reduction_polynomial<d>() : grmodtables::reduction_polynomial<k, R, d>;
         auto& low = reduce_once<n, d, R>(x, red);
         low = reduce_once<n, d, R>(low, red);
         // truncate to d terms
         
         std::array<R, d> res;
-        std::copy(low.begin(), low.begin() + d, res().begin());
+        std::copy(low.begin(), low.begin() + d, res.begin());
         return res;
     }
     
@@ -423,7 +427,7 @@ namespace ops {
 
 template<int k, int d>
 requires ( 1 <= k && k <= 64 && 1 <= d && d <= 32)
-class GR1e 
+class GR1e<k, d>
 {
     public: 
         using F = typename arith::datatype<arith::type_idx<k>()>::type;
@@ -497,7 +501,7 @@ class GR1e
             std::string cur;
             int i = 0;
             while (std::getline(ss, cur, ',')) {
-                res[i++] = Z2k<k>(trim(cur));
+                res[i++] = Z2k<k>(arith::trim(cur));
             }
             return GR1e<k, d>(res);
         }
@@ -522,16 +526,16 @@ class GR1e
             std::ostringstream ss;
             ss << "[";
             for (int i = 0; i < d; i++) {
-                oss << polys_[i].force_int();
+                ss << polys_[i].force_int();
                 if (i == d - 1) break;
-                oss << ", ";
+                ss << ", ";
             }
             ss << "]";
             return ss.str();
         }
 
         static GR1e<k, d> random() {
-            std::array<R, d> res;
+            std::array<Z2k<k>, d> res;
             for (int i = 0; i < d; i++) {
                 res[i] = Z2k<k>::random(); 
             }
@@ -594,8 +598,8 @@ struct is_gr_template : std::false_type {};
 template<int k, int d>
 struct is_gr_template<GR1e<k, d>> : std::true_type {};
 
-template<typename R, int d>
-class GRT1e;
+// template<typename R, int d>
+// class GRT1e;
 template<typename T>
 struct is_grt_template : std::false_type {};
 template<typename R, int d>
@@ -660,8 +664,7 @@ class GRT1e<R, d> {
         }
 
         GRT1e<R, d> operator*(const GRT1e<R, d>& o) const {
-            using dlist = tuple_to_integer_sequence<decltype(ds_)>;
-            return GRT1e<R, d>(ops::reduce<k_, 2*d - 1, d, R, dlist>(ops::multiply<d, R>(polys_, o.polys_)));
+            return GRT1e<R, d>(ops::reduce<k_, 2*d - 1, d, R>(ops::multiply<d, R>(polys_, o.polys_)));
         }
 
         GRT1e<R, d>& operator*=(const GRT1e<R,d>& o) {
@@ -739,13 +742,13 @@ class GRT1e<R, d> {
                     sstack.pop();
                     if (!sstack.empty()) cur += ch;
                     else {
-                        res[i++] = R::from_list(trim(cur));
+                        res[i++] = R::from_list(arith::trim(cur));
                         cur.clear();
                     }
                 } 
                 else if (ch == ',' && sstack.size() == 1) {
                     if (!cur.empty()) {
-                        res[i++] = R::from_list(trim(cur));
+                        res[i++] = R::from_list(arith::trim(cur));
                         cur.clear();
                     }
                 } 
@@ -760,9 +763,9 @@ class GRT1e<R, d> {
             std::ostringstream ss;
             ss << "[";
             for (int i = 0; i < d; i++) {
-                oss << polys_[i].force_str();
+                ss << polys_[i].force_str();
                 if (i == d - 1) break;
-                oss << ", ";
+                ss << ", ";
             }
             ss << "]";
             return ss.str();

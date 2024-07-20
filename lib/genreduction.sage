@@ -35,7 +35,7 @@ def recurse_build(layer, prev_R, prev_degs, max_layer0):
         recurse_build(layer + 1, R2, prev_degs + [lift_d1], max_layer0)
 
 for base_d0 in D0_LIFT_DEG:
-    for max_layer0 in range(MAX_LAYER): 
+    for max_layer0 in range(0, MAX_LAYER): 
         F1 = GF(2^base_d0, 'ζ', modulus="minimal_weight")
         R1 = F1['δ']
         prev_degs = [base_d0]
@@ -55,15 +55,17 @@ for deg, moduli in TOWERS.items():
         if layer == 0 and len(deg) == 1:
             return f"Z2k<k>", "{{{}}}".format(", ".join(f"Z2k<k>({x}u)" for x in data))
         if layer == 0:
-            return f"GR1e<k, {deg[0]}>", "GR1e<k, {}>({{{}}})".format(deg[0], ", ".join(f"{x}u" for x in data))
+            return f"GR1e<k, {deg[layer]}>", "GR1e<k, {}>({{{}}})".format(deg[0], ", ".join(f"{x}u" for x in data))
         inner_strs = [enum_build(i, deg, layer - 1)[1] for i in data]
-        prev_tem = enum_build(data[0], deg, layer - 1)[0] 
+        prev_item = enum_build(data[0], deg, layer - 1)[0] 
         if layer == len(deg) - 1:
-            return f"{prev_tem}", f"{{{', '.join(inner_strs)}}}"
-        inner_tem = f"GRT1e< {prev_tem}, {len(data[0])}>"
-        return inner_tem, f"{inner_tem}({{{', '.join(inner_strs)}}})"
+            return f"{prev_item}", f"{{{', '.join(inner_strs)}}}"
+        inner_item = f"GRT1e< {prev_item}, {len(data)}>"
+        print(inner_item)
+        return inner_item, f"{inner_item}({{{', '.join(inner_strs)}}})"
+    
     mtype, mval = enum_build(moduli, deg, len(deg) - 1)
-    textual_towerings.append(f"template <int k> inline const std::array<" + mtype + f", {deg[-1] + 1}> "+ "reduction_polynomial<k, " + mtype + f" , {deg[-1]} > = " + mval + f";")
+    textual_towerings.append(f"template <int k> inline const std::array<" + mtype + f", {deg[-1] + 1}> "+ "reduction_polynomial<k, " + mtype + f", {deg[-1]}> = " + mval + f";")
         
 
 
