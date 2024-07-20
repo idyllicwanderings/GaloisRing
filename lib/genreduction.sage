@@ -1,7 +1,7 @@
 # This file generates the primitive polynomial of towering of GR via the towering of finite fields
 
 D0_LIFT_DEG = [i for i in range(2, 8)] #TODO: 不支持d0 = 1。
-LIFT_DEG = [[i for i in range(2, 5)], [i for i in range(2, 5)], [i for i in range(2, 5)]]
+LIFT_DEG = [[i for i in range(2, 3)], [i for i in range(2, 5)], [i for i in range(2, 5)]]
 ALPHABET = ['α','β','γ']
 MAX_LAYER = 4   # = 4 liftings at most
 
@@ -13,7 +13,7 @@ def modulus_to_list(moduli, layer):
     return [modulus_to_list(term, layer - 1) for term in moduli.list()]
 
 def recurse_build(layer, prev_R, prev_degs, max_layer0):
-    if layer >= max_layer0:  
+    if layer - 1 >= max_layer0:     #layer - 1 = 0, 此时max_layer0 = 1,
         return
     def find_irreducible(R1, d0):
         while true: #TODO:研究一下比较sparse的polynomial，并且对C++上能有加速的
@@ -24,7 +24,7 @@ def recurse_build(layer, prev_R, prev_degs, max_layer0):
                 R2 = F2[ALPHABET[layer - 1]]     
                 return F2, R2  
                        
-    for lift_d1 in LIFT_DEG[layer]:
+    for lift_d1 in LIFT_DEG[layer - 1]:
         R1 = prev_R
         if layer == 1:   # TODO: should we use primitive instead? 思考
             F2 = R1.quo(R1.irreducible_element(lift_d1, algorithm="first_lexicographic"))
@@ -35,7 +35,7 @@ def recurse_build(layer, prev_R, prev_degs, max_layer0):
         recurse_build(layer + 1, R2, prev_degs + [lift_d1], max_layer0)
 
 for base_d0 in D0_LIFT_DEG:
-    for max_layer0 in range(0, MAX_LAYER): 
+    for max_layer0 in range(1, MAX_LAYER): 
         F1 = GF(2^base_d0, 'ζ', modulus="minimal_weight")
         R1 = F1['δ']
         prev_degs = [base_d0]
