@@ -1,6 +1,3 @@
-#include <cstdlib>
-#include <string>
-#include <iostream>
 #include "UnitTest.h"
 
 void UT_startTest(const char *s, const char *info)

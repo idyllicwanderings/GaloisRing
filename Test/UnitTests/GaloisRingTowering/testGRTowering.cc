@@ -1,14 +1,10 @@
 // TODO: #include "config.h"
-#ifdef Has_GRT
 
-#include <assert>
-#include <stdint>
-#include <stdlib>
-#include <string>
+
 
 #define case 100
 
-#include "testGRTowering.inc"
+#include "testGRTowering.h"
 
 
 void testGR()
@@ -30,11 +26,11 @@ void writeTestGRTowering(void)
 #endif
 
 #ifdef GRT_HAS_K_64BITS_HIGHER
-    UT_startTest("GRTowering addition with k higher than 64 bits");
+    UT_startTest("GRTowering addition ", "k > 64 bits");
     //TODO
     UT_endTest();
 #else 
-    UT_startTest("GRTowering addition with k less than 64 bits");
+    UT_startTest("GRTowering addition", "k < 64 bits");
 
     std::vector<std::string> in_a;
     std::vector<std::string> in_b;
@@ -75,7 +71,6 @@ void writeTestGRTowering(void)
 #endif
 }
 
-
 void selfTestAddition(std::string in_a, std::string in_b, std::string expected_c) {
     #ifdef GRT_HAS_2_TOWERS
         GRT1e<GR1e<k, d1>, d2> a = GRT1e<GR1e<k, d1>, d2>::from_list(in_a);
@@ -100,7 +95,7 @@ void selfTestAddition(std::string in_a, std::string in_b, std::string expected_c
     assert(c.force_str() == (a + b).force_str());
 }
 
-void selfTestSubtraction(unsigned char * in_a, unsigned char * in_b, unsigned char *expected_c) {
+void selfTestSubtraction(std::string in_a, std::string in_b, std::string expected_c) {
     #ifdef GRT_HAS_2_TOWERS
         GRT1e<GR1e<k, d1>, d2> a = GRT1e<GR1e<k, d1>, d2>::from_list(in_a);
         GRT1e<GR1e<k, d1>, d2> b = GRT1e<GR1e<k, d1>, d2>::from_list(in_b);
@@ -124,7 +119,7 @@ void selfTestSubtraction(unsigned char * in_a, unsigned char * in_b, unsigned ch
     assert(c.force_str() == (a - b).force_str());
 }
 
-void selfTestMultiplication(unsigned char * in_a, unsigned char * in_b, unsigned char *expected_c) {
+void selfTestMultiplication(std::string in_a, std::string in_b, std::string expected_c) {
     #ifdef GRT_HAS_2_TOWERS
         GRT1e<GR1e<k, d1>, d2> a = GRT1e<GR1e<k, d1>, d2>::from_list(in_a);
         GRT1e<GR1e<k, d1>, d2> b = GRT1e<GR1e<k, d1>, d2>::from_list(in_b);
@@ -148,7 +143,7 @@ void selfTestMultiplication(unsigned char * in_a, unsigned char * in_b, unsigned
     assert(c.force_str() == (a * b).force_str());
 }
 
-void selfTestInverse(unsigned char * in_a, unsigned char *expected_a_inv) {
+void selfTestInverse(std::string in_a, std::string in_b) {
     #ifdef GRT_HAS_2_TOWERS
         GRT1e<GR1e<k, d1>, d2> a = GRT1e<GR1e<k, d1>, d2>::from_list(in_a);
         GRT1e<GR1e<k, d1>, d2> b = GRT1e<GR1e<k, d1>, d2>::from_list(in_b);
@@ -165,14 +160,13 @@ void selfTestInverse(unsigned char * in_a, unsigned char *expected_a_inv) {
         GRT1e<GRT1e<GRT1e<GRT1e<GR1e<k, d1>, d2>, d3>, d4>, d5> a = GRT1e<GRT1e<GRT1e<GRT1e<GR1e<k, d1>, d2>, d3>, d4>, d5>::from_list(in_a);
         GRT1e<GRT1e<GRT1e<GRT1e<GR1e<k, d1>, d2>, d3>, d4>, d5> b = GRT1e<GRT1e<GRT1e<GRT1e<GR1e<k, d1>, d2>, d3>, d4>, d5>::from_list(in_b);
     #endif
-    assert(a_inv.force_str() == a.inv().force_str());
+    assert(b.force_str() == a.inv().force_str());
 }
 
+// void selfTestExeceptionalSequence() {
+//     //TODO
 
-void selfTestExeceptionalSequence() {
-    //TODO
-
-}
+// }
 
 
 

@@ -24,16 +24,56 @@ if(CMAKE_CURRENT_SOURCE_DIR STREQUAL CMAKE_SOURCE_DIR)
 	configure_file(cmake.toml cmake.toml COPYONLY)
 endif()
 
-project(galois_ring)
+project(galois_ring
+	VERSION
+		0.1.0
+	DESCRIPTION
+		"math library"
+)
 
+# Target: grlib
+set(grlib_SOURCES
+	"lib/gring.h"
+	"lib/grlifttables.h"
+	"lib/grmodtables.h"
+)
 
-set(CMAKE_CXX_STANDARD 20)
+add_library(grlib INTERFACE)
 
-include_directories(lib)
+target_sources(grlib INTERFACE ${grlib_SOURCES})
+source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR} FILES ${grlib_SOURCES})
 
+target_compile_features(grlib INTERFACE
+	cxx_std_20
+)
 
-add_executable(main_executable src/demo.cpp)
+target_include_directories(grlib INTERFACE
+	lib
+)
 
+# Target: grtowertest
+set(grtowertest_SOURCES
+	"Test/UnitTests/GaloisRingTowering/testGRTowering.cc"
+	"Test/UnitTests/GaloisRingTowering/testGRTowering.h"
+	"Test/UnitTests/UnitTest.cc"
+	"Test/UnitTests/UnitTest.h"
+	cmake.toml
+)
 
-add_subdirectory(test)
+add_executable(grtowertest)
 
+target_sources(grtowertest PRIVATE ${grtowertest_SOURCES})
+source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR} FILES ${grtowertest_SOURCES})
+
+target_compile_features(grtowertest PRIVATE
+	cxx_std_20
+)
+
+target_link_libraries(grtowertest PRIVATE
+	grlib
+)
+
+get_directory_property(CMKR_VS_STARTUP_PROJECT DIRECTORY ${PROJECT_SOURCE_DIR} DEFINITION VS_STARTUP_PROJECT)
+if(NOT CMKR_VS_STARTUP_PROJECT)
+	set_property(DIRECTORY ${PROJECT_SOURCE_DIR} PROPERTY VS_STARTUP_PROJECT grtowertest)
+endif()

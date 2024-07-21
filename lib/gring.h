@@ -1,24 +1,27 @@
 #ifndef __GALOIS_RING_H
 #define __GALOIS_RING_H
 
-#include <emmintrin.h>
-#include <smmintrin.h>
-#include <wmmintrin.h>
+//TODO: 以下四个东西。。compilation wrong
+// #include <emmintrin.h>
+// #include <smmintrin.h>
+// #include <wmmintrin.h>
+// #include <iomanip>
+// #include <algorithm>
 #include <cassert>
 #include <cstdint>
 #include <iostream>
-#include <iomanip>
 
-#include <algorithm>
+
 #include <stack>
 #include <array>
 #include <tuple>
+#include <string>
+#include <sstream>
 #include <initializer_list>
 #include <concepts>
 #include <cmath>
 #include <type_traits>
 
-#include <stdexcept>
 
 // #include "SimpleFIPS202.h"
 
@@ -26,109 +29,10 @@ namespace arith {
  
 
     /**
-     * @note: code by robin
+     * @note: 128 bit code by robin
      * @todo: add support for multiplication of 128 bits?
      */
-    class int128 {
-        public:
-            int128() : m_val(_mm_set_epi64x(0, 0)) {}
-            int128(__m128i x) : m_val(std::move(x)) {}
-            int128(long long x) : m_val(_mm_set_epi64x(0, x)) {}
-            int128(long long lo, long long hi) : m_val(_mm_set_epi64x(hi, lo)) {}
-
-            static int128 make_mask(int k) {
-                if (k == 0) {
-                    return 0;
-                } else if (k < 64) {
-                    return int128((1ull << k) - 1);
-                } else if (k == 64) {
-                    return int128(-1);
-                } else if (k < 128) {
-                    return int128(_mm_set_epi64x((1ull << (k - 64)) - 1, -1));
-                } else if (k == 128) {
-                    return int128(_mm_set_epi64x(-1, -1));
-                } else {
-                    __builtin_unreachable();
-                }
-            }
-
-            int128 operator&(const int128& o) const {
-                return m_val & o.m_val;
-            }
-            int128& operator&=(const int128& o) {
-                return *this = *this & o;
-            }
-
-            int128 operator^(const int128& o) const {
-                return m_val ^ o.m_val;
-            }
-            int128& operator^=(const int128& o) {
-                return *this = *this ^ o;
-            }
-
-            int128 operator>>(int s) const {
-                __m128i packed_shifted = _mm_srli_epi64(m_val, s); // Shift both parts
-                __m128i cross_boundary = m_val;
-                if (s < 64) {
-                    cross_boundary = _mm_slli_epi64(m_val, 64 - s); // LSB of high to become MSB of low
-                } else if (s > 64) {
-                    cross_boundary = _mm_srli_epi64(m_val, s - 64); // MSB of high to become LSB of low
-                }
-                return packed_shifted ^ _mm_srli_si128(cross_boundary, 8); // Right shift the mixin by 8 *bytes* to bring high into low
-            }
-            int128& operator>>=(int s) {
-                return *this = (*this) >> s;
-            }
-
-            int128 operator<<(int s) const {
-                __m128i packed_shifted = _mm_slli_epi64(m_val, s); // Shift both parts
-                __m128i cross_boundary = m_val;
-                if (s < 64) {
-                    cross_boundary = _mm_srli_epi64(m_val, 64 - s); // MSB of low to become LSB of high
-                } else if (s > 64) {
-                    cross_boundary = _mm_slli_epi64(m_val, s - 64); // LSB of low to become MSB of high
-                }
-                return packed_shifted ^ _mm_slli_si128(cross_boundary, 8); // Left shift by 8 bytes to bring low into high
-            }
-            int128& operator<<=(int s) {
-                return *this = (*this) << s;
-            }
-
-            bool operator==(const int128& o) const {
-                const __m128i tmp = m_val ^ o.m_val;
-                return _mm_test_all_zeros(tmp, tmp);
-            }
-            bool operator!=(const int128& o) const {
-                return !(*this == o);
-            }
-
-            bool operator<(const unsigned long long& other) { // Special case for this, because it's a pain to do with another int128
-                return !(
-                        _mm_test_all_zeros(m_val, _mm_set_epi64x(-1, 0))                  // if anything is in the top 64 bits, it's definitely bigger
-                     || static_cast<unsigned long long>(_mm_cvtsi128_si64(m_val)) >= other // otherwise, unsigned compare the rest
-                     );
-            }
-
-            std::int64_t low() const {
-                return _mm_extract_epi64(m_val, 0);
-            }
-
-            std::int64_t high() const {
-                return _mm_extract_epi64(m_val, 1);
-            }
-
-            explicit operator __m128i() const {
-                return m_val;
-            }
-            __m128i reveal() const {
-                return m_val;
-            }
-
-        private:
-            __m128i m_val;
-    };
-
-
+    
     template <int k>
     constexpr int type_idx() {
         static_assert(k > 0, "Sane values?");
@@ -235,7 +139,7 @@ class Z2k
         static inline F MASK = arith::make_mask<F, k>();
 
         template <typename T>
-        explicit Z2k<k>(const T& ele): val_(F(ele) & MASK) {}
+        constexpr explicit Z2k<k>(const T& ele): val_(F(ele) & MASK) {}
 
         explicit Z2k<k>(F f, bool /*skip mask*/) : val_(std::move(f & MASK)) {}
 
@@ -339,47 +243,47 @@ namespace ops {
         return reduction_polynomial_impl<k, num_reduction_monomials<k>()>::value();
     }
 
-    template <int k, int d, typename R>
-    std::array<R, d> reduce_once(const std::array<R, d>& x, int red) { // Trinomial
-        std::array<R, d> high;   // high poly terms
-        std::copy(x.begin() + k, x.end(), high.begin());
-        std::array<R, d> low;   // low poly terms
-        std::copy(x.begin(), x.begin() + k, low.begin());
+    template <int n, int d, typename R>
+    std::array<R, n> reduce_once(const std::array<R, n>& x, const int& red) { // Trinomial
+        std::array<R, n> high;   // high poly terms
+        std::copy(x.begin() + d, x.end(), high.begin());
+        std::array<R, n> low;   // low poly terms
+        std::copy(x.begin(), x.begin() + d, low.begin());
 
-        std::array<R, d> hired;     // hi << red
+        std::array<R, n> hired;     // hi << red
         std::copy(high.begin() + red, high.begin(), hired.begin());
 
-        std::array<R, d> res;
+        std::array<R, n> res;
         for (int i = 0; i < d;i++) {
-            res = low[i] - high[i] - hired[i];
+            res[i] = low[i] - high[i] - hired[i];
         }
         return res;
     }
 
-    template <int k, int d, typename R>
-    std::array<R, d> reduce_once(const std::array<R, d>& x, const std::tuple<int, int, int>& red) { // Pentanomial
-        std::array<R, d> high;   // high poly terms
-        std::copy(x.begin() + k, x.end(), high.begin());
-        std::array<R, d> low;   // low poly terms
-        std::copy(x.begin(), x.begin() + k, low.begin());
+    template <int n, int d, typename R>
+    std::array<R, n> reduce_once(const std::array<R, n>& x, const std::tuple<int, int, int>& red) { // Pentanomial
+        std::array<R, n> high;   // high poly terms
+        std::copy(x.begin() + d, x.end(), high.begin());
+        std::array<R, n> low;   // low poly terms
+        std::copy(x.begin(), x.begin() + d, low.begin());
 
-        std::array<R, d> hired1;     // hi << red
+        std::array<R, n> hired1;     // hi << red
         std::copy(high.begin() + std::get<0>(red), high.begin(), hired1.begin());
-        std::array<R, d> hired2;     // hi << red
+        std::array<R, n> hired2;     // hi << red
         std::copy(high.begin() + std::get<1>(red), high.begin(), hired2.begin());
-        std::array<R, d> hired3;     // hi << red
+        std::array<R, n> hired3;     // hi << red
         std::copy(high.begin() + std::get<2>(red), high.begin(), hired3.begin());
 
-        std::array<R, d> res;
-        for (int i = 0; i < d;i++) {
-            res = low[i] - high[i] - hired1[i] - hired2[i] - hired3[i];
+        std::array<R, n> res;
+        for (int i = 0; i < n;i++) {
+            res[i] = low[i] - high[i] - hired1[i] - hired2[i] - hired3[i];
         }
         return res;
     }
 
        // TODO: make red polynomial more efficient data structure since it's sparse
     template <int n, int d, typename R> //R: base_ring, n: size of ring polynomial, d: extension degree
-    std::array<R, n> reduce_once(const std::array<R, n>& poly_x, const std::array<R, d>& red /* (indx, R_val) */) {
+    std::array<R, n> reduce_once(const std::array<R, n>& poly_x, const std::array<R, d + 1>& red /* (indx, R_val) */) {
         std::array<R, n> high;  // TODO: new a zero value in R
         std::copy(poly_x.begin() + d, poly_x.end(), high.begin());
 
@@ -394,20 +298,37 @@ namespace ops {
         }
         return low;
     }
-
-
+    
     #include "grmodtables.h"
+    template <typename R, int k, int d>
+    auto get_reduction_polynomial() {
+        if constexpr (std::is_same_v<R, Z2k<k>>) {
+            return reduction_polynomial<d>();
+        } 
+        else {
+            return grmodtables::reduction_polynomial<k, R, d>;
+        }
+    }
+
     //template <int k, int n, typename R, int dlen, std::array<int, dlen> ds>
     template <int k, int n, int d, typename R>
     std::array<R, d> reduce(const std::array<R, n>& x) {
-        constexpr auto red = (std::is_same_v<R, Z2k<k>>)? reduction_polynomial<d>() : grmodtables::reduction_polynomial<k, R, d>;
-        auto& low = reduce_once<n, d, R>(x, red);
-        low = reduce_once<n, d, R>(low, red);
-        // truncate to d terms
-        
-        std::array<R, d> res;
-        std::copy(low.begin(), low.begin() + d, res.begin());
-        return res;
+        const auto red = get_reduction_polynomial<R, k, d>();
+        if constexpr (std::is_same_v<R, Z2k<k>>) {
+            auto low = reduce_once<n, d, R>(x, red);
+            low = reduce_once<n, d, R>(low, red);
+            std::array<R, d> res;
+            std::copy(low.begin(), low.begin() + d, res.begin());
+            return res;
+        }
+        else {
+            auto low = reduce_once<n, d, R>(x, red);
+            low = reduce_once<n, d, R>(low, red);
+            std::array<R, d> res;
+            std::copy(low.begin(), low.begin() + d, res.begin());
+            return res;
+        }
+       
     }
     
     template <int n, typename R>
@@ -421,7 +342,6 @@ namespace ops {
         return mult;
     }
 
-    
 }
 
 
@@ -439,10 +359,10 @@ class GR1e<k, d>
         GR1e() { polys_.fill(Z2k<k>());}
 
         template <typename T>
-        explicit GR1e<k, d>(std::initializer_list<T> eles) {
-            if (eles.size() != d) {
-                throw std::out_of_range("Wrong size of d provided");
-            }
+        constexpr explicit GR1e<k, d>(std::initializer_list<T> eles) {
+            // if (eles.size() != d) {
+            //     throw std::out_of_range("Wrong size of d provided");
+            // }
             int i = 0;
             for (const auto& ele : eles) {  // initializer list's element only accessed by iterator
                 polys_[i] = Z2k<k>(ele);
@@ -454,9 +374,9 @@ class GR1e<k, d>
         GR1e<k, d> operator+(const GR1e<k, d>& o) const {
             std::array<Z2k<k>, d> polys;
             for (int i = 0;i < d; i++) {
-                polys.emplace_back(o.polys_[i] + polys_[i]);
+                polys[i] = o.polys_[i] + polys_[i];
             }
-            return BK<k,d>(polys);
+            return GR1e<k,d>(polys);
         }
 
         GR1e<k, d> operator+=(const GR1e<k, d>& o) { return *this = (*this) + o; }
@@ -464,9 +384,9 @@ class GR1e<k, d>
         GR1e<k, d> operator-(const GR1e<k, d>& o) const {
             std::array<Z2k<k>, d> polys;
             for (int i = 0;i < d; i++) {
-                polys.emplace_back(polys_[i] - o.polys_[i]);
+                polys[i] = (polys_[i] - o.polys_[i]);
             }
-            return BK<k,d>(polys);
+            return GR1e<k,d>(polys);
         }
 
         GR1e<k, d> operator-=(const GR1e<k, d>& o) { return *this = (*this) + o; }
@@ -501,7 +421,7 @@ class GR1e<k, d>
             std::string cur;
             int i = 0;
             while (std::getline(ss, cur, ',')) {
-                res[i++] = Z2k<k>(arith::trim(cur));
+                res[i++] = Z2k<k>(std::stoi(arith::trim(cur)));
             }
             return GR1e<k, d>(res);
         }
@@ -523,7 +443,7 @@ class GR1e<k, d>
         }
 
         std::string force_str() const {
-            std::ostringstream ss;
+            std::stringstream ss;
             ss << "[";
             for (int i = 0; i < d; i++) {
                 ss << polys_[i].force_int();
@@ -583,10 +503,11 @@ class GR1e<k, d>
             return o;            
         }
 
+    static constexpr int d0_ = d;
+    static constexpr int k_ = k;
+
     private:
         std::array<Z2k<k>, d> polys_;
-        static constexpr int d0_ = d;
-        static constexpr int k_ = k;
 
 };
 
@@ -630,10 +551,10 @@ class GRT1e<R, d> {
         GRT1e()  { polys_.fill(R());}
 
         template <typename T>
-        explicit GRT1e<R, d>(std::initializer_list<T> eles) {
-            if (eles.size() != d) {
-                throw std::out_of_range("Unmatched extenssion degree provided");
-            }
+        constexpr explicit GRT1e<R, d>(std::initializer_list<T> eles) {
+            // if (eles.size() != d) {
+            //     throw std::out_of_range("Unmatched extenssion degree provided");
+            // }
             std::copy(eles.begin(), eles.end(), polys_.begin());
         }
 
@@ -760,7 +681,7 @@ class GRT1e<R, d> {
         }
 
         std::string force_str() const {
-            std::ostringstream ss;
+            std::stringstream ss;
             ss << "[";
             for (int i = 0; i < d; i++) {
                 ss << polys_[i].force_str();
@@ -770,12 +691,12 @@ class GRT1e<R, d> {
             ss << "]";
             return ss.str();
         }
-
-    private:
-        std::array<R, d> polys_;   // from x^0 to x^(d-1), modulus UP TO x^d
         static constexpr int k_ = R::k_;
         static constexpr int d0_ = d;
         static constexpr int d_prod_ = d * R::d0_;
+
+    private:
+        std::array<R, d> polys_;   // from x^0 to x^(d-1), modulus UP TO x^d
         static constexpr int tower_depth_ = 1 + (is_gr_template<BaseType>::value ? 0 : BaseType::tower_depth_);
 };
 

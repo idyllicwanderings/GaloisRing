@@ -5,16 +5,8 @@ version = "0.1.0"
 description = "math library"
 
 
-# TODO: define a target for each of your executables/libraries like this:
-#[target.myexecutable]
-#type = "executable" # static, shared
-#sources = ["src/galois_ring/*.cpp", "include/galois_ring/*.hpp"]
-#include-directories = ["include"]
-#compile-features = ["cxx_std_11"]
-#link-libraries = ["target-or-library"]
-
-[dependencies]
-cmake = ">=3.15"
+# [dependencies]
+# cmake = ">=3.15"
 
 
 # fecth a content
@@ -25,20 +17,29 @@ cmake = ">=3.15"
 [target.grlib]
 type = "interface"
 include-directories = ["lib"]
-sources = ["lib/**.h"]
-compile-features = ["c++_std_20"]
+headers = ["lib/gring.h", "lib/grlifttables.h", "lib/grmodtables.h"]
+compile-features = ["cxx_std_20"]
+
+# [target.demo]
+# type = "executable"
+# sources = ["main/demo.cpp"]
+# link-libraries = ["grlib"]
 
 
-[target.demo]
+[target.grtowertest]
 type = "executable"
-sources = ["main/demo.cpp"]
+headers = [#"Test/UnitTests/GaloisRingTowering/testGRTowering.inc",
+           "Test/UnitTests/UnitTest.h",
+           "Test/UnitTests/GaloisRingTowering/testGRTowering.h",]
+sources = ["Test/UnitTests/UnitTest.cc", "Test/UnitTests/GaloisRingTowering/testGRTowering.cc"]
 link-libraries = ["grlib"]
+compile-features = ["cxx_std_20"]
 
 
-[target.test]
-type = "executable"
-sources = ["Test/UnitTest"]
-link-libraries = ["grlib"]
+
+
+
+
 
 
 
