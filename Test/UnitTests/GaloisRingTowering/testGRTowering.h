@@ -9,12 +9,12 @@
 #include <string>
 
 #define k 2
-#define d1 5
-#define d2 5
-#define d3 5
-#define d4 5
-#define d5 5
-#define GRT_HAS_5_TOWERS
+#define d1 2
+#define d2 2
+#define d3 2
+// #define d4 2
+// #define d5 2
+#define GRT_HAS_3_TOWERS
 
 
 #ifdef UT_OUTPUT

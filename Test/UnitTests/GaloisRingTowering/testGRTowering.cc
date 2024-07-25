@@ -1,9 +1,3 @@
-// TODO: #include "config.h"
-
-
-
-#define case 100
-
 #include "testGRTowering.h"
 
 
@@ -42,6 +36,9 @@ void writeTestGRTowering(void)
     in_a.clear();
     in_b.clear();
     in_c.clear();
+    UT_displayInfo("GR towering test: addition", in_a.size() + " testcases passed");
+
+    ////////////////////////////////////////////////////////////////////////////
 
     UT_testVectorParse("GRToweringSubtraction.txt", in_a, in_b, in_c);
     for (int i = 0; i < in_a.size(); i++) {
@@ -50,6 +47,9 @@ void writeTestGRTowering(void)
     in_a.clear();
     in_b.clear();
     in_c.clear();
+    UT_displayInfo("GR towering test: subtractions", in_a.size() + " testcases passed");
+
+    ////////////////////////////////////////////////////////////////////////////
 
     UT_testVectorParse("GRToweringMultiplication.txt", in_a, in_b, in_c);
     for (int i = 0; i < in_a.size(); i++) {
@@ -58,6 +58,9 @@ void writeTestGRTowering(void)
     in_a.clear();
     in_b.clear();
     in_c.clear();
+    UT_displayInfo("GR towering test: mult", in_a.size() + " testcases passed");
+
+    ////////////////////////////////////////////////////////////////////////////
 
     UT_testVectorParse("GRToweringInverse.txt", in_a, in_b, in_c);
     for (int i = 0; i < in_a.size(); i++) {
@@ -66,6 +69,7 @@ void writeTestGRTowering(void)
     in_a.clear();
     in_b.clear();
     in_c.clear();
+    UT_displayInfo("GR towering test: inverse", in_a.size() + " testcases passed");
 
     UT_endTest();
 #endif
@@ -161,6 +165,7 @@ void selfTestInverse(std::string in_a, std::string in_b) {
         GRT1e<GRT1e<GRT1e<GRT1e<GR1e<k, d1>, d2>, d3>, d4>, d5> b = GRT1e<GRT1e<GRT1e<GRT1e<GR1e<k, d1>, d2>, d3>, d4>, d5>::from_list(in_b);
     #endif
     assert(b.force_str() == a.inv().force_str());
+    std::cout << "passed!\n";
 }
 
 // void selfTestExeceptionalSequence() {
@@ -169,6 +174,10 @@ void selfTestInverse(std::string in_a, std::string in_b) {
 // }
 
 
-
+int main()
+{
+    testGR();
+    return 0;
+}
 
 

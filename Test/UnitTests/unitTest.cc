@@ -2,25 +2,25 @@
 
 void UT_startTest(const char *s, const char *info)
 {
-    std::cout << s <<"," << info << std::cout;
+    std::cout << s <<"," << info << std::endl;
 }
 
 void UT_endTest()
 {
-    std::cout "    - OK" << std::cout;
+    std::cout << "    - OK" << std::endl;
     std::cin.clear();
     std::cin.sync();
 }
 
 void UT_displayInfo(const char *header, const char *contents)
 {
-    std::cout << header <<"," << contents << std::cout;
+    std::cout << header <<"," << contents << std::endl;
 }
 
 void UT_assert(int condition, char * s)
 {
     if (!condition) {
-        std::cout << s << std::cout;
+        std::cout << s << std::endl;
         exit(1);
     }
 }

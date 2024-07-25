@@ -264,3 +264,33 @@ int reduce() {
 
 为啥可颂说SHAKE当做一个PRG？shake不是xof吗。。。
 
+
+
+[𝑟] 2𝑘 = (𝑧0 ⋅ 2 𝑘 + [𝑟0 ] 𝑘 , …, 𝑧𝑑 ⋅ 2 𝑘 + [𝑟𝑑 ] 𝑘 ).
+
+
+
+
+
+### TODO for 23/07 to 02/08
+
+1. slide number
+
+2. lift in embedding把这两页搞得多一点。。text is a bit dense
+
+3. hensel lifting by robin
+
+4. related papers: KKW expanded to Z2K but does not include from top-down to checking based  MPCs 
+
+5.  on 20th, practice on 6th August
+
+6. test the time performace operations：测试一下add+ mult的速度？？？？
+
+   1. no comparison because for now no baseline than sage
+   2. modular reductions in sage
+   3. time based on per unit of Z2k< k >, but this can be estimated theorectically i think?  
+   4. how the performance of GR performance scales with different increasing d and the different towering of ds(比如d1, d2, d3换成d2, d1, d3)
+   5. significant of towering/embedding? 我也不知道。。。他是说野人再说什么。。。彳亍
+
+   
+
