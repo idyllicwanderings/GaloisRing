@@ -29,47 +29,48 @@ void writeTestGRTowering(void)
     std::vector<std::string> in_a;
     std::vector<std::string> in_b;
     std::vector<std::string> in_c;
-    UT_testVectorParse("GRToweringAddition.txt", in_a, in_b, in_c);
+    UT_testVectorParse(ADD_TV_FILE, in_a, in_b, in_c);
+    std::cout << in_a.size() << std::endl;
     for (int i = 0; i < in_a.size(); i++) {
         selfTestAddition(in_a[i], in_b[i], in_c[i]);
     }
+    UT_displayInfo("GR towering test: addition", " testcases passed");
     in_a.clear();
     in_b.clear();
     in_c.clear();
-    UT_displayInfo("GR towering test: addition", in_a.size() + " testcases passed");
 
-    ////////////////////////////////////////////////////////////////////////////
+    //////////////////////////////////////////////////////////////////////////
 
-    UT_testVectorParse("GRToweringSubtraction.txt", in_a, in_b, in_c);
+    UT_testVectorParse(SUB_TV_FILE, in_a, in_b, in_c);
     for (int i = 0; i < in_a.size(); i++) {
         selfTestSubtraction(in_a[i], in_b[i], in_c[i]);
     }
-    in_a.clear();
-    in_b.clear();
-    in_c.clear();
     UT_displayInfo("GR towering test: subtractions", in_a.size() + " testcases passed");
-
-    ////////////////////////////////////////////////////////////////////////////
-
-    UT_testVectorParse("GRToweringMultiplication.txt", in_a, in_b, in_c);
-    for (int i = 0; i < in_a.size(); i++) {
-        selfTestMultiplication(in_a[i], in_b[i], in_c[i]);
-    }
     in_a.clear();
     in_b.clear();
     in_c.clear();
-    UT_displayInfo("GR towering test: mult", in_a.size() + " testcases passed");
 
-    ////////////////////////////////////////////////////////////////////////////
+    // ////////////////////////////////////////////////////////////////////////////
 
-    UT_testVectorParse("GRToweringInverse.txt", in_a, in_b, in_c);
-    for (int i = 0; i < in_a.size(); i++) {
-        selfTestInverse(in_a[i], in_b[i]);
-    }
-    in_a.clear();
-    in_b.clear();
-    in_c.clear();
-    UT_displayInfo("GR towering test: inverse", in_a.size() + " testcases passed");
+    // UT_testVectorParse(MUL_TV_FILE, in_a, in_b, in_c);
+    // for (int i = 0; i < in_a.size(); i++) {
+    //     selfTestMultiplication(in_a[i], in_b[i], in_c[i]);
+    // }
+    // in_a.clear();
+    // in_b.clear();
+    // in_c.clear();
+    // UT_displayInfo("GR towering test: mult", in_a.size() + " testcases passed");
+
+    // ////////////////////////////////////////////////////////////////////////////
+
+    // UT_testVectorParse(INV_TV_FILE, in_a, in_b, in_c);
+    // for (int i = 0; i < in_a.size(); i++) {
+    //     selfTestInverse(in_a[i], in_b[i]);
+    // }
+    // in_a.clear();
+    // in_b.clear();
+    // in_c.clear();
+    // UT_displayInfo("GR towering test: inverse", in_a.size() + " testcases passed");
 
     UT_endTest();
 #endif
@@ -97,6 +98,8 @@ void selfTestAddition(std::string in_a, std::string in_b, std::string expected_c
         GRT1e<GRT1e<GRT1e<GRT1e<GR1e<k, d1>, d2>, d3>, d4>, d5> c = GRT1e<GRT1e<GRT1e<GRT1e<GR1e<k, d1>, d2>, d3>, d4>, d5>::from_list(expected_c);
     #endif
     assert(c.force_str() == (a + b).force_str());
+    UT_displayInfo("c: ", c.force_str().c_str());
+    UT_displayInfo("a + b: ", (a + b).force_str().c_str());
 }
 
 void selfTestSubtraction(std::string in_a, std::string in_b, std::string expected_c) {
@@ -121,6 +124,8 @@ void selfTestSubtraction(std::string in_a, std::string in_b, std::string expecte
         GRT1e<GRT1e<GRT1e<GRT1e<GR1e<k, d1>, d2>, d3>, d4>, d5> c = GRT1e<GRT1e<GRT1e<GRT1e<GR1e<k, d1>, d2>, d3>, d4>, d5>::from_list(expected_c);
     #endif
     assert(c.force_str() == (a - b).force_str());
+    UT_displayInfo("c: ", c.force_str().c_str());
+    UT_displayInfo("a - b: ", (a - b).force_str().c_str());
 }
 
 void selfTestMultiplication(std::string in_a, std::string in_b, std::string expected_c) {

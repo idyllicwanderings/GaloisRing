@@ -139,14 +139,17 @@ class Z2k
         static inline F MASK = arith::make_mask<F, k>();
 
         template <typename T>
-        constexpr explicit Z2k<k>(const T& ele): val_(F(ele) & MASK) {}
+        constexpr explicit Z2k<k>(const T& ele): val_(F(ele) & MASK) {
+        }
 
-        explicit Z2k<k>(F f, bool /*skip mask*/) : val_(std::move(f & MASK)) {}
+        explicit Z2k<k>(F f, bool /*skip mask*/) : val_(std::move(f & MASK)) {
+        }
 
         Z2k() : val_(0) {}
 
     public:
-        Z2k<k> operator+(const Z2k& o) const { return Z2k<k>(val_ + o.val_, false); }
+        Z2k<k> operator+(const Z2k& o) const { 
+            return Z2k<k>(val_ + o.val_, false); }
 
         Z2k<k> operator+=(const Z2k& o) { return *this = (*this) + o; }
 
@@ -282,7 +285,9 @@ class GR1e
 
         static GR1e<k, d> from_list(const std::string& str) {
             std::array<Z2k<k>, d> res;
-            std::istringstream ss(str);
+            auto start = str.find_first_not_of(" \[");  //trim the brackets
+            auto end = str.find_last_not_of(" \]");
+            std::istringstream ss(str.substr(start, end - start + 1));
             std::string cur;
             int i = 0;
             while (std::getline(ss, cur, ',')) {
@@ -311,7 +316,7 @@ class GR1e
             std::stringstream ss;
             ss << "[";
             for (int i = 0; i < d; i++) {
-                ss << polys_[i].force_int();
+                ss << int(polys_[i].force_int());
                 if (i == d - 1) break;
                 ss << ", ";
             }

@@ -25,9 +25,10 @@ void UT_assert(int condition, char * s)
     }
 }
 
-void UT_testVectorParse(const char * tv_file, std::vector<std::string> in_a, std::vector<std::string> in_b, std::vector<std::string> in_c)
+void UT_testVectorParse(const char * tv_file, std::vector<std::string>& in_a, std::vector<std::string>& in_b, std::vector<std::string>& in_c)
 {
     std::ifstream file(tv_file);
+    if (!file) std::cout << "cannot open test vectors " << std::endl;
     std::string line;
     while (std::getline(file, line)) {
         std::istringstream iss(line);
@@ -39,10 +40,12 @@ void UT_testVectorParse(const char * tv_file, std::vector<std::string> in_a, std
             std::getline(iss, b);
             c = "";  
         }
+        //std::cout << a << "??????" << b << "!!!!!" << c << std::endl;
         in_a.push_back(a);
         in_b.push_back(b);
         in_c.push_back(c);
     }
     file.close();
+    std::cout << in_a.size() << std::endl;
 
 }

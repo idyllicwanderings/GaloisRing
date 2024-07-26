@@ -1,7 +1,7 @@
 # This file generates the primitive polynomial of towering of GR via the towering of finite fields
 
 D0_LIFT_DEG = [i for i in range(2, 8)] #TODO: 不支持d0 = 1。
-LIFT_DEG = [[i for i in range(2, 3)], [i for i in range(2, 5)], [i for i in range(2, 5)]]
+LIFT_DEG = [[i for i in range(2, 5)], [i for i in range(2, 7)], [i for i in range(2, 5)]]
 ALPHABET = ['α','β','γ']
 MAX_LAYER = 4   # = 4 liftings at most
 
@@ -19,7 +19,7 @@ def recurse_build(layer, prev_R, prev_degs, max_layer0):
         while true: #TODO:研究一下比较sparse的polynomial，并且对C++上能有加速的
             r1_ele = R1.gen()^d0 + R1.random_element(degree=d0//2) #ensures it's monic & sparse
             # r1_ele = R1.random_element(degree=d0 - 1) + R1.gen()^d0  #ensures it's monic
-            if r1_ele.is_primitive():
+            if r1_ele.is_irreducible():
                 F2 = R1.quo(r1_ele)
                 R2 = F2[ALPHABET[layer - 1]]     
                 return F2, R2  
@@ -47,6 +47,9 @@ print("------------------------------------generate completed-------------------
 # template <int k, int d0, int... d1> extern const GR<GR<GR1e<>>???>?? NO.
 # or we can write every case of k, d0, d1
 
+for deg in TOWERS.keys():
+    print(deg)
+
 
 textual_towerings = [] #(d0, d1, d2, ...) GR<GR<GR1e<k,d0>(s1),d1)(s2),d>(s3)
 textual_declares = [] 
@@ -55,12 +58,13 @@ for deg, moduli in TOWERS.items():
         if layer == 0 and len(deg) == 1:
             return f"Z2k<k>", "{{{}}}".format(", ".join(f"Z2k<k>({x}u)" for x in data))
         if layer == 0:
-            return f"GR1e<k, {deg[layer]}>", "GR1e<k, {}>({{{}}})".format(deg[0], ", ".join(f"{x}u" for x in data))
+            return f"GR1e<k, {deg[0]}>", "GR1e<k, {}>({{{}}})".format(deg[0], ", ".join(f"{x}u" for x in data))
         inner_strs = [enum_build(i, deg, layer - 1)[1] for i in data]
         prev_item = enum_build(data[0], deg, layer - 1)[0] 
         if layer == len(deg) - 1:
             return f"{prev_item}", f"{{{', '.join(inner_strs)}}}"
-        inner_item = f"GRT1e< {prev_item}, {len(data)}>"
+        inner_item = f"GRT1e< {prev_item}, {deg[layer]}>"
+        #if layer == 1:
         print(inner_item)
         return inner_item, f"{inner_item}({{{', '.join(inner_strs)}}})"
     
