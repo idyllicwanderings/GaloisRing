@@ -13,39 +13,44 @@ bazel build //main:galois-ring
 Our test structure looks like:
 
 ```bash
-├── basering
-│   ├── GR1E-update-test.sh
-│   ├── GR1E.cc
-│   ├── GR1E.sage
-│   ├── expected_out_add
-│   └── expected_out_multiply
-├── galoisring
-└── z2k
-    ├── expected_out_add
-    ├── expected_out_multiply
-    ├── z2k-update-test.sh
-    ├── z2k.cc
-    └── z2k.sage
+├── TestVectors
+│   ├── GRToweringAddition.txt
+│   ├── GRToweringInverse.txt
+│   ├── GRToweringMultiplication.txt
+│   └── GRToweringSubtraction.txt
+└── UnitTests
+    ├── GaloisRing
+    ├── GaloisRingTowering
+    │   ├── genGRTowering.sage
+    │   ├── grmodtables.sage
+    │   ├── testGRTowering.cc
+    │   └── testGRTowering.h
+    ├── UnitTest.cc
+    ├── UnitTest.h
 ```
+
+
+
 
 To run the tests, first run the corresponding bash script, then use 
 
 ```bash
-bazel test //path/to/your:test_target 
+cmake -B build 
+cmake --build build
+./build/test_target 
 ```
-for example, to test the $Z210$, use
- ```bash
-cd ./test/z2k
-./z2k-update-test.sh z2k.cc 10 100
-cd ../../
- ```
-then run 
-```bash
-bazel test //test/z2k:z2k-test
-```
-```bash
-bazel test //test/z2k:z2k-test \
-    --define k=10 \
-    --define testcase_num=100 
+for example, t run the tests for towers of Galois ring, first run `lib/genreduction.sage` and then run `tests/UnitTests/GaloisRingTowering/genGRTowering.sage`.
 
- -->
+To have $55$ testcases of $GR(GR(GR(7,2),3),2)$, use
+ ```bash
+cd lib/
+sage genreduction.sage
+cd ../tests/UnitTests/GaloisRingTowering
+sage genGRTowering.sage 55 7 2 3 2 mult add sub inv
+ ```
+then mofidy the corresponding `k, d0, d1, d2` in `tests/UnitTests/GaloisRingTowering/testGRTowering.h`, then run 
+```bash
+cmake -B build 
+cmake --build build
+./build/grtowertest
+```
