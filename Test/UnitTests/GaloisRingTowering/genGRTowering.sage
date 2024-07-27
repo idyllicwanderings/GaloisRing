@@ -4,6 +4,7 @@ import random
 ALPHABET = ['β','γ','δ','ε','ζ','η','θ','ι','κ','λ','μ','ν','ξ','ο','π','ρ','σ','τ','υ','φ','χ','ψ','ω']
 
 
+
 # fix the modulus as lists
 def mkgrtowers(k, d_list, modulus_list = None):
     Z2K = Zmod(2^k)  #construct base ring GF(2^k, d)
@@ -23,6 +24,10 @@ def mkgrtowers(k, d_list, modulus_list = None):
             return mod_list
         return GR_list[layer - 1][ALPHABET[layer]]([build_modulus(GR_list, mod, layer - 1) for mod in mod_list])
 
+    def put_in_f2(moduli):
+        if not isinstance(moduli, list):
+            return GF(2)(moduli)
+        return [put_in_f2(term) for term in moduli]
 
     F1 = GF(2^d_list[layer], name="z", modulus="minimal_weight")  #find polynomial
     RX.<ζ> = F1['ζ']
@@ -36,7 +41,7 @@ def mkgrtowers(k, d_list, modulus_list = None):
     while (layer < len(d_list) - 1):
         layer += 1
         RX, moduli = find_irreducible(RX, d_list[layer])
-        moduli = modulus_to_list(moduli, layer) if modulus_list is None else modulus_list[tuple(k, d_list, )]
+        moduli = modulus_to_list(moduli, layer) if reduction_polynomial is None else put_in_f2(reduction_polynomial[tuple(d_list[0:layer + 1])])
         GRX = GR_list[layer - 1][ALPHABET[layer - 1]].quotient(build_modulus(GR_list, moduli, layer))
         GR_list.append(GRX)
     return GR_list[-1]
@@ -77,7 +82,7 @@ def testinv(GR, k, d, seq):  ## test GR1TE inverse
     return [str(element_to_list(a)), str(element_to_list(inv_a))]
 
 
-''' TODO
+'''
 def testlift(GR1, GR2, ele):
     a = GR1.random_element()
     lift_a = GR2(a)
@@ -85,9 +90,17 @@ def testlift(GR1, GR2, ele):
 '''
 
 
+
 if __name__ == "__main__":
     if len(sys.argv) < 4:
         print("Usage: sage genGRTowering.sage n k d1 d2 d3 ... mult|add|sub|inv")
+    
+
+    with open("grmodtables.sage", "r") as f:
+        content = f.read()
+    exec(content)
+    #print(reduction_polynomial)
+    print("============================ loaded GR ==============================")
 
     n = int(sys.argv[1])
     k = int(sys.argv[2])
@@ -102,7 +115,11 @@ if __name__ == "__main__":
     operations = set(sys.argv[d_end:])
 
     GR = mkgrtowers(k, d) 
+
+    print("============================ generated GR ==============================")
     seq_permutations = all_permutations(d)
+
+    print("====================== generated seq_permutations ======================")
 
     path = "../../TestVectors/"
     if 'mult' in operations:
@@ -121,3 +138,5 @@ if __name__ == "__main__":
         with open(path + "GRToweringInverse.txt", "w") as f:
             for _ in range(n):
                 f.write(" ; ".join(testinv(GR, k, d, seq_permutations)) + '\n')
+    
+    print("===================== generated test vectors =============================")

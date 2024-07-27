@@ -72,6 +72,7 @@ for deg, moduli in TOWERS.items():
     textual_towerings.append(f"template <int k> inline const std::array<" + mtype + f", {deg[-1] + 1}> "+ "reduction_polynomial<k, " + mtype + f", {deg[-1]}> = " + mval + f";")
         
 
+## =====================================write to c files====================================
 
 with open("grmodtables.h", "w") as f:
     f.write("""
@@ -88,14 +89,30 @@ namespace grmodtables {
 """ % "\n    ".join(textual_towerings))
 
 
+## =====================================write to sage files====================================
+import json
 
-# TODO
-'''
-with open("grmodtables.sage", "w") as f:
+def convert_to_serializable(obj):
+    if isinstance(obj, list):
+        return [convert_to_serializable(i) for i in obj]
+    else:
+        return int(obj)
+
+TOWERS_serializable = {str(k): convert_to_serializable(v) for k, v in TOWERS.items()}
+json_data = json.dumps(TOWERS_serializable, separators=(',', ':'))
+
+with open("../test/UnitTests/GaloisRingTowering/grmodtables.sage", "w") as f:
     f.write("""
-# only for storing the towering tables.
-TOWERS = %s
-""" % "\n    ".join(str(TOWERS)))
+# This file was automatically generated, changes may be overwritten
+# Only to keep everything looking nice if you somehow would include the file directly; it's circular otherwise
+
+import json
+json_data = '''
+    %s
 '''
+reduction_polynomial = json.loads(json_data)
+reduction_polynomial = {eval(k): v for k, v in reduction_polynomial.items()}
+""" % json.dumps(TOWERS_serializable, indent=4))
+
 
 print("------------------------------------writefile completed----------------------------------")
