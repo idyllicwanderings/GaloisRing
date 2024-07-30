@@ -29,9 +29,16 @@ compile-features = ["cxx_std_20"]
 [target.grtowertest]
 type = "executable"
 headers = [#"Test/UnitTests/GaloisRingTowering/testGRTowering.inc",
-           "Test/UnitTests/UnitTest.h",
-           "Test/UnitTests/GaloisRingTowering/testGRTowering.h",]
-sources = ["Test/UnitTests/UnitTest.cc", "Test/UnitTests/GaloisRingTowering/testGRTowering.cc"]
+           "test/UnitTests/UnitTest.h",
+           "test/UnitTests/GaloisRingTowering/testGRTowering.h",]
+sources = ["test/UnitTests/UnitTest.cc", "test/UnitTests/GaloisRingTowering/testGRTowering.cc"]
+link-libraries = ["grlib"]
+compile-features = ["cxx_std_20"]
+
+
+[target.grbenchmark]
+type = "executable"
+sources = ["src/benchmark_GR.cc"]
 link-libraries = ["grlib"]
 compile-features = ["cxx_std_20"]
 

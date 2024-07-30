@@ -24,42 +24,43 @@ void writeTestGRTowering(void)
     //TODO
     UT_endTest();
 #else 
-    UT_startTest("GRTowering addition", "k < 64 bits");
 
     std::vector<std::string> in_a;
     std::vector<std::string> in_b;
     std::vector<std::string> in_c;
-    UT_testVectorParse(ADD_TV_FILE, in_a, in_b, in_c);
-    std::cout << in_a.size() << std::endl;
-    for (int i = 0; i < in_a.size(); i++) {
-        selfTestAddition(in_a[i], in_b[i], in_c[i]);
-    }
-    UT_displayInfo("GR towering test: addition", " testcases passed");
-    in_a.clear();
-    in_b.clear();
-    in_c.clear();
 
-    //////////////////////////////////////////////////////////////////////////
-
-    UT_testVectorParse(SUB_TV_FILE, in_a, in_b, in_c);
-    for (int i = 0; i < in_a.size(); i++) {
-        selfTestSubtraction(in_a[i], in_b[i], in_c[i]);
-    }
-    UT_displayInfo("GR towering test: subtractions", in_a.size() + " testcases passed");
-    in_a.clear();
-    in_b.clear();
-    in_c.clear();
-
-    // ////////////////////////////////////////////////////////////////////////////
-
-    // UT_testVectorParse(MUL_TV_FILE, in_a, in_b, in_c);
+    // UT_startTest("GRTowering addition", "k < 64 bits");
+    // UT_testVectorParse(ADD_TV_FILE, in_a, in_b, in_c);
+    // std::cout << in_a.size() << std::endl;
     // for (int i = 0; i < in_a.size(); i++) {
-    //     selfTestMultiplication(in_a[i], in_b[i], in_c[i]);
+    //     selfTestAddition(in_a[i], in_b[i], in_c[i]);
     // }
+    // UT_displayInfo("GR towering test: addition", " testcases passed");
     // in_a.clear();
     // in_b.clear();
     // in_c.clear();
-    // UT_displayInfo("GR towering test: mult", in_a.size() + " testcases passed");
+
+    // //////////////////////////////////////////////////////////////////////////
+    //UT_startTest("GRTowering subtraction", "k < 64 bits");
+    // UT_testVectorParse(SUB_TV_FILE, in_a, in_b, in_c);
+    // for (int i = 0; i < in_a.size(); i++) {
+    //     selfTestSubtraction(in_a[i], in_b[i], in_c[i]);
+    // }
+    // UT_displayInfo("GR towering test: subtractions", in_a.size() + " testcases passed");
+    // in_a.clear();
+    // in_b.clear();
+    // in_c.clear();
+
+    ////////////////////////////////////////////////////////////////////////////
+
+    UT_testVectorParse(MUL_TV_FILE, in_a, in_b, in_c);
+    for (int i = 0; i < in_a.size(); i++) {
+        selfTestMultiplication(in_a[i], in_b[i], in_c[i]);
+    }
+    UT_displayInfo("GR towering test: mult", in_a.size() + " testcases passed");
+    in_a.clear();
+    in_b.clear();
+    in_c.clear();
 
     // ////////////////////////////////////////////////////////////////////////////
 
@@ -77,6 +78,11 @@ void writeTestGRTowering(void)
 }
 
 void selfTestAddition(std::string in_a, std::string in_b, std::string expected_c) {
+    #ifdef GRT_HAS_1_TOWER
+        GR1e<k, d1> a = GR1e<k, d1>::from_list(in_a);
+        GR1e<k, d1> b = GR1e<k, d1>::from_list(in_b);
+        GR1e<k, d1> c = GR1e<k, d1>::from_list(expected_c);
+    #endif
     #ifdef GRT_HAS_2_TOWERS
         GRT1e<GR1e<k, d1>, d2> a = GRT1e<GR1e<k, d1>, d2>::from_list(in_a);
         GRT1e<GR1e<k, d1>, d2> b = GRT1e<GR1e<k, d1>, d2>::from_list(in_b);
@@ -98,11 +104,16 @@ void selfTestAddition(std::string in_a, std::string in_b, std::string expected_c
         GRT1e<GRT1e<GRT1e<GRT1e<GR1e<k, d1>, d2>, d3>, d4>, d5> c = GRT1e<GRT1e<GRT1e<GRT1e<GR1e<k, d1>, d2>, d3>, d4>, d5>::from_list(expected_c);
     #endif
     assert(c.force_str() == (a + b).force_str());
-    UT_displayInfo("c: ", c.force_str().c_str());
-    UT_displayInfo("a + b: ", (a + b).force_str().c_str());
+    UT_displayInfo("c ", c.force_str().c_str());
+    UT_displayInfo("a + b ", (a + b).force_str().c_str());
 }
 
 void selfTestSubtraction(std::string in_a, std::string in_b, std::string expected_c) {
+    #ifdef GRT_HAS_1_TOWER
+        GR1e<k, d1> a = GR1e<k, d1>::from_list(in_a);
+        GR1e<k, d1> b = GR1e<k, d1>::from_list(in_b);
+        GR1e<k, d1> c = GR1e<k, d1>::from_list(expected_c);
+    #endif
     #ifdef GRT_HAS_2_TOWERS
         GRT1e<GR1e<k, d1>, d2> a = GRT1e<GR1e<k, d1>, d2>::from_list(in_a);
         GRT1e<GR1e<k, d1>, d2> b = GRT1e<GR1e<k, d1>, d2>::from_list(in_b);
@@ -124,11 +135,16 @@ void selfTestSubtraction(std::string in_a, std::string in_b, std::string expecte
         GRT1e<GRT1e<GRT1e<GRT1e<GR1e<k, d1>, d2>, d3>, d4>, d5> c = GRT1e<GRT1e<GRT1e<GRT1e<GR1e<k, d1>, d2>, d3>, d4>, d5>::from_list(expected_c);
     #endif
     assert(c.force_str() == (a - b).force_str());
-    UT_displayInfo("c: ", c.force_str().c_str());
-    UT_displayInfo("a - b: ", (a - b).force_str().c_str());
+    UT_displayInfo("c ", c.force_str().c_str());
+    UT_displayInfo("a - b ", (a - b).force_str().c_str());
 }
 
 void selfTestMultiplication(std::string in_a, std::string in_b, std::string expected_c) {
+    #ifdef GRT_HAS_1_TOWER
+        GR1e<k, d1> a = GR1e<k, d1>::from_list(in_a);
+        GR1e<k, d1> b = GR1e<k, d1>::from_list(in_b);
+        GR1e<k, d1> c = GR1e<k, d1>::from_list(expected_c);
+    #endif
     #ifdef GRT_HAS_2_TOWERS
         GRT1e<GR1e<k, d1>, d2> a = GRT1e<GR1e<k, d1>, d2>::from_list(in_a);
         GRT1e<GR1e<k, d1>, d2> b = GRT1e<GR1e<k, d1>, d2>::from_list(in_b);
@@ -149,10 +165,19 @@ void selfTestMultiplication(std::string in_a, std::string in_b, std::string expe
         GRT1e<GRT1e<GRT1e<GRT1e<GR1e<k, d1>, d2>, d3>, d4>, d5> b = GRT1e<GRT1e<GRT1e<GRT1e<GR1e<k, d1>, d2>, d3>, d4>, d5>::from_list(in_b);
         GRT1e<GRT1e<GRT1e<GRT1e<GR1e<k, d1>, d2>, d3>, d4>, d5> c = GRT1e<GRT1e<GRT1e<GRT1e<GR1e<k, d1>, d2>, d3>, d4>, d5>::from_list(expected_c);
     #endif
+    UT_displayInfo("a ", a.force_str().c_str());
+    UT_displayInfo("b ", b.force_str().c_str());
+    UT_displayInfo("c ", c.force_str().c_str());
+    UT_displayInfo("a * b ", (a * b).force_str().c_str());
     assert(c.force_str() == (a * b).force_str());
+    UT_displayInfo("//////////////////////////////////////////// PASSED ", "////////////////////////////////////////////");
 }
 
 void selfTestInverse(std::string in_a, std::string in_b) {
+    #ifdef GRT_HAS_1_TOWER
+        GR1e<k, d1> a = GR1e<k, d1>::from_list(in_a);
+        GR1e<k, d1> b = GR1e<k, d1>::from_list(in_b);
+    #endif
     #ifdef GRT_HAS_2_TOWERS
         GRT1e<GR1e<k, d1>, d2> a = GRT1e<GR1e<k, d1>, d2>::from_list(in_a);
         GRT1e<GR1e<k, d1>, d2> b = GRT1e<GR1e<k, d1>, d2>::from_list(in_b);

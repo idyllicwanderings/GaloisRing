@@ -5,8 +5,8 @@
 // #include <emmintrin.h>
 // #include <smmintrin.h>
 // #include <wmmintrin.h>
-// #include <iomanip>
-// #include <algorithm>
+#include <iomanip>
+#include <algorithm>
 #include <cassert>
 #include <cstdint>
 #include <iostream>
@@ -21,6 +21,11 @@
 #include <concepts>
 #include <cmath>
 #include <type_traits>
+
+// DELETE: for DEBUGGING
+#include <bitset>
+#include <ctime>
+#include <random>
 
 
 // #include "SimpleFIPS202.h"
@@ -155,7 +160,7 @@ class Z2k
 
         Z2k<k> operator-(const Z2k& o) const { return Z2k<k>(val_ - o.val_, false); }
 
-        Z2k<k> operator-=(const Z2k& o) { return *this = (*this) + o; }
+        Z2k<k> operator-=(const Z2k& o) { return *this = (*this) - o; }
 
         Z2k<k> operator*(const Z2k& o) const {
             F a = val_;
@@ -188,9 +193,11 @@ class Z2k
             return Z2k<k>(F(a), true);   
         }
         
+
         static Z2k<k> random() {
             // TODO:return Z2k<k>(random_bits(k)); 
-            return Z2k<k>(0);
+            std::srand(time(NULL));
+            return Z2k<k>(std::rand() % (static_cast<int>(std::pow(2, k))));
         }
 
         /**
@@ -255,7 +262,7 @@ class GR1e
             return GR1e<k,d>(polys);
         }
 
-        GR1e<k, d> operator-=(const GR1e<k, d>& o) { return *this = (*this) + o; }
+        GR1e<k, d> operator-=(const GR1e<k, d>& o) { return *this = (*this) - o; }
 
         GR1e<k, d> operator*(const GR1e<k, d>& o) const;
         // {
@@ -310,6 +317,19 @@ class GR1e
                 res[i] = polys_[i].force_int();
             }
             return res;
+        }
+
+        std::string force_bits_str() const {
+            std::stringstream ss;
+            ss << "[";
+            for (int i = 0; i < d; i++) {
+                int a = int(polys_[i].force_int());
+                ss << std::bitset<sizeof(a)*8>(a);
+                if (i == d - 1) break;
+                ss << ", ";
+            }
+            ss << "]";
+            return ss.str();
         }
 
         std::string force_str() const {
@@ -563,6 +583,19 @@ class GRT1e<R, d> {
             ss << "]";
             return ss.str();
         }
+
+        std::string force_bits_str() const {
+            std::stringstream ss;
+            ss << "[";
+            for (int i = 0; i < d; i++) {
+                ss << polys_[i].force_bits_str();
+                if (i == d - 1) break;
+                ss << ", ";
+            }
+            ss << "]";
+            return ss.str();
+        }
+
         static constexpr int k_ = R::k_;
         static constexpr int d0_ = d;
         static constexpr int d_prod_ = d * R::d0_;
@@ -611,34 +644,65 @@ namespace ops {
 
     template <int n, int d, typename R>
     std::array<R, n> reduce_once(const std::array<R, n>& x, const int& red) { // Trinomial
+        std::cout << "========= ============================= reduce once in trinomail" << std::endl;
+        std::cout << "red" << red << std::endl;
+        // std::cout << "x:";
+        // for (int i = 0; i < n; i++) {
+        //     int a = int(x[i].force_int());
+        //     std::cout << std::bitset<sizeof(a)*8>(a) << ", ";
+        // }
+        // std::cout << std::endl;
+
+        std::cout << "x:";
+        for (int i = 0; i < n; i++) {
+            int a = int(x[i].force_int());
+            std::cout << a << ", ";
+        }
+        std::cout << std::endl;
+
         std::array<R, n> high;   // high poly terms
         std::copy(x.begin() + d, x.end(), high.begin());
+
         std::array<R, n> low;   // low poly terms
         std::copy(x.begin(), x.begin() + d, low.begin());
 
         std::array<R, n> hired;     // hi << red
-        std::copy(high.begin() + red, high.begin(), hired.begin());
+        std::copy(high.begin(), high.end(), hired.begin() + red);
 
         std::array<R, n> res;
         for (int i = 0; i < d;i++) {
             res[i] = low[i] - high[i] - hired[i];
         }
+
+        std::cout << "res:";
+        for (int i = 0; i < n; i++) {
+            int a = int(res[i].force_int());
+            std::cout << a << ", ";
+        }
+        std::cout << std::endl;
+        std::cout << "++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++" << std::endl;
+
         return res;
     }
 
     template <int n, int d, typename R>
     std::array<R, n> reduce_once(const std::array<R, n>& x, const std::tuple<int, int, int>& red) { // Pentanomial
+    
+
         std::array<R, n> high;   // high poly terms
         std::copy(x.begin() + d, x.end(), high.begin());
+
+
         std::array<R, n> low;   // low poly terms
         std::copy(x.begin(), x.begin() + d, low.begin());
 
+
         std::array<R, n> hired1;     // hi << red
-        std::copy(high.begin() + std::get<0>(red), high.begin(), hired1.begin());
+        std::copy(high.begin(), high.end(), hired1.begin() + std::get<0>(red));
         std::array<R, n> hired2;     // hi << red
-        std::copy(high.begin() + std::get<1>(red), high.begin(), hired2.begin());
+        std::copy(high.begin(), high.end(), hired2.begin() + std::get<1>(red));
         std::array<R, n> hired3;     // hi << red
-        std::copy(high.begin() + std::get<2>(red), high.begin(), hired3.begin());
+        std::copy(high.begin(), high.end(), hired3.begin() + std::get<2>(red));
 
         std::array<R, n> res;
         for (int i = 0; i < n;i++) {
@@ -650,18 +714,20 @@ namespace ops {
        // TODO: make red polynomial more efficient data structure since it's sparse
     template <int n, int d, typename R> //R: base_ring, n: size of ring polynomial, d: extension degree
     std::array<R, n> reduce_once(const std::array<R, n>& poly_x, const std::array<R, d + 1>& red /* (indx, R_val) */) {
-        std::array<R, n> high;  // TODO: new a zero value in R
+        
+        std::array<R, n> high;  // high poly terms
         std::copy(poly_x.begin() + d, poly_x.end(), high.begin());
 
-        std::array<R, n> low;   
+        std::array<R, n> low;   // low poly terms
         std::copy(poly_x.begin(), poly_x.begin() + d, low.begin());
 
         //TODO: red polynomial do not pass on its 最高项， 所以这里是没有最高项的modulus
         for (int i = 0;i < n - d; i++) {
-            for (int shift = 0; shift < d;shift++) {
+            for (int shift = 0; shift < d; shift++) {
                 low[shift + i] -= red[shift] * high[i];
             }
         }
+
         return low;
     }
     
@@ -680,14 +746,20 @@ namespace ops {
     template <int k, int n, int d, typename R>
     std::array<R, d> reduce(const std::array<R, n>& x) {
         const auto red = get_reduction_polynomial<R, k, d>();
+        // after one reduction, the polynomial will be using the same reduction polynomial
+        //.就不对了
         if constexpr (std::is_same_v<R, Z2k<k>>) {
-            auto low = reduce_once<n, d, R>(x, red);
-            low = reduce_once<n, d, R>(low, red);
+            std::cout << "reduce start" << std::endl;
+            auto low = reduce_once<n, d, R>(x, red); 
+            low = reduce_once<n, d, R>(low, red); 
+            std::cout << "reduce end" << std::endl;
             std::array<R, d> res;
             std::copy(low.begin(), low.begin() + d, res.begin());
+            std::cout << "res:";
             return res;
         }
         else {
+            std::cout << "I AM SUPPOSED NOT TO BE HERE" << std::endl;
             auto low = reduce_once<n, d, R>(x, red);
             low = reduce_once<n, d, R>(low, red);
             std::array<R, d> res;

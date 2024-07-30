@@ -53,11 +53,11 @@ target_include_directories(grlib INTERFACE
 
 # Target: grtowertest
 set(grtowertest_SOURCES
-	"Test/UnitTests/GaloisRingTowering/testGRTowering.cc"
-	"Test/UnitTests/GaloisRingTowering/testGRTowering.h"
-	"Test/UnitTests/UnitTest.cc"
-	"Test/UnitTests/UnitTest.h"
 	cmake.toml
+	"test/UnitTests/GaloisRingTowering/testGRTowering.cc"
+	"test/UnitTests/GaloisRingTowering/testGRTowering.h"
+	"test/UnitTests/UnitTest.cc"
+	"test/UnitTests/UnitTest.h"
 )
 
 add_executable(grtowertest)
@@ -76,4 +76,28 @@ target_link_libraries(grtowertest PRIVATE
 get_directory_property(CMKR_VS_STARTUP_PROJECT DIRECTORY ${PROJECT_SOURCE_DIR} DEFINITION VS_STARTUP_PROJECT)
 if(NOT CMKR_VS_STARTUP_PROJECT)
 	set_property(DIRECTORY ${PROJECT_SOURCE_DIR} PROPERTY VS_STARTUP_PROJECT grtowertest)
+endif()
+
+# Target: grbenchmark
+set(grbenchmark_SOURCES
+	cmake.toml
+	"src/benchmark_GR.cc"
+)
+
+add_executable(grbenchmark)
+
+target_sources(grbenchmark PRIVATE ${grbenchmark_SOURCES})
+source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR} FILES ${grbenchmark_SOURCES})
+
+target_compile_features(grbenchmark PRIVATE
+	cxx_std_20
+)
+
+target_link_libraries(grbenchmark PRIVATE
+	grlib
+)
+
+get_directory_property(CMKR_VS_STARTUP_PROJECT DIRECTORY ${PROJECT_SOURCE_DIR} DEFINITION VS_STARTUP_PROJECT)
+if(NOT CMKR_VS_STARTUP_PROJECT)
+	set_property(DIRECTORY ${PROJECT_SOURCE_DIR} PROPERTY VS_STARTUP_PROJECT grbenchmark)
 endif()

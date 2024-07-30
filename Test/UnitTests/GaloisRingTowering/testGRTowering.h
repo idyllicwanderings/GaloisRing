@@ -14,7 +14,9 @@
 #define d3 2
 // #define d4 2
 // #define d5 2
-#define GRT_HAS_3_TOWERS
+// #define GRT_HAS_1_TOWER
+// #define GRT_HAS_2_TOWERS
+ #define GRT_HAS_3_TOWERS
 #define ADD_TV_FILE "test/TestVectors/GRToweringAddition.txt"
 #define SUB_TV_FILE "test/TestVectors/GRToweringSubtraction.txt"
 #define MUL_TV_FILE "test/TestVectors/GRToweringMultiplication.txt"

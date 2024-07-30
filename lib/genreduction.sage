@@ -1,9 +1,9 @@
 # This file generates the primitive polynomial of towering of GR via the towering of finite fields
 
-D0_LIFT_DEG = [i for i in range(2, 8)] #TODO: 不支持d0 = 1。
-LIFT_DEG = [[i for i in range(2, 5)], [i for i in range(2, 7)], [i for i in range(2, 5)]]
+D0_LIFT_DEG = [i for i in range(2, 13)] #TODO: 不支持d0 = 1。
+LIFT_DEG = [[i for i in range(2, 5)], [i for i in range(2, 5)], [i for i in range(2, 3)]]
 ALPHABET = ['α','β','γ']
-MAX_LAYER = 4   # = 4 liftings at most
+MAX_LAYER = 3   # = 4 liftings at most
 
 TOWERS = {}
 
@@ -35,20 +35,25 @@ def recurse_build(layer, prev_R, prev_degs, max_layer0):
         recurse_build(layer + 1, R2, prev_degs + [lift_d1], max_layer0)
 
 for base_d0 in D0_LIFT_DEG:
-    for max_layer0 in range(1, MAX_LAYER): 
-        F1 = GF(2^base_d0, 'ζ', modulus="minimal_weight")
-        R1 = F1['δ']
-        prev_degs = [base_d0]
-        TOWERS[tuple(prev_degs)] = modulus_to_list(F1.modulus(), 0)
-        recurse_build(1, R1, prev_degs, max_layer0)
+    #for max_layer0 in range(1, MAX_LAYER): 
+    F1 = GF(2^base_d0, 'ζ', modulus="minimal_weight")
+    R1 = F1['δ']
+    prev_degs = [base_d0]
+    TOWERS[tuple(prev_degs)] = modulus_to_list(F1.modulus(), 0)
+    recurse_build(1, R1, prev_degs, MAX_LAYER)
 
 print("------------------------------------generate completed-----------------------------------")
 # TODO: ring check in ZK4Z2K using layers of embedding might lose some 映射结构。。？所以暂时只能做一层。
 # template <int k, int d0, int... d1> extern const GR<GR<GR1e<>>???>?? NO.
 # or we can write every case of k, d0, d1
 
-for deg in TOWERS.keys():
-    print(deg)
+
+print(TOWERS[(2,)])
+print(TOWERS[(3,)])
+print(TOWERS[(4,)])
+print(TOWERS[(5,)])
+print(TOWERS[(6,)])
+print(TOWERS[(7,)])
 
 
 textual_towerings = [] #(d0, d1, d2, ...) GR<GR<GR1e<k,d0>(s1),d1)(s2),d>(s3)
@@ -64,8 +69,6 @@ for deg, moduli in TOWERS.items():
         if layer == len(deg) - 1:
             return f"{prev_item}", f"{{{', '.join(inner_strs)}}}"
         inner_item = f"GRT1e< {prev_item}, {deg[layer]}>"
-        #if layer == 1:
-        print(inner_item)
         return inner_item, f"{inner_item}({{{', '.join(inner_strs)}}})"
     
     mtype, mval = enum_build(moduli, deg, len(deg) - 1)
