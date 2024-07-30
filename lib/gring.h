@@ -644,8 +644,8 @@ namespace ops {
 
     template <int n, int d, typename R>
     std::array<R, n> reduce_once(const std::array<R, n>& x, const int& red) { // Trinomial
-        std::cout << "========= ============================= reduce once in trinomail" << std::endl;
-        std::cout << "red" << red << std::endl;
+        // std::cout << "========= ============================= reduce once in trinomail" << std::endl;
+        // std::cout << "red" << red << std::endl;
         // std::cout << "x:";
         // for (int i = 0; i < n; i++) {
         //     int a = int(x[i].force_int());
@@ -653,12 +653,12 @@ namespace ops {
         // }
         // std::cout << std::endl;
 
-        std::cout << "x:";
-        for (int i = 0; i < n; i++) {
-            int a = int(x[i].force_int());
-            std::cout << a << ", ";
-        }
-        std::cout << std::endl;
+        // std::cout << "x:";
+        // for (int i = 0; i < n; i++) {
+        //     int a = int(x[i].force_int());
+        //     std::cout << a << ", ";
+        // }
+        // std::cout << std::endl;
 
         std::array<R, n> high;   // high poly terms
         std::copy(x.begin() + d, x.end(), high.begin());
@@ -674,13 +674,13 @@ namespace ops {
             res[i] = low[i] - high[i] - hired[i];
         }
 
-        std::cout << "res:";
-        for (int i = 0; i < n; i++) {
-            int a = int(res[i].force_int());
-            std::cout << a << ", ";
-        }
-        std::cout << std::endl;
-        std::cout << "++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++" << std::endl;
+        // std::cout << "res:";
+        // for (int i = 0; i < n; i++) {
+        //     int a = int(res[i].force_int());
+        //     std::cout << a << ", ";
+        // }
+        // std::cout << std::endl;
+        // std::cout << "++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++" << std::endl;
 
         return res;
     }
@@ -749,17 +749,14 @@ namespace ops {
         // after one reduction, the polynomial will be using the same reduction polynomial
         //.就不对了
         if constexpr (std::is_same_v<R, Z2k<k>>) {
-            std::cout << "reduce start" << std::endl;
             auto low = reduce_once<n, d, R>(x, red); 
             low = reduce_once<n, d, R>(low, red); 
-            std::cout << "reduce end" << std::endl;
             std::array<R, d> res;
             std::copy(low.begin(), low.begin() + d, res.begin());
-            std::cout << "res:";
             return res;
         }
         else {
-            std::cout << "I AM SUPPOSED NOT TO BE HERE" << std::endl;
+            //std::cout << "I AM SUPPOSED NOT TO BE HERE" << std::endl;
             auto low = reduce_once<n, d, R>(x, red);
             low = reduce_once<n, d, R>(low, red);
             std::array<R, d> res;

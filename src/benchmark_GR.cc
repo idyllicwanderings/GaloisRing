@@ -11,7 +11,7 @@ uint64_t nanos()
 }
 
 void GRT_mult_benchmark() {
-    #define k 7
+    #define k 32
     #define d1 2
     #define d2 3
     #define d3 2
@@ -38,7 +38,7 @@ void GRT_mult_benchmark() {
 }
 
 void GRT_add_benchmark() {
-    #define k 7
+    #define k 32
     #define d1 2
     #define d2 3
     #define d3 2
@@ -65,7 +65,7 @@ void GRT_add_benchmark() {
 }
 
 void GR_mult_benchmark() {
-    #define k 7
+    #define k 32
     #define d1 12
     // grab random values for a, b, and c
     GR1e<k, d1> a = GR1e<k, d1>::random();
@@ -91,7 +91,7 @@ void GR_mult_benchmark() {
 }
 
 void GR_add_benchmark() {
-    #define k 7
+    #define k 32
     #define d1 12
     // grab random values for a, b, and c
     GR1e<k, d1> a = GR1e<k, d1>::random();
@@ -117,11 +117,11 @@ void GR_add_benchmark() {
 int main() {
 
     std::cout << " =========================== gr towers benchmark =========================== " << std::endl;
-    // GRT_mult_benchmark();
-    // GRT_add_benchmark();
+    GRT_mult_benchmark();
+    GRT_add_benchmark();
     std::cout << " =========================== gr w/o towers benchmark ======================== " << std::endl;
     GR_mult_benchmark();
-    // GR_add_benchmark();
+    GR_add_benchmark();
 
 
     return 1;

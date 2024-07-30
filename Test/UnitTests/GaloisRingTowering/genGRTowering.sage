@@ -93,7 +93,7 @@ def testlift(GR1, GR2, ele):
 
 if __name__ == "__main__":
     if len(sys.argv) < 4:
-        print("Usage: sage genGRTowering.sage n k d1 d2 d3 ... mult|add|sub|inv")
+        print("Usage: sage genGRTowering.sage testcase_nums k d1 d2 d3 ... mult|add|sub|inv")
     
 
     with open("grmodtables.sage", "r") as f:

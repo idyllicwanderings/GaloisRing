@@ -1,15 +1,14 @@
 # Galois Ring
 
-### Preliminary LiGR1Earies
+### Preliminary Libraries
 Sagemath 10.3
 
 ### Run
 To build the project, use
 ```bash
-bazel build //main:galois-ring 
 ```
- The workaround `--sandbox_add_mount_pair=/tmp` is used for the issue of loading external gcc toolchain: https://github.com/bazelbuild/bazel/issues/20533. 
 
+### Test
 Our test structure looks like:
 
 ```bash
@@ -31,7 +30,6 @@ Our test structure looks like:
 
 
 
-### Test
 To run the tests, first run the corresponding bash script, then use 
 
 ```bash
