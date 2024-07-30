@@ -65,7 +65,8 @@ void GRT_add_benchmark() {
 }
 
 void GR_mult_benchmark() {
-    #define k 32
+    #define k 6 
+    //uint8_t has some problems, fails for k <= 8, d1 = 12????????????
     #define d1 12
     // grab random values for a, b, and c
     GR1e<k, d1> a = GR1e<k, d1>::random();
@@ -91,7 +92,7 @@ void GR_mult_benchmark() {
 }
 
 void GR_add_benchmark() {
-    #define k 32
+    #define k 8
     #define d1 12
     // grab random values for a, b, and c
     GR1e<k, d1> a = GR1e<k, d1>::random();

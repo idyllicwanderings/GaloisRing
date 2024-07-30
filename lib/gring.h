@@ -667,7 +667,10 @@ namespace ops {
         std::copy(x.begin(), x.begin() + d, low.begin());
 
         std::array<R, n> hired;     // hi << red
-        std::copy(high.begin(), high.end(), hired.begin() + red);
+        // int n  = 2k -1 = 2*6 -1 = 11
+        // red = 5
+        // high 
+        std::copy(high.begin(), high.begin() + n - red, hired.begin() + red);
 
         std::array<R, n> res;
         for (int i = 0; i < d;i++) {
