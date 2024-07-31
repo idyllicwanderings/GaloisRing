@@ -82,15 +82,6 @@ def testinv(GR, k, d, seq):  ## test GR1TE inverse
     return [str(element_to_list(a)), str(element_to_list(inv_a))]
 
 
-'''
-def testlift(GR1, GR2, ele):
-    a = GR1.random_element()
-    lift_a = GR2(a)
-    return [str(element_to_list(a)), str(element_to_list(lift_a))]
-'''
-
-
-
 if __name__ == "__main__":
     if len(sys.argv) < 4:
         print("Usage: sage genGRTowering.sage testcase_nums k d1 d2 d3 ... mult|add|sub|inv")

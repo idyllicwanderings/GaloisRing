@@ -78,6 +78,33 @@ if(NOT CMKR_VS_STARTUP_PROJECT)
 	set_property(DIRECTORY ${PROJECT_SOURCE_DIR} PROPERTY VS_STARTUP_PROJECT grtowertest)
 endif()
 
+# Target: grtest
+set(grtest_SOURCES
+	cmake.toml
+	"test/UnitTests/GaloisRing/testGR.cc"
+	"test/UnitTests/GaloisRing/testGR.h"
+	"test/UnitTests/UnitTest.cc"
+	"test/UnitTests/UnitTest.h"
+)
+
+add_executable(grtest)
+
+target_sources(grtest PRIVATE ${grtest_SOURCES})
+source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR} FILES ${grtest_SOURCES})
+
+target_compile_features(grtest PRIVATE
+	cxx_std_20
+)
+
+target_link_libraries(grtest PRIVATE
+	grlib
+)
+
+get_directory_property(CMKR_VS_STARTUP_PROJECT DIRECTORY ${PROJECT_SOURCE_DIR} DEFINITION VS_STARTUP_PROJECT)
+if(NOT CMKR_VS_STARTUP_PROJECT)
+	set_property(DIRECTORY ${PROJECT_SOURCE_DIR} PROPERTY VS_STARTUP_PROJECT grtest)
+endif()
+
 # Target: grbenchmark
 set(grbenchmark_SOURCES
 	cmake.toml

@@ -36,6 +36,15 @@ link-libraries = ["grlib"]
 compile-features = ["cxx_std_20"]
 
 
+[target.grtest]
+type = "executable"
+headers = ["test/UnitTests/UnitTest.h",
+           "test/UnitTests/GaloisRing/testGR.h",]
+sources = ["test/UnitTests/UnitTest.cc", "test/UnitTests/GaloisRing/testGR.cc"]
+link-libraries = ["grlib"]
+compile-features = ["cxx_std_20"]
+
+
 [target.grbenchmark]
 type = "executable"
 sources = ["src/benchmark_GR.cc"]

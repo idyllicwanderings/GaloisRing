@@ -76,8 +76,8 @@ namespace arith {
     }
 
     template<typename T>
-    T fast_exp(T& a, std::vector<bool> exp) {
-        T res;  
+    T fast_exp(T a, std::vector<bool> exp) {
+        T res = T::one();
         for (int i = size(exp) - 1; i >= 0; i--) {
             if (exp[i]) res *= a;
             a *= a;
@@ -86,9 +86,9 @@ namespace arith {
     }
 
     template<typename T>
-    T fast_exp_fermat(T&a, int d, int k) {
-        T res; 
-        for (int i = 0; i < k + d - 2; i++) {
+    T fast_exp_fermat(T a, int d, int k) {
+        T res = T::one();
+        for (int i = 0; i < k + d - 1; i++) {
             if (i != k - 1) res *= a;
             a *= a;
         }
@@ -279,14 +279,22 @@ class GR1e
 
         bool operator!=(const GR1e<k, d>& o) const { return (polys_ != o.polys_); }
 
-        Z2k<k>& operator[](int i) const {
+        Z2k<k>& operator[](int i) {
+            if( i < 0 || i >= d ) { throw std::out_of_range("Index out of range"); }
+            return polys_[i];
+        }
+
+        const Z2k<k>& operator[](int i) const {
             if( i < 0 || i >= d ) { throw std::out_of_range("Index out of range"); }
             return polys_[i];
         }
         
         GR1e<k, d> inv() {
             GR1e<k, d> res = arith::fast_exp_fermat<GR1e<k, d>>(*this, d, k);
-            assert(res * (*this) != one());
+            std::cout << "res: " << res.force_str() << std::endl;
+            auto tmp = res * (*this);
+            std::cout << "tmp: " << tmp.force_str() << std::endl;
+            assert(res * (*this) == one());
             return res;
         }
 
@@ -517,7 +525,7 @@ class GRT1e<R, d> {
 
         GRT1e<R, d> inv() {
             GRT1e<R, d> res = arith::fast_exp_fermat<GRT1e<R, d>>(*this, d_prod_, k_);
-            assert(res * (*this) != one());
+            assert(res * (*this) == one());
             return res;
         }
 

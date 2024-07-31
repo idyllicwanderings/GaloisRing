@@ -6,9 +6,9 @@ LIFT_D0 = [i for i in range(2, 33)]
 '''
 
 #for test 
-BASE_K = [i for i in range(2, 7)]
-LIFT_D0 = [i for i in range(2, 7)]
-LIFT_D1 = 7
+BASE_K = [i for i in range(2, 65)]
+LIFT_D0 = [i for i in range(2, 9)]
+LIFT_D1 = 25
 
 def modulus_poly(k):
     return GF(2^k, 'ζ', modulus="minimal_weight").modulus()
@@ -103,19 +103,29 @@ print("------------------------------------generate completed-------------------
 textual_embeddings = []
 for key, v in EMBEDDINGS.items():
     k, d0, d1 = key # k[1] terms, 一个term里面有k[2]个int
-    r_powers = [f"GR1e<{k}, {d1}>({{{', '.join(f'{x}u' for x in s)}}})" for s in v]  #{{是用来转义{
-    textual_embeddings.append(f"template <> inline const GR1e<{k}, {d1}> lift_v<{k}, {d0}, {d1}>[{d0}] = {{{', '.join(r_powers)}}};")
+    int_type = "u"
+    if k <= 16:
+        int_type = "u"
+    elif 16 < k and k <= 32:
+        int_type = "ul"
+    elif 32 < k and k <= 64:
+        int_type = "ull"
+    else:
+        print("unsupported k!" + str(k))
+    r_powers = [f"GR1e<{k}, {d1}>({{{', '.join(f'{x}{int_type}' for x in s)}}})" for s in v]  #{{是用来转义{
+    textual_embeddings.append(f"template <> inline const std::array< GR1e<{k}, {d1}>, {d0}> lift_v<{k}, {d0}, {d1}> = {{{', '.join(r_powers)}}};")
 
 with open("grlifttables.h", "w") as f:
     f.write("""
 // This file was automatically generated, changes may be overwritten
 #pragma once
 #include <cstdint>
+#include <array>
 // Only to keep everything looking nice if you somehow would include the file directly; it's circular otherwise
 #include "gring.h"
 
 namespace grlifttables {
-    template <int k, int d0, int d1> extern const GR1e<k, d1> lift_v[d0];
+    template <int k, int d0, int d1> extern const std::array<GR1e<k, d1>, d0> lift_v;
     %s
 } // namespace grlifttables
 """ % "\n    ".join(textual_embeddings))
