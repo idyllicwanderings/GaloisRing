@@ -4,9 +4,9 @@
 
 - [x] 写一个polynomial mult 接口
 
-- [ ] 用makefile写test
+- [x] 用makefile写test
 
-- [ ] 把error handling统一一下
+- [x] 把error handling统一一下
 
 - [ ] demo测试一下keccak sha3
 
@@ -41,9 +41,9 @@
   Z2k<k>(): val_(0) {}  //wrong
   ```
 
-- [ ] 重写test structure for Z2K:
+- [x] 重写test structure for Z2K:
 
-  - [ ] workflow works like this: 
+  - [x] workflow works like this: 
 
     unit-test.c for displaying information
 
@@ -79,7 +79,7 @@
     return a*b == 1
     ```
 
-  - [ ] (2^d - 1) * (2^(k - 1)) - 1是一个大数，该怎么计算和存储
+  - [x] (2^d - 1) * (2^(k - 1)) - 1是一个大数，该怎么计算和存储
 
     $(2^d - 1) * 2^{k - 1} - 1$:
 
@@ -90,8 +90,8 @@
 - [x] GR1e GRT1e的test vector string
 
   - [x] 固定GR test里sage script的 polynomial alphabet
-  - [ ] 写GRT1e test(固定polynomial) 
-  - [ ] 按照sage规则写一个写GR1e GRT1e的operator<<重载
+  - [x] 写GRT1e test(固定polynomial) 
+  - [x] 按照sage规则写一个写GR1e GRT1e的operator<<重载
 
 - [x] sage GR towering
 
@@ -100,19 +100,19 @@
   - [x] 测试一层/多层towering是否可以用robin那个结论
   - [x] 写C++里面的全排列生成（exceptional sequence），也就是sequence generation on the flys
   
-- [ ] GRT1e test
+- [x] GRT1e test
 
   - [x] sage test script
-  - [ ] C++ output scirpt
+  - [x] C++ output scirpt
   
 - [x] inv的fast exponentiation改一下。不要存储
 
   - [x] GRT1E增加一个k的成员函数。
 
-- [ ] gring.h编译通过
+- [x] gring.h编译通过
 
   - [x] 增加一个函数，把BRlifttables加进去
-  - [ ] 处理一下reduce
+  - [x] 处理一下reduce
   
 - [ ] RO
 
@@ -120,7 +120,11 @@
   - [ ] 想法子把这个库build进来。咋搞
   - [ ] test一下我的demo
 
-- [ ] 
+- [ ] benchmark修改一下机制
+
+- [ ] grt1e测试一下inv
+
+- [ ] 增加lagrange
 
 
 

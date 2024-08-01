@@ -298,6 +298,21 @@ class GR1e
             return res;
         }
 
+        /**
+         * @note: only used for mapping lagrange pairs (int - GR1e element), 
+         *       not for general use to build GR1e element from int
+         * @todo: allows k <= 32(64 here)
+         */
+        
+        static GR1e<k, d> from_bits(std::array<bool, d> value) {
+            std::array<Z2k<k>, d> a;
+            for (std::size_t i = 0; i < std::min(64, d); i++) {
+                Z2k<k>(value[i]);
+            }
+            return GR1e<k, d>(a);
+        }
+        
+
         static GR1e<k, d> from_list(const std::string& str) {
             std::array<Z2k<k>, d> res;
             auto start = str.find_first_not_of(" \[");  //trim the brackets
@@ -548,6 +563,23 @@ class GRT1e<R, d> {
             }
             return res;
         }
+
+        /**
+         * @note: only used for mapping lagrange pairs (int - GRT1e element), not for general use
+         * @todo: allows prod(d) <= 32(64 here)
+         */
+        static GRT1e<R, d> from_bits(std::array<bool, d> bits) {
+            std::array<R, d> res;
+            for (std::size_t i = 0; i < d; i++) {
+                std::array<bool, d_prod_ / d> in_bits;
+                for (std::size_t j = 0; j < d_prod_ / d; j++) {
+                    in_bits[j] = bits[i * (d_prod_ / d) + j];
+                }
+                res[i] = R::from_bits(in_bits);
+            }
+            return GRT1e<R, d>(res);
+        }
+
 
         static GRT1e<R, d> from_list(const std::string& str) {
             std::array<R, d> res;
