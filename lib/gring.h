@@ -301,10 +301,9 @@ class GR1e
         /**
          * @note: only used for mapping lagrange pairs (int - GR1e element), 
          *       not for general use to build GR1e element from int
-         * @todo: allows k <= 32(64 here)
          */
         
-        static GR1e<k, d> from_bits(std::array<bool, d> value) {
+        static GR1e<k, d> from_bits(const std::array<bool, d>& value) {
             std::array<Z2k<k>, d> a;
             for (std::size_t i = 0; i < std::min(64, d); i++) {
                 Z2k<k>(value[i]);
@@ -324,14 +323,6 @@ class GR1e
                 res[i++] = Z2k<k>(std::stoi(arith::trim(cur)));
             }
             return GR1e<k, d>(res);
-        }
-
-        static GR1e<k, d> from_bits(const std::array<F, d>& bits) {
-            std::array<Z2k<k>, d> a;
-            for (int i = 0; i < std::min(64, d); i++) {
-                a = Z2k<k>(bits[i]);
-            }
-            return GR1e<k, d>(a);
         }
         
         std::array<F, d> force_list() const {
@@ -566,7 +557,6 @@ class GRT1e<R, d> {
 
         /**
          * @note: only used for mapping lagrange pairs (int - GRT1e element), not for general use
-         * @todo: allows prod(d) <= 32(64 here)
          */
         static GRT1e<R, d> from_bits(std::array<bool, d> bits) {
             std::array<R, d> res;
