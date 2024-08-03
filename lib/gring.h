@@ -194,7 +194,7 @@ class Z2k
         }
         
 
-        static Z2k<k> random() {
+        static Z2k<k> random_element() {
             // TODO:return Z2k<k>(random_bits(k)); 
             std::srand(time(NULL));
             return Z2k<k>(std::rand() % (static_cast<int>(std::pow(2, k))));
@@ -358,12 +358,21 @@ class GR1e
             return ss.str();
         }
 
-        static GR1e<k, d> random() {
+        static GR1e<k, d> random_element() {
             std::array<Z2k<k>, d> res;
             for (int i = 0; i < d; i++) {
-                res[i] = Z2k<k>::random(); 
+                res[i] = Z2k<k>::random_element(); 
             }
             return GR1e<k, d>(res); 
+        }
+
+        template<int m>
+        static std::array<GR1e<k, d>, m> random_vector() {
+            std::array<GR1e<k, d>, m> res;
+            for (int i = 0; i < m; i++) {
+                res[i] = random_element();
+            }
+            return res;
         }
 
         static GR1e<k, d> zero() {
@@ -506,10 +515,10 @@ class GRT1e<R, d> {
             return (polys_ == o.polys_);
         }
 
-        static GRT1e<R, d> random() {
+        static GRT1e<R, d> random_element() {
             std::array<R, d> res;
             for (int i = 0; i < d; i++) {
-                res[i] = R::random(); 
+                res[i] = R::random_element(); 
             }
             return GRT1e<R, d>(res); 
         }

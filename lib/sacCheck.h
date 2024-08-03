@@ -1,5 +1,5 @@
 
-#include <gring.h>
+#include "gring.h"
 
 namespace detail {
 
@@ -47,31 +47,91 @@ namespace detail {
         return res;
     }
 
+    void interpolate_preprocess() {
+        
+    }
+
+    template <typename R, int n>
+    std::array<R, n> elewise_product(const std::array<R, n>& a, const std::array<R, n>& b) {
+        std::array<R, n> mult;
+        for (int i = 0; i < n; i++) {
+            mult[i] = a[i] * b[j];
+        }
+        return mult;
+    }
+
+    
+    template <typename R, int n>
+    std::array<R, n> dot_product(const std::array<R, n>& a, const R& b) {
+        std::array<R, n> mult;
+        for (int i = 0; i < n; i++) {
+            mult[i] = a[i] * b;
+        }
+        return mult;
+    }
+
+
+
+    /* =============== 1. Generate sharing of witness x, y, z =============== */
+    void langrange_precompute(std::vector<R>& ys, uint64_t d_prod) {
+        std::vector<R> ys;
+        interpolate<R>(ys, x, d_prod);
+
+        std::array<R, k> s_x;
+        std::array<R, k> s_y;
+        std::array<R, k> s_z;
+        for (int i = 0; i < k; i++) {
+            s_x[i] = interpolate<R>(x, d_prod);
+            s_y[i] = interpolate<R>(y, d_prod);
+            s_z[i] = interpolate<R>(z, d_prod);
+        }
+
+    }
+
 }
 
 
 
-template <int k>
-void sacCheck(std::array<tuple<int, int>, k> x, y, z) {
+
+template <typename Rs, typename Rl, int k, int s>
+void sacrificing_check(const std::array<Rs, n>& in_x, const std::array<Rs, n>& in_y, const std::array<Rs, n>& in_z) {
 
     // TODO: generate sharing of witness x, y, z
     // TODO: langrange + reconstruct 
-    std::vector<GRT<>> x_shares = langrange_compute(x);
+    langrange_precompute<Rs>(ys, d_prod, in_x, in_y, in_z);
 
     //lift x, y, z
-    std::vector<GRT1e<k, d2>> lift_x;
+    uint64_t ds = Rs.get_d();
+    uint64_t dl = Rl.get_d();
 
-    // generate random a and a*y = c
-    a = GR<>::random_element();
-    c = multiply(a, y);
+    /* ===================== 1. lift input shares to the check ring===================== */
+    std::array<Rl, n> lift_x;
+    std::array<Rl, n> lift_y;
+    std::array<Rl, n> lift_z;
+
+    for (int i = 0; i < n; i++) {
+        lift_x[i] = liftGR<k + s, ds, dl>(shared_x[i]);
+        lift_y[i] = liftGR<k + s, ds, dl>(shared_y[i]);
+        lift_z[i] = liftGR<k + s, ds, dl>(shared_z[i]);
+    }
+
+    /* ===================== 2. generate random masking ================================ */
+    
+    std::array<Rl, n> a = Rl::random_vector<n>();
+    shared_a = interpolate<>(a, d_prod);
+
+    std::array<Rl, n> c = elewise_product<Rl, n>(shared_a, lift_y);
+    shared_c = interpolate<>(c, d_prod);
 
     // random eplison
-    epsilon = GR<>::random_element();
+    /* ===================== 3. generate random epilson ================================ */
+    GR1e<1 + s, dl> epsilon = GR1e<1 + s, dl>::random_element();
+    //TODO: different range for epsilon and lift_z
 
-    // reconstruct alpha 
-    alpha = reconstruct(multiply(epsilon, a) - lift_x);
+    /* ===================== 4. recover check value ==================================== */
+    auto alpha = reconstruct(dot_product<Rl, n>(epsilon, lift_x) - shared_a);
 
-    // zero check 
-    multiply(epsilon, lift_z ) - c - multiply(alpha, lift_y) == 0;
+    /* ===================== 5. zero check ============================================ */
+    assert(dot_product<Rl, n>(epsilon, lift_z) - shared_c - elewise_product(alpha, lift_y) == Rl::zero());
 
 }
