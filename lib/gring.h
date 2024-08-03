@@ -288,6 +288,10 @@ class GR1e
             if( i < 0 || i >= d ) { throw std::out_of_range("Index out of range"); }
             return polys_[i];
         }
+
+        static constexpr int get_d() const {
+            return d0_;
+        }
         
         GR1e<k, d> inv() {
             GR1e<k, d> res = arith::fast_exp_fermat<GR1e<k, d>>(*this, d, k);
@@ -366,11 +370,10 @@ class GR1e
             return GR1e<k, d>(res); 
         }
 
-        template<int m>
-        static std::array<GR1e<k, d>, m> random_vector() {
-            std::array<GR1e<k, d>, m> res;
+        static std::vector<GR1e<k, d>> random_vector(int m) {
+            std::vector<GR1e<k, d>> res;
             for (int i = 0; i < m; i++) {
-                res[i] = random_element();
+                res.push_back(random_element());
             }
             return res;
         }
@@ -513,6 +516,10 @@ class GRT1e<R, d> {
 
         bool operator!=(const GRT1e<R, d>& o) const {
             return (polys_ == o.polys_);
+        }
+
+        static constexpr int get_d() const {
+            return d0_;
         }
 
         static GRT1e<R, d> random_element() {
@@ -861,7 +868,18 @@ GR1e<k, d1> liftGR(const GR1e<k, d0>& base) {
     return res;
 }
 
-
+/**
+ * @brief: p-adic extension from Z2^k0 to Z2^k1
+ */
+template <int k0, int k1, int d>
+GR1e<k1, d> extendGR(const GR1e<k0, d>& base) {
+    static_assert(k1 > k0, "Z2k must be larger");
+    GR1e<k1, d> res;
+    for (int i = 0; i < d; i++) {
+        res[i] = base[i];
+    }
+    return res;
+}
 
 
 
