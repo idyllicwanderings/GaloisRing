@@ -14,6 +14,7 @@ def modulus_poly(k):
     return GF(2^k, 'ζ', modulus="minimal_weight").modulus()
 
 #TODO: delete linear time solution。。
+# k is actually "2k" for the larger ring....
 def lift2k(k, Rs_moduli, Rl_moduli, r1, algorithm = 'log'):  #k, the Rsmall's polynomial, Rlarge's reduction polynomial, the previous roots
     Rbase = Zmod(2^k)
     Rlarge = Rbase.extension(Rl_moduli)

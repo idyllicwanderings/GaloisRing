@@ -10,14 +10,18 @@
 #include <string>
 #include <fstream>
 
+extern "C" {
 #include "SimpleFIPS202.h"
 #include "KeccakPRG.h"
+}
 
 #define SEED_BYTE_LEN 16
 #define SHA3_WIDTH 256
 #define OUT_BYTE_LEN 256
 
-class random {
+namespace random {
+
+class RO {
 
     uint8_t out_[OUT_BYTE_LEN];
     uint64_t p_;
@@ -57,5 +61,6 @@ class random {
     }
 
 };
+}
 
 #endif

@@ -28,7 +28,7 @@
 #include <random>
 
 
-// #include "SimpleFIPS202.h"
+#include "random.h"
 
 namespace arith {
  
@@ -98,6 +98,7 @@ namespace arith {
     // TODO: figure out a seed and length
     template <typename T>
     T random(const unsigned char *seed) {
+        
         // unsigned char res[ceil(sizeof(T) / 8)];
         
         // if (SHA3_256(res, seed, strlen((const char *)seed))) 
@@ -198,6 +199,8 @@ class Z2k
             // TODO:return Z2k<k>(random_bits(k)); 
             std::srand(time(NULL));
             return Z2k<k>(std::rand() % (static_cast<int>(std::pow(2, k))));
+
+            
         }
 
         /**
@@ -395,7 +398,7 @@ class GR1e
         template <int m>
         std::array<GR1e<k, d>, m> exceptional_seq() {
             std::array<GR1e<k, d>, m> res;
-            static_assert(m <= 2^d, "the ring only has a maximal sequence of at most 2^d length");
+            static_assert(m <= std::pow(2, d), "the ring only has a maximal sequence of at most 2^d length");
             for (int i = 0; i < m; i++) { 
                 std::array<F, d> seq;  
                 for (int j = 0; j < d; j++) {

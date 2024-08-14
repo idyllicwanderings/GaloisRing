@@ -117,14 +117,14 @@
 - [ ] RO
 
   - [x] RO写一下。参见question 2
-  - [ ] 想法子把这个库build进来。咋搞
+  - [x] 想法子把这个库build进来。咋搞
   - [ ] test一下我的demo
 
-- [ ] benchmark修改一下机制
+- [x] benchmark修改一下机制
 
 - [ ] grt1e测试一下inv
 
-- [ ] 增加lagrange
+- [x] 增加lagrange
 
 
 

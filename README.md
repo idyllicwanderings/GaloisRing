@@ -3,6 +3,11 @@
 ### Preliminary Libraries
 Sagemath 10.3
 
+Install the following packages for sagemath:
+```bash
+sage --pip install (--user) tqdm
+```
+
 ### Run
 To build the project, use
 ```bash
