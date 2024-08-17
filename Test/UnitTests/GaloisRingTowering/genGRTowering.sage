@@ -91,7 +91,7 @@ if __name__ == "__main__":
         content = f.read()
     exec(content)
     #print(reduction_polynomial)
-    print("============================ loaded GR ==============================")
+    print("=================================== loaded GR ==========================================")
 
     n = int(sys.argv[1])
     k = int(sys.argv[2])
@@ -107,10 +107,10 @@ if __name__ == "__main__":
 
     GR = mkgrtowers(k, d) 
 
-    print("============================ generated GR ==============================")
+    print("=================================== generated GR =======================================")
     seq_permutations = all_permutations(d)
 
-    print("====================== generated seq_permutations ======================")
+    print("============================= generated seq_permutations ===============================")
 
     path = "../../TestVectors/"
     if 'mult' in operations:
@@ -130,4 +130,4 @@ if __name__ == "__main__":
             for _ in range(n):
                 f.write(" ; ".join(testinv(GR, k, d, seq_permutations)) + '\n')
     
-    print("===================== generated test vectors =============================")
+    print("============================ generated test vectors ====================================")

@@ -292,7 +292,7 @@ class GR1e
             return polys_[i];
         }
 
-        static constexpr int get_d() const {
+        static constexpr int get_d() {
             return d0_;
         }
         
@@ -521,7 +521,7 @@ class GRT1e<R, d> {
             return (polys_ == o.polys_);
         }
 
-        static constexpr int get_d() const {
+        static constexpr int get_d() {
             return d0_;
         }
 

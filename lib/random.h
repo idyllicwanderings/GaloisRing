@@ -19,7 +19,7 @@ extern "C" {
 #define SHA3_WIDTH 256
 #define OUT_BYTE_LEN 256
 
-namespace random {
+namespace randomness {
 
 class RO {
 
@@ -29,18 +29,18 @@ class RO {
     void gen_random_bytes() {
         // SHA3之后就是shake256
         uint8_t seed_[SEED_BYTE_LEN];
-        uint8_t hash_[#SHA3_WIDTH / 8];
+        uint8_t hash_[SHA3_WIDTH / 8];
         seed(seed_, SEED_BYTE_LEN);
-        int ret = SHA3_#SHA3_WIDTH(hash_, seed_, SEED_BYTE_LEN); 
+        int ret = SHA3_256(hash_, seed_, SEED_BYTE_LEN); 
         assert(ret == 0);
-        ret = SHAKE256(out_, OUT_BYTE_LEN, hash_, #SHA3_WIDTH / 8);
-        static_assert(ret == 0);
+        ret = SHAKE256(out_, OUT_BYTE_LEN, hash_, SHA3_WIDTH / 8);
+        assert(ret == 0);
         p_ = 0;
     }
 
     void get_bytes(uint8_t *out, unsigned int byte_len) {
         if (p_ + byte_len <= OUT_BYTE_LEN) {
-            std::memcpy(out, out_ + p_, byte_len);
+            memcpy(out, out_ + p_, byte_len);
             p_ += byte_len;
         } else {
         // TODO: Handle the error if requested length exceeds the available length

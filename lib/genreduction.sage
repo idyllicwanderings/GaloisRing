@@ -42,7 +42,6 @@ def recurse_build(layer, prev_R, prev_degs, max_layer0):
 
 
 def generate():
-    # 计算总操作数（此处为示例，实际中需要你自行估算）
     global pbar
     from math import prod
     ttl_iters = len(D0_LIFT_DEG) * math.prod([len(i) for i in LIFT_DEG])
@@ -57,10 +56,10 @@ def generate():
     
     pbar.close()
 
-print("------------------------------------generate   started-----------------------------------")
+print("------------------------------------generate     started---------------------------------")
 generate()
 
-print("------------------------------------generate completed-----------------------------------")
+print("------------------------------------generate   completed---------------------------------")
 # TODO: ring check in ZK4Z2K using layers of embedding might lose some 映射结构。。？所以暂时只能做一层。
 # template <int k, int d0, int... d1> extern const GR<GR<GR1e<>>???>?? NO.
 # or we can write every case of k, d0, d1
@@ -111,6 +110,8 @@ namespace grmodtables {
 """ % "\n    ".join(textual_towerings))
 
 
+print("------------------------------------write  c++ completed---------------------------------")
+
 ## =====================================write to sage files====================================
 import json
 
@@ -137,4 +138,4 @@ reduction_polynomial = {eval(k): v for k, v in reduction_polynomial.items()}
 """ % json.dumps(TOWERS_serializable, indent=4))
 
 
-print("------------------------------------writefile completed----------------------------------")
+print("------------------------------------write json completed---------------------------------")

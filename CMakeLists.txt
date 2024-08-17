@@ -36,6 +36,7 @@ set(grlib_SOURCES
 	"lib/gring.h"
 	"lib/grlifttables.h"
 	"lib/grmodtables.h"
+	"lib/random.h"
 )
 
 add_library(grlib INTERFACE)
@@ -49,7 +50,37 @@ target_compile_features(grlib INTERFACE
 
 target_include_directories(grlib INTERFACE
 	lib
+	"third_party/XKCP/bin/AVX512/libXKCP.a.headers"
 )
+
+target_link_libraries(grlib INTERFACE
+	"${CMAKE_CURRENT_SOURCE_DIR}/third_party/XKCP/bin/AVX512/libXKCP.a"
+)
+
+# Target: saccheck
+set(saccheck_SOURCES
+	cmake.toml
+	"lib/saccheck.h"
+	"src/testSac.cc"
+)
+
+add_executable(saccheck)
+
+target_sources(saccheck PRIVATE ${saccheck_SOURCES})
+source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR} FILES ${saccheck_SOURCES})
+
+target_compile_features(saccheck PRIVATE
+	cxx_std_20
+)
+
+target_link_libraries(saccheck PRIVATE
+	grlib
+)
+
+get_directory_property(CMKR_VS_STARTUP_PROJECT DIRECTORY ${PROJECT_SOURCE_DIR} DEFINITION VS_STARTUP_PROJECT)
+if(NOT CMKR_VS_STARTUP_PROJECT)
+	set_property(DIRECTORY ${PROJECT_SOURCE_DIR} PROPERTY VS_STARTUP_PROJECT saccheck)
+endif()
 
 # Target: grtowertest
 set(grtowertest_SOURCES

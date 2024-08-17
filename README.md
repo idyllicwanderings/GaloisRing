@@ -1,11 +1,18 @@
 # Galois Ring
 
 ### Preliminary Libraries
+
 Sagemath 10.3
 
 Install the following packages for sagemath:
 ```bash
 sage --pip install (--user) tqdm
+```
+
+Build the static XKCP library:
+```bash
+cd third_party/XKCP
+make AVX512/libXKCP.a
 ```
 
 ### Run

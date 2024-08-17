@@ -24,18 +24,18 @@ cmkr-include = "cmkr.cmake"
 
 [target.grlib]
 type = "interface"
-include-directories = ["lib"]
-headers = ["lib/gring.h", "lib/grlifttables.h", "lib/grmodtables.h"]
+include-directories = ["lib", "third_party/XKCP/bin/AVX512/libXKCP.a.headers"]
+link-libraries = ["third_party/XKCP/bin/AVX512/libXKCP.a"]
+headers = ["lib/gring.h", "lib/grlifttables.h", "lib/grmodtables.h", "lib/random.h"]
 compile-features = ["cxx_std_20"]
-
 
 
 [target.saccheck]
 type = "executable"
-headers = ["lib/random.h", "lib/saccheck.h"]
-# TODO: sources = ["lib/saccheck.cc"]
-include-directories = ["third_party/XKCP/libxkcp.a.headers"]
-link-libraries = ["third_party/XKCP/libxkcp.a", "grlib"]
+headers = ["lib/saccheck.h"]
+# TODO: 
+sources = ["src/testSac.cc"]
+link-libraries = ["grlib"]
 compile-features = ["cxx_std_20"]
 
 # [target.demo]

@@ -4,7 +4,7 @@
 #define PARTY_NUM 10 
 
 namespace detail {
-
+    template <int d>
     std::array<bool, d> to_bits(std::int64_t value) {
         std::array<bool, d> bits;
         for (std::size_t i = 0; i < d; ++i) {
@@ -16,10 +16,10 @@ namespace detail {
 
     template <typename R>
     R lagrange_l(const std::int64_t& lo, const std::int64_t& hi, const R& alpha_i, R x) {
-        R res::one();
-        R denom::one();
+        R res = R::one();
+        R denom = R::one();
         for (std::int64_t j = lo; j < hi; j++) {
-            R alpha_j = R::from_bits(to_bits(j));
+            R alpha_j = R::from_bits(to_bits<R::d>(j));
             if (alpha_j == alpha_i) continue;
             res *= (x - alpha_j);
             denom *= (alpha_i - alpha_j);
@@ -29,8 +29,8 @@ namespace detail {
 
     template <typename R>
     R lagrange_l(const std::vector<R>& xcoords, R alpha_i, R x) {
-        R res::one();
-        R denom::one();
+        R res = R::one();
+        R denom = R::one();
         for (const auto& alpha_j : xcoords) {
             if (alpha_j == alpha_i) continue;
             res *= (x - alpha_j);
@@ -42,7 +42,7 @@ namespace detail {
     template <typename R>
     R interpolate(const std::vector<R>& ys, const R& x) {
         uint64_t d_prod = R::get_d();
-        assert(ys.size() < (1ull << std::pow(2, d_prod)));
+        assert(ys.size() < (1ull << static_cast<uint64_t>(std::pow(2, d_prod))));
         R res;
         /// 0 作为secret, 1 到 ys.size() 作为shares
         for (std::size_t i = 0; i < ys.size(); i++) {
@@ -107,13 +107,11 @@ namespace detail {
         return ys;
     }
 
-
-
-
     /* =============== 1. Generate sharing of witness x, y, z =============== */
-    void langrange_precompute(std::vector<R>& ys, uint64_t d_prod) {
+    // template <typename R>
+    // void langrange_precompute(std::vector<R>& ys, uint64_t d_prod) {
     
-    }
+    // }
 
 }
 
@@ -167,7 +165,7 @@ void sacrificing_check(const std::vector<Rs>& in_x, const std::vector<Rs>& in_y,
     std::vector<std::vector<ChkShare>> c_shares;
 
     std::vector<Rl> a = Rl::random_vector(n);
-    std::vector<Rl> c = elewise_product<Rl>(a, lift_y);
+    std::vector<Rl> c = elewise_product<Rl>(a, lift_y_shares);
 
     for (int i = 0; i < n; i++) {
         a_shares.emplace_back(generate_sharing<ChkShare>(a[i], PARTY_NUM));
@@ -191,7 +189,7 @@ void sacrificing_check(const std::vector<Rs>& in_x, const std::vector<Rs>& in_y,
     }
 
     for (int i = 0; i < n; i++) { //reconstruct alpha
-        auto alpha[i] = interpolate(alpha_shares[i], Rl::zero());
+        alpha[i] = interpolate(alpha_shares[i], Rl::zero());
     }
 
     /* ===================== 6. zero check ============================================ */
