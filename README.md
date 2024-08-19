@@ -9,16 +9,32 @@ Install the following packages for sagemath:
 sage --pip install (--user) tqdm
 ```
 
-Build the static XKCP library:
+Build the XKCP library, be sure to choose the instruction set at your own and change the name in `cmake.toml`, like `compact` here:
 ```bash
 cd third_party/XKCP
-make AVX512/libXKCP.a
+make compact/libXKCP.a
 ```
+
 
 ### Run
 To build the project, use
 ```bash
 ```
+
+### Benchmarking
+To run the benchmarking results, modify the parameterization in `src/run_mb_gr`and run it,
+```python
+# parameters for the GR
+k = 64          # define the k, d for GR
+d1 = 8
+d2 = 0          # set to 0 if not used
+d3 = 0
+d4 = 0
+
+lift_ds = 3     # lift from GR(Z2k, d_small) to GR(Z2k, d_large)
+lift_dl = 24    
+```
+and then build the whole project and run grbenchmark as above, or simply run `run_benchmark.sh`
 
 ### Test
 Our test structure looks like:

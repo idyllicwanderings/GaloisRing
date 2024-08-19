@@ -50,11 +50,11 @@ target_compile_features(grlib INTERFACE
 
 target_include_directories(grlib INTERFACE
 	lib
-	"third_party/XKCP/bin/AVX512/libXKCP.a.headers"
+	"third_party/XKCP/bin/compact/libXKCP.a.headers"
 )
 
 target_link_libraries(grlib INTERFACE
-	"${CMAKE_CURRENT_SOURCE_DIR}/third_party/XKCP/bin/AVX512/libXKCP.a"
+	"${CMAKE_CURRENT_SOURCE_DIR}/third_party/XKCP/bin/compact/libXKCP.a"
 )
 
 # Target: saccheck

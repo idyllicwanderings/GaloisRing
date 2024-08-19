@@ -1,23 +1,33 @@
 # This file generates the primitive polynomial of towering of GR via the towering of finite fields
 
+#warning: does not support d_i = 1, d_prod <= 32
+'''
+D0_LIFT_DEG = [2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18]
+LIFT_DEG = [[2, 3 , 4 , 5, 6, 7, 8, 9, 10, 11, 12], [2, 3, 4, 5, 6, 7, 8], [2, 3, 4]]
+MAX_LAYER = 3   # = 4 liftings at most
+'''
+
+D0_LIFT_DEG = [i for i in range(2, 33)] 
+LIFT_DEG = [[i for i in range(2, 17)], [i for i in range(2, 9)], [i for i in range(2, 5)]]
+MAX_LAYER = 3   # = 4 liftings at most
+
+
 from tqdm import tqdm
 import time
 
-
-D0_LIFT_DEG = [i for i in range(2, 9)] #TODO: 不支持d0 = 1。
-LIFT_DEG = [[i for i in range(2, 5)], [i for i in range(2, 5)], [i for i in range(2, 3)]]
-ALPHABET = ['α','β','γ']
-MAX_LAYER = 3   # = 4 liftings at most
-
+ALPHABET = ['α','β','γ','δ', 'ε', 'ζ', 'η', 'θ', 'ι', 'κ', 'λ', 'μ', 'ν', 'ξ', 'ο', 'π']
 TOWERS = {}
 
 def modulus_to_list(moduli, layer):
-    if layer == 0:  #单独判断base_d0 = 1，因为int没有list.
+    if layer <= 0:  #单独判断base_d0 = 1，因为int没有list.
         return moduli if not hasattr(moduli, 'list') else moduli.list()
     return [modulus_to_list(term, layer - 1) for term in moduli.list()]
 
 def find_irreducible(layer, R1, d0):
     while true:         #TODO:研究一下比较sparse的polynomial，并且对C++上能有加速的
+        # TODO: DOES NOT SUPPORT BASE_D0 = 1, PROBLEM IN CHOICE OF R1 HERE
+        #print(f"layer = {layer}, d0 = {d0}")
+        
         r1_ele = R1.gen()^d0 + R1.random_element(degree=d0//2) #ensures it's monic & sparse
         # r1_ele = R1.random_element(degree=d0 - 1) + R1.gen()^d0  #ensures it's monic
         if r1_ele.is_irreducible():
@@ -30,6 +40,9 @@ def recurse_build(layer, prev_R, prev_degs, max_layer0):
         pbar.update(int(1))    #update progress bar
         return                
     for lift_d1 in LIFT_DEG[layer - 1]:
+        #TODO: prod(d_i) <= 32 here
+        if (math.prod(prev_degs) * lift_d1) > 32:
+            continue
         R1 = prev_R
         if layer == 1:   # TODO: should we use primitive instead? 思考
             F2 = R1.quo(R1.irreducible_element(lift_d1, algorithm="first_lexicographic"))
@@ -53,6 +66,7 @@ def generate():
             prev_degs = [base_d0]
             TOWERS[tuple(prev_degs)] = modulus_to_list(F1.modulus(), 0)
             recurse_build(1, R1, prev_degs, MAX_LAYER)
+            #print(f"base_d0 = {base_d0} finished")
     
     pbar.close()
 

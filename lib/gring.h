@@ -195,12 +195,16 @@ class Z2k
         }
         
 
-        static Z2k<k> random_element() {
-            // TODO:return Z2k<k>(random_bits(k)); 
-            std::srand(time(NULL));
-            return Z2k<k>(std::rand() % (static_cast<int>(std::pow(2, k))));
+        static inline Z2k<k> random_element(randomness::RO& ro) {
+            // randomness::RO ro;
+            // ro.gen_random_bytes(); 
+            size_t byte_len = (k + 7) / 8;
+            uint8_t out[byte_len];
+            ro.get_bytes(out, byte_len);
+            return Z2k<k>(randomness::to_int(out, k));
+            //std::srand(time(NULL));
+            // return Z2k<k>(std::rand() % (static_cast<int>(std::pow(2, k))));
 
-            
         }
 
         /**
@@ -298,10 +302,11 @@ class GR1e
         
         GR1e<k, d> inv() {
             GR1e<k, d> res = arith::fast_exp_fermat<GR1e<k, d>>(*this, d, k);
-            std::cout << "res: " << res.force_str() << std::endl;
+            //std::cout << "res: " << res.force_str() << std::endl;
             auto tmp = res * (*this);
-            std::cout << "tmp: " << tmp.force_str() << std::endl;
-            assert(res * (*this) == one());
+            // std::cout << "tmp: " << tmp.force_str() << std::endl;
+            //TODO: uncommment this 
+            // assert(res * (*this) == one());
             return res;
         }
 
@@ -365,18 +370,18 @@ class GR1e
             return ss.str();
         }
 
-        static GR1e<k, d> random_element() {
+        static inline GR1e<k, d> random_element(randomness::RO& ro) {
             std::array<Z2k<k>, d> res;
             for (int i = 0; i < d; i++) {
-                res[i] = Z2k<k>::random_element(); 
+                res[i] = Z2k<k>::random_element(ro); 
             }
             return GR1e<k, d>(res); 
         }
 
-        static std::vector<GR1e<k, d>> random_vector(int m) {
+        static inline std::vector<GR1e<k, d>> random_vector(int m, randomness::RO& ro) {
             std::vector<GR1e<k, d>> res;
             for (int i = 0; i < m; i++) {
-                res.push_back(random_element());
+                res.push_back(random_element(ro));
             }
             return res;
         }
@@ -395,10 +400,11 @@ class GR1e
             return GR1e<k, d>(res); 
         }
 
+
         template <int m>
-        std::array<GR1e<k, d>, m> exceptional_seq() {
+        static std::array<GR1e<k, d>, m> exceptional_seq() {
             std::array<GR1e<k, d>, m> res;
-            static_assert(m <= std::pow(2, d), "the ring only has a maximal sequence of at most 2^d length");
+            static_assert(m <= (1 << d), "the ring only has a maximal sequence of at most 2^d length");
             for (int i = 0; i < m; i++) { 
                 std::array<F, d> seq;  
                 for (int j = 0; j < d; j++) {
@@ -525,10 +531,10 @@ class GRT1e<R, d> {
             return d0_;
         }
 
-        static GRT1e<R, d> random_element() {
+        static inline GRT1e<R, d> random_element(randomness::RO& ro) {
             std::array<R, d> res;
             for (int i = 0; i < d; i++) {
-                res[i] = R::random_element(); 
+                res[i] = R::random_element(ro); 
             }
             return GRT1e<R, d>(res); 
         }
@@ -555,7 +561,7 @@ class GRT1e<R, d> {
         }
 
         template <int m>
-        std::array<GRT1e<R, d>, m> exceptional_seq() {
+        static std::array<GRT1e<R, d>, m> exceptional_seq() {
             std::array<GRT1e<R, d>, m> res;
             // TODO: modify m_in int type, TODO: ceil is not static
             static constexpr uint64_t m_in =  static_cast<uint64_t>(
@@ -693,21 +699,6 @@ namespace ops {
 
     template <int n, int d, typename R>
     std::array<R, n> reduce_once(const std::array<R, n>& x, const int& red) { // Trinomial
-        // std::cout << "========= ============================= reduce once in trinomail" << std::endl;
-        // std::cout << "red" << red << std::endl;
-        // std::cout << "x:";
-        // for (int i = 0; i < n; i++) {
-        //     int a = int(x[i].force_int());
-        //     std::cout << std::bitset<sizeof(a)*8>(a) << ", ";
-        // }
-        // std::cout << std::endl;
-
-        // std::cout << "x:";
-        // for (int i = 0; i < n; i++) {
-        //     int a = int(x[i].force_int());
-        //     std::cout << a << ", ";
-        // }
-        // std::cout << std::endl;
 
         std::array<R, n> high;   // high poly terms
         std::copy(x.begin() + d, x.end(), high.begin());
@@ -716,9 +707,6 @@ namespace ops {
         std::copy(x.begin(), x.begin() + d, low.begin());
 
         std::array<R, n> hired;     // hi << red
-        // int n  = 2k -1 = 2*6 -1 = 11
-        // red = 5
-        // high 
         std::copy(high.begin(), high.begin() + n - red, hired.begin() + red);
 
         std::array<R, n> res;
@@ -750,11 +738,11 @@ namespace ops {
 
 
         std::array<R, n> hired1;     // hi << red
-        std::copy(high.begin(), high.end(), hired1.begin() + std::get<0>(red));
+        std::copy(high.begin(), high.begin() + n - std::get<0>(red), hired1.begin() + std::get<0>(red));
         std::array<R, n> hired2;     // hi << red
-        std::copy(high.begin(), high.end(), hired2.begin() + std::get<1>(red));
+        std::copy(high.begin(), high.begin() + n - std::get<1>(red), hired2.begin() + std::get<1>(red));
         std::array<R, n> hired3;     // hi << red
-        std::copy(high.begin(), high.end(), hired3.begin() + std::get<2>(red));
+        std::copy(high.begin(), high.begin() + n - std::get<2>(red), hired3.begin() + std::get<2>(red));
 
         std::array<R, n> res;
         for (int i = 0; i < n;i++) {
@@ -883,6 +871,8 @@ GR1e<k1, d> extendGR(const GR1e<k0, d>& base) {
     }
     return res;
 }
+
+
 
 
 

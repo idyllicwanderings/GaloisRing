@@ -24,8 +24,8 @@ cmkr-include = "cmkr.cmake"
 
 [target.grlib]
 type = "interface"
-include-directories = ["lib", "third_party/XKCP/bin/AVX512/libXKCP.a.headers"]
-link-libraries = ["third_party/XKCP/bin/AVX512/libXKCP.a"]
+include-directories = ["lib", "third_party/XKCP/bin/compact/libXKCP.a.headers"]
+link-libraries = ["third_party/XKCP/bin/compact/libXKCP.a"]
 headers = ["lib/gring.h", "lib/grlifttables.h", "lib/grmodtables.h", "lib/random.h"]
 compile-features = ["cxx_std_20"]
 
