@@ -17,8 +17,11 @@ make compact/libXKCP.a
 
 
 ### Run
-To build the project, use
+To build the sacrificing check protocol, build
 ```bash
+cmake -B build 
+cmake --build build
+./build/saccheck
 ```
 
 ### Benchmarking
