@@ -32,9 +32,25 @@ compile-features = ["cxx_std_20"]
 
 [target.saccheck]
 type = "executable"
-headers = ["lib/saccheck.h"]
+headers = ["lib/saccheck.h", "lib/lagrange.h"]
 # TODO: 
 sources = ["src/testSac.cc"]
+link-libraries = ["grlib"]
+compile-features = ["cxx_std_20"]
+
+
+[target.innprodcheck]
+type = "executable"
+headers = ["lib/innprodcheck.h", "lib/lagrange.h"]	
+sources = ["src/test_innerproduct_check.cc"]
+link-libraries = ["grlib"]
+compile-features = ["cxx_std_20"]
+
+
+[target.compresscheck]
+type = "executable"
+headers = ["lib/compresscheck.h", "lib/lagrange.h"]
+sources = ["src/testCompress.cc"]
 link-libraries = ["grlib"]
 compile-features = ["cxx_std_20"]
 

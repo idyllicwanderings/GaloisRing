@@ -400,7 +400,7 @@ class GR1e
             return GR1e<k, d>(res); 
         }
 
-
+        // TODO: change array to vector
         template <int m>
         static std::array<GR1e<k, d>, m> exceptional_seq() {
             std::array<GR1e<k, d>, m> res;

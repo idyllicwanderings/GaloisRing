@@ -4,23 +4,11 @@
 \begin{document}
 
 %+Title
-\title{Draft for my Manuscript for my Master's Thesis}
-\author{Xiyue SU}
+\title{Article Title}
+\author{Author}
 \date{\today}
 \maketitle
 %-Title
-
-
-\section{Preliminary}
-\subsection{Finite Field}
-
-\subsection{Galois Ring}
-
-\subsection{Linear Secret Sharing}
-
-\subsection{Exceptional sequence}
-
-\subsection{Schwarz-Zippel Lemma}
 
 
 
@@ -94,22 +82,6 @@ call a PRNG api(its own inner state or just refresh seed with $seed \|\| counter
 
 
 \section{LSSS}
-
-
-\section{hensel lifting of the embedding techinque}
-
-\section{reduction}
-
-\section{inversion}
-
-\subsection{fast inversion in the class of rings}
-
-\subsection{fast inversion by hensel lifting}
-
-\section{fast multiplication karatube }
-
-\section{}
-
 
 
 
