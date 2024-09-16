@@ -400,13 +400,12 @@ class GR1e
             return GR1e<k, d>(res); 
         }
 
-        // TODO: change array to vector
-        template <int m>
-        static std::array<GR1e<k, d>, m> exceptional_seq() {
-            std::array<GR1e<k, d>, m> res;
-            static_assert(m <= (1 << d), "the ring only has a maximal sequence of at most 2^d length");
+        static  std::vector<GR1e<k, d>> exceptional_seq(int m) {
+            std::vector<GR1e<k, d>> res(m);
+            assert(m <= (1 << d));
+            // , "the ring only has a maximal sequence of at most 2^d length");
             for (int i = 0; i < m; i++) { 
-                std::array<F, d> seq;  
+                std::vector<F> seq(d);  
                 for (int j = 0; j < d; j++) {
                     seq[j] = (i >> j) & 1; //extract jth bit
                 }
@@ -560,14 +559,16 @@ class GRT1e<R, d> {
             return res;
         }
 
-        template <int m>
-        static std::array<GRT1e<R, d>, m> exceptional_seq() {
-            std::array<GRT1e<R, d>, m> res;
+
+        static std::vector<GRT1e<R, d>> exceptional_seq(int m) {
+            std::vector<GRT1e<R, d>> res(m);
             // TODO: modify m_in int type, TODO: ceil is not static
-            static constexpr uint64_t m_in =  static_cast<uint64_t>(
-                    std::ceil(static_cast<double>(std::pow(static_cast<double>(m), 1.0/d))));
-            auto base_seqs = R::template exceptional_seq<m_in>();
-            static_assert(m <= 2^d_prod_, "the ring only has a maximal sequence of at most 2^{d1 d2 ..dn} length");
+            uint64_t m_in =  std::ceil((std::pow((double)m, 1.0/d)));
+            // static constexpr uint64_t m_in =  static_cast<uint64_t>(
+            //         std::ceil(static_cast<double>(std::pow(static_cast<double>(m), 1.0/d))));
+            auto base_seqs = R::template exceptional_seq<>(m_in);
+            assert(m <= 2^d_prod_);
+            // , "the ring only has a maximal sequence of at most 2^{d1 d2 ..dn} length");
             for (int i = 0; i < m; i++) { 
                 std::array<R, d> seq;  
                 int index = i;

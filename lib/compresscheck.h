@@ -5,13 +5,11 @@
 #define COMPRESS_FACTOR 10
 #define RAND_FLAG 1
 
-Random::randomness ro;
 
-
-template <typename R, int v, int l> 
+template <typename R, int m, int v> 
 std::vector<std::vector<R>> parse_polynomials (std::vector<R> x, int j)
 {
-    std::vector res;
+    std::vector<R> res;
     for (int i = 0; i < v; i++) {
         uint64_t len =  m / pow(v, j - 1);
         std::vector<R> tmp;
@@ -24,10 +22,13 @@ std::vector<std::vector<R>> parse_polynomials (std::vector<R> x, int j)
 }
 
 template<typename R>
-void transpose(std::vector<std::vector<R>>& matrix) {
-    for (size_t i = 0; i < matrix.size(); ++i) {
-        for (size_t j = i + 1; j < matrix[i].size(); ++j) {
-            std::swap(matrix[i][j], matrix[j][i]);
+void transpose(std::vector<std::vector<R>>& matrix, std::vector<std::vector<R>>& matrix_out) {
+    size_t rows = matrix.size();
+    size_t cols = matrix[0].size();
+    matrix_out.resize(cols, std::vector<R>(rows));
+    for (size_t i = 0; i < rows; ++i) {
+        for (size_t j = 0; j < cols; ++j) {
+            matrix_out[j][i] = matrix[i][j];
         }
     }
 }
@@ -37,32 +38,33 @@ void transpose(std::vector<std::vector<R>>& matrix) {
  * a:  第一维是compression factor ν,   第二维是多项式系数dimension ℓ
  */
 template <typename R, int v, int l>
-void compress_subroutine(std::vector<std::vector<R>>& x, std::vector<std::vector<R>>& y,std::vector<R>& z, 
-                    std::vector<std::vector<R>>& x_out, std::vector<std::vector<R>>& y_out, std::vector<R>& z_out,
-                    int RAND_FLAG)
+void compress_subroutine(std::vector<std::vector<R>>& x_in, std::vector<std::vector<R>>& y_in,std::vector<R>& z, 
+                    std::vector<R>& x_out, std::vector<R>& y_out, R& z_out,
+                    int rand_flag, randomness::RO& ro)
 {
     x_out.clear();
     y_out.clear();
     z_out.clear();
 
-    assert(x.size() == v && y.size() == v && z.size() == v);
-    assert(x[0].size() == l && y[0].size() == l);
+    assert(x_in.size() == v && y_in.size() == v && z.size() == v);
+    assert(x_in[0].size() == l && y_in[0].size() == l);
 
     //transpose x, y to make it easier to compute
-    transpose(x);
-    transpose(y);
+    std::vector<std::vector<R>> x, y;
+    transpose<R>(x_in, x);
+    transpose<R>(y_in, y);
 
 /*====================== 1. define two polynomials f, g ============================== */
-    std::vector<R> alpha_w0 = R::exceptional_seq<2 * v + 2>(); // 不能用0！取2v+2个值
+    std::vector<R> alpha_w0 = R::exceptional_seq(2 * v + 2); // 不能用0！取2v+2个值
     std::vector<R> alpha(alpha_w0.begin() + 1, alpha_w0.end());   // only 2v + 1 values
     std::vector<R> alpha_v(alpha.begin(), alpha.begin() + v);  // extract first v elements
     std::vector<R> alpha_vp1(alpha.begin(), alpha.begin() + v + 1); // extract first v + 1 elements
 
-    std::vector<std::vector<R>> f, g(l);
+    std::vector<std::vector<R>> f(l), g(l);
 
-    if (RAND_FLAG) {
-        R vs = R::random_element();
-        R ws = R::random_element();
+    if (rand_flag) {
+        R vs = R::random_element(ro);
+        R ws = R::random_element(ro);
         for (int i = 0; i < l; i++) {
             f[i].emplace_back(detail::lagrange_coeff(std::vector<R>{x[i].begin(), x[i].end(), vs}, alpha_vp1));
             g[i].emplace_back(detail::lagrange_coeff(std::vector<R>{y[i].begin(), y[i].end(), ws}, alpha_vp1));
@@ -76,51 +78,49 @@ void compress_subroutine(std::vector<std::vector<R>>& x, std::vector<std::vector
     }
 
 /*====================== 2. inject z_i for the interpolation ========================= */
-    std::vector<std::vector<R>> z_2nd_half; //z: [ν + 1, 2ν − 1]
+    std::vector<R> z_2nd_half(v - 1); //z: [ν + 1, 2ν − 1]
     for (int j = v + 1; j < 2 * v; j++) {
+        R z_j;
         for (int i = 0; i < l; i++) {
-            std::vector<R> z_j = detail::horner_eval(f[i], alpha[j]), detail::horner_eval(g[i], alpha[j]);
-            z_2nd_half[i].emplace_back(z_j);
+            z_j  += detail::horner_eval(f[i], alpha[j]) * detail::horner_eval(g[i], alpha[j]);
         }
     }   
     // z:  [v+1, 2v+1]
-    if (RAND_FLAG) {
-        for (int i = 2 * v; i <= 2 * v + 1; v++) {
+    if (rand_flag) {
+        for (int j = 2 * v; j <= 2 * v + 1; j++) {
+            R z_j;
             for (int i = 0; i < l; i++) {
-                std::vector<R> z_j = detail::horner_eval(f[i], alpha[j]) * detail::horner_eval(g[i], alpha[j]);
-                z_2nd_half[i].emplace_back(z_j);
+                z_j += detail::horner_eval(f[i], alpha[j]) * detail::horner_eval(g[i], alpha[j]);
             }
+            z_2nd_half.push_back(z_j);
         }
     }
 
 /*====================== 3. compute polynomial h ===================================== */
-    std::vector<std::vector<R>> h;
-    std::vector alpha_endm2(alpha.begin() + v - 1, alpha.end() - 2);
-    std::vector alpha_end(alpha.begin() + v - 1, alpha.end());
+    std::vector alpha_endm2(alpha.begin(), alpha.end() - 2);
+    std::vector alpha_end(alpha.begin(), alpha.end());
 
-    for (int i = 0; i < l; i++) {
-        std::vector<R> z_full(z[i].begin(), z[i].end()); // z: [0, 2v-1]
-        z_full.insert(z_full.end(), z_2nd_half[i].begin(), z_2nd_half[i].end());
-        if (RAND_FLAG) {
-            h[i].emplace_back(detail::lagrange_coeff(z_full, alpha_endm2));
-        }
-        else {
-            h[i].emplace_back(detail::lagrange_coeff(z_full, alpha_end));
-        }
-    }
+    std::vector<R> z_full(z.begin(), z.end()); // z: [0, 2v-1]
+    z_full.insert(z_full.end(), z_2nd_half.begin(), z_2nd_half.end());
+    std::vector<R> h = (rand_flag) ? detail::lagrange_coeff(z_full, alpha_end) \
+                                        : detail::lagrange_coeff(z_full, alpha_endm2);
+
 
 /*====================== 4. obtain challenge from exceptional sequence =============== */
     //TODO: get a byte, instantiate a random oracle for that
-    uint64_t chal_bit = ro.gen_random_bytes(ro) % (v + 1) + v + 1;
+    // v cannot be bigger than 2^8 - 1
+    uint8_t chal_bit[1];
+    ro.get_bytes(chal_bit, 1);
+    chal_bit = chal_bit[0] % (v + 1) + v + 1;
     R chal_ele = alpha[chal_bit];
     // make sure alpha in [ v + 1, 2v + 1];
 
 /*====================== 5. obtain output of the polynomials ========================= */
     for (int i = 0; i < l; i++) {
-        x_out[i] = detail::horner_eval(f[i], chal_ele);
-        y_out[i] = detail::horner_eval(g[i], chal_ele);
-        z_out[i] = detail::horner_eval(h[i], chal_ele);
+        x_out.push_back(detail::horner_eval(f[i], chal_ele));
+        y_out.push_back(detail::horner_eval(g[i], chal_ele));
     }
+    z_out = detail::horner_eval(h, chal_ele);
 
 }
 
@@ -138,36 +138,39 @@ void compressed_multiplication_check(const std::vector<std::vector<Rs>>& x_share
 
     constexpr uint64_t ds = Rs::get_d();
     constexpr uint64_t dl = Rl::get_d();
-    constexpr uint64_t k  = Rs::get_k();
 
     assert(x_shares.size() == PARTY_NUM && y_shares.size() == PARTY_NUM && z_shares.size() == PARTY_NUM);
     static_assert(dl % ds == 0, "dl must be a multiple of ds");
 
-    uint64_t m = in_x.size();
+    uint64_t m = x_shares[0].size();
+
+    randomness::RO& ro;
+    ro.gen_random_bytes();
+
 
 /* ===================== 2. lift input shares to the check ring===================== */
     std::vector<std::vector<ChkShare>> lift_x_shares;
     std::vector<std::vector<ChkShare>> lift_y_shares;
     std::vector<std::vector<ChkShare>> lift_z_shares;
 
-    for (int i = 0; i < PARTY_NUM;; i++) {
+    for (int i = 0; i < PARTY_NUM; i++) {
         for (int j = 0; j < m; j++) {
             #ifdef GRtower
                 // TODO: to support for GR towers
             #else
-                lift_x_shares[i].emplace_back(liftGR<k + s, ds, dl>(x_shares[i][j]));
-                lift_y_shares[i].emplace_back(liftGR<k + s, ds, dl>(y_shares[i][j]));
-                lift_z_shares[i].emplace_back(liftGR<k + s, ds, dl>(z_shares[i][j]));
+                lift_x_shares[i].emplace_back(liftGR<k, ds, dl>(x_shares[i][j]));
+                lift_y_shares[i].emplace_back(liftGR<k, ds, dl>(y_shares[i][j]));
+                lift_z_shares[i].emplace_back(liftGR<k, ds, dl>(z_shares[i][j]));
             #endif
         }
     }
 /* ===================== 3. generate inner product tuple =========================== */
 
-/
-    using MskRing = GR<2, dl>;
+    using MskRing = GR1e<2, dl>;
+
     std::vector<MskRing> yita;
     for (int i = 0; i < m; i++) {
-        yita[i] = extendGR<2, k, dl>(MskRing::random_element());
+        yita[i] = extendGR<2, k, dl>(MskRing::random_element(ro));
     }
 
     std::vector<std::vector<ChkShare>> xj_shares;
@@ -180,7 +183,7 @@ void compressed_multiplication_check(const std::vector<std::vector<Rs>>& x_share
             x0_share[i] = elewise_product<ChkShare>(lift_x_shares[i], yita[i]);
         }
         xj_shares.push_back(x0_share);
-        z0_share = dot_product<ChkShare>(lift_z_shares[i], yita);
+        z0_share = dot_product<ChkShare>(lift_z_shares[j], yita);
         zj_shares.push_back(z0_share);
     }
 
@@ -193,12 +196,12 @@ void compressed_multiplication_check(const std::vector<std::vector<Rs>>& x_share
         std::vector<std::vector<std::vector<ChkShare>>> a, b; // PARTY_NUM, COMPRESS_FACTOR, m
         std::vector<std::vector<ChkShare>> c;
         for (int i = 0; i < PARTY_NUM; i++) { 
-            a_i = parse_polynomials<ChkShare, COMPRESS_FACTOR, l>(xj_shares[i], j);
+            std::vector<std::vector<ChkShare>> a_i = parse_polynomials<ChkShare, m, COMPRESS_FACTOR>(xj_shares[i], j);
             a.push_back(a_i);
-            b_i = parse_polynomials<ChkShare, COMPRESS_FACTOR, l>(yj_shares[i], j);
+            std::vector<std::vector<ChkShare>> b_i = parse_polynomials<ChkShare, m, COMPRESS_FACTOR>(yj_shares[i], j);
             b.push_back(b_i);
-            for (int k = 0; k < COMPRESS_FACTOR; k++) {
-                c.emplace_back(detail::dot_product<ChkShare>(a_i[k], b_i[k]));
+            for (int s = 0; s < COMPRESS_FACTOR; s++) {
+                c.emplace_back(detail::dot_product<ChkShare>(a_i[s], b_i[s]));
             }
         
             if (pow(COMPRESS_FACTOR, j) == m) {
@@ -213,11 +216,12 @@ void compressed_multiplication_check(const std::vector<std::vector<Rs>>& x_share
 
 /* ===================== 5. reconstruct the x values =============================== */
     // now xj_shares should be party_num个单元素向量
-    std::vector<R> xjs;
+    std::vector<Rl> xjs;
     for (const auto& vec : xj_shares) {
         xjs.push_back(xj_shares[0]);  
     }
-    R x_logv_m = detail::lagrange(xjs, Rl::zero());
+
+    Rl x_logv_m = detail::interpolate(xjs, Rl::zero());
 
 /* ===================== 6. verify the result ====================================== */
     auto zero_ = elewise_subtract(dot_product<ChkShare>(yj_shares[logv_m], x_logv_m), zj_shares[logv_m]);
