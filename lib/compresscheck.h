@@ -1,8 +1,8 @@
 #include "gring.h"
 #include "lagrange.h"
 
-#define PARTY_NUM 10 
-#define COMPRESS_FACTOR 10
+// #define PARTY_NUM 10 
+// #define COMPRESS_FACTOR 10
 #define RAND_FLAG 1
 
 
@@ -21,17 +21,6 @@ std::vector<std::vector<R>> parse_polynomials (std::vector<R> x, int j)
     return res;
 }
 
-template<typename R>
-void transpose(std::vector<std::vector<R>>& matrix, std::vector<std::vector<R>>& matrix_out) {
-    size_t rows = matrix.size();
-    size_t cols = matrix[0].size();
-    matrix_out.resize(cols, std::vector<R>(rows));
-    for (size_t i = 0; i < rows; ++i) {
-        for (size_t j = 0; j < cols; ++j) {
-            matrix_out[j][i] = matrix[i][j];
-        }
-    }
-}
 
 /**
  * v: compression factor, l: dimension, rand_flag
@@ -51,8 +40,8 @@ void compress_subroutine(std::vector<std::vector<R>>& x_in, std::vector<std::vec
 
     //transpose x, y to make it easier to compute
     std::vector<std::vector<R>> x, y;
-    transpose<R>(x_in, x);
-    transpose<R>(y_in, y);
+    details::transpose<R>(x_in, x);
+    details::transpose<R>(y_in, y);
 
 /*====================== 1. define two polynomials f, g ============================== */
     std::vector<R> alpha_w0 = R::exceptional_seq(2 * v + 2); // 不能用0！取2v+2个值
@@ -130,7 +119,7 @@ void compress_subroutine(std::vector<std::vector<R>>& x_in, std::vector<std::vec
  * Rs is GR(2^k, d0), Rl is GR(2^k, d0* d1)
  * x_shares: x[0] is the first parties' shares
  */
-template <typename Rs, typename Rl, int k>
+template <typename Rs, typename Rl>
 void compressed_multiplication_check(const std::vector<std::vector<Rs>>& x_shares,
                                         const std::vector<std::vector<Rs>>& y_shares,
                                         const std::vector<std::vector<Rs>>& z_shares)   {
@@ -138,6 +127,7 @@ void compressed_multiplication_check(const std::vector<std::vector<Rs>>& x_share
 
     constexpr uint64_t ds = Rs::get_d();
     constexpr uint64_t dl = Rl::get_d();
+    constexpr uint64_t k  = Rs::get_k();
 
     assert(x_shares.size() == PARTY_NUM && y_shares.size() == PARTY_NUM && z_shares.size() == PARTY_NUM);
     static_assert(dl % ds == 0, "dl must be a multiple of ds");
@@ -234,5 +224,7 @@ void compressed_multiplication_check(const std::vector<std::vector<Rs>>& x_share
 
 
 
-
+#undef PARTY_NUM
+#undef COMPRESS_FACTOR
+#undef RAND_FLAG
 

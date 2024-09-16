@@ -1,4 +1,5 @@
 #include "../lib/gring.h"
+#include "../lib/innprodcheck.h"
 
 int main () {
         

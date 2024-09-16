@@ -238,6 +238,13 @@ class GR1e
         explicit GR1e<k, d>(const std::array<Z2k<k>, d>& eles): polys_(eles) {}
         GR1e() { polys_.fill(Z2k<k>());}
 
+        
+        template <typename T>
+        constexpr explicit GR1e<k, d>(const T& ele) {
+            polys_.fill(Z2k<k>());
+            polys_[0] = Z2k<k>(ele);
+        }
+
         template <typename T>
         constexpr explicit GR1e<k, d>(std::initializer_list<T> eles) {
             // if (eles.size() != d) {
@@ -537,6 +544,15 @@ class GRT1e<R, d> {
             }
             return GRT1e<R, d>(res); 
         }
+
+        static inline std::vector<GRT1e<R, d>> random_vector(int m, randomness::RO& ro) {
+            std::vector<GRT1e<R, d>> res(m);
+            for (int i = 0; i < m; i++) {
+                res.push_back(random_element(ro));
+            }
+            return res;
+        }
+
 
         // TODO: write a constructor for zero()
         static GRT1e<R, d> zero() {

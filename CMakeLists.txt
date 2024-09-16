@@ -57,6 +57,58 @@ target_link_libraries(grlib INTERFACE
 	"${CMAKE_CURRENT_SOURCE_DIR}/third_party/XKCP/bin/compact/libXKCP.a"
 )
 
+# Target: saccheck
+set(saccheck_SOURCES
+	cmake.toml
+	"lib/lagrange.h"
+	"lib/saccheck.h"
+	"src/test_sac_check.cc"
+)
+
+add_executable(saccheck)
+
+target_sources(saccheck PRIVATE ${saccheck_SOURCES})
+source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR} FILES ${saccheck_SOURCES})
+
+target_compile_features(saccheck PRIVATE
+	cxx_std_20
+)
+
+target_link_libraries(saccheck PRIVATE
+	grlib
+)
+
+get_directory_property(CMKR_VS_STARTUP_PROJECT DIRECTORY ${PROJECT_SOURCE_DIR} DEFINITION VS_STARTUP_PROJECT)
+if(NOT CMKR_VS_STARTUP_PROJECT)
+	set_property(DIRECTORY ${PROJECT_SOURCE_DIR} PROPERTY VS_STARTUP_PROJECT saccheck)
+endif()
+
+# Target: innprodcheck
+set(innprodcheck_SOURCES
+	cmake.toml
+	"lib/innprodcheck.h"
+	"lib/lagrange.h"
+	"src/test_innerproduct_check.cc"
+)
+
+add_executable(innprodcheck)
+
+target_sources(innprodcheck PRIVATE ${innprodcheck_SOURCES})
+source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR} FILES ${innprodcheck_SOURCES})
+
+target_compile_features(innprodcheck PRIVATE
+	cxx_std_20
+)
+
+target_link_libraries(innprodcheck PRIVATE
+	grlib
+)
+
+get_directory_property(CMKR_VS_STARTUP_PROJECT DIRECTORY ${PROJECT_SOURCE_DIR} DEFINITION VS_STARTUP_PROJECT)
+if(NOT CMKR_VS_STARTUP_PROJECT)
+	set_property(DIRECTORY ${PROJECT_SOURCE_DIR} PROPERTY VS_STARTUP_PROJECT innprodcheck)
+endif()
+
 # Target: compresscheck
 set(compresscheck_SOURCES
 	cmake.toml

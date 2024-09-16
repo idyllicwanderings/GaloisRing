@@ -20,11 +20,15 @@ namespace detail {
 
 
     template <typename R>
-    R lagrange_l(const std::int64_t& lo, const std::int64_t& hi, const R& alpha_i, R x) {
+    R lagrange_l(const std::uint64_t& lo, const std::uint64_t& hi, 
+                const std::vector<R> alphas, 
+                std::uint64_t i, R x) {
         R res = R::one();
         R denom = R::one();
-        for (std::int64_t j = lo; j < hi; j++) {
-            R alpha_j = R::from_bits(to_bits<R::d>(j));
+        R alpha_i = alphas[i];
+        for (std::uint64_t j = lo; j < hi; j++) {
+            //R alpha_j = R::from_bits(to_bits<R::d>(j));
+            R alpha_j = alphas[j];
             if (alpha_j == alpha_i) continue;
             res *= (x - alpha_j);
             denom *= (alpha_i - alpha_j);
@@ -110,13 +114,13 @@ namespace detail {
     }
 
     template <typename R>
-    R interpolate(const std::vector<R>& ys, const R& x) {
+    R interpolate(const std::vector<R>& ys, const std::vector<R>& alphas, const R& x) {
         uint64_t d_prod = R::get_d();
         assert(ys.size() < (1ull << static_cast<uint64_t>(std::pow(2, d_prod))));
         R res;
         /// 0 作为secret, 1 到 ys.size() 作为shares
         for (std::size_t i = 0; i < ys.size(); i++) {
-            res += ys[i] * detail::lagrange_l(1, ys.size() + 1, i + 1, x);
+            res += ys[i] * detail::lagrange_l(1, ys.size() + 1, alphas, i + 1, x);
         }
         return res;
     }
@@ -171,19 +175,34 @@ namespace detail {
     }
 
     template <typename R>
-    std::vector<R> generate_sharing(const R& v, int t, int n) {
+    std::vector<R> generate_sharing(const R& v, const std::vector<R> alphas, int t, int n) {
         std::vector<R> ys(n);
         // generate a polynomial of f(x) =(((a0x + a1)x + a2)x + a3)x + … )x + a_{t+1}( i.e. v).
         std::vector<R> coeffs(t + 1);
+        coeffs[0] = v;
         for (int i = 0; i < t; i++) {
             coeffs.push_back(R::random_element());
         }
-        coeffs.push_back(v);
+
         // compute 1 to n of the shares
+        assert(alphas.size() >=  n + 1);
         for (int i = 1; i <= n; i++) {
-            ys[i] = (horner_eval(coeffs, i));
+            ys[i] = (horner_eval(coeffs, alphas[i]));
         }
         return ys;
+    }
+
+    
+    template<typename R>
+    void transpose(std::vector<std::vector<R>>& matrix, std::vector<std::vector<R>>& matrix_out) {
+        size_t rows = matrix.size();
+        size_t cols = matrix[0].size();
+        matrix_out.resize(cols, std::vector<R>(rows));
+        for (size_t i = 0; i < rows; ++i) {
+            for (size_t j = 0; j < cols; ++j) {
+                matrix_out[j][i] = matrix[i][j];
+            }
+        }
     }
 
 
