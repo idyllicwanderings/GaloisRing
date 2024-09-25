@@ -30,29 +30,29 @@ headers = ["lib/gring.h", "lib/grlifttables.h", "lib/grmodtables.h", "lib/random
 compile-features = ["cxx_std_20"]
 
 
-[target.saccheck]
-type = "executable"
-headers = ["lib/saccheck.h", "lib/lagrange.h"]
-# TODO: 
-sources = ["src/test_sac_check.cc"]
-link-libraries = ["grlib"]
-compile-features = ["cxx_std_20"]
+# [target.saccheck]
+# type = "executable"
+# headers = ["lib/saccheck.h", "lib/lagrange.h"]
+# # TODO: 
+# sources = ["src/test_sac_check.cc"]
+# link-libraries = ["grlib"]
+# compile-features = ["cxx_std_20"]
 
 
-[target.innprodcheck]
-type = "executable"
-headers = ["lib/innprodcheck.h", "lib/lagrange.h"]	
-sources = ["src/test_innerproduct_check.cc"]
-link-libraries = ["grlib"]
-compile-features = ["cxx_std_20"]
+# [target.innprodcheck]
+# type = "executable"
+# headers = ["lib/innprodcheck.h", "lib/lagrange.h"]	
+# sources = ["src/test_innerproduct_check.cc"]
+# link-libraries = ["grlib"]
+# compile-features = ["cxx_std_20"]
 
 
-[target.compresscheck]
-type = "executable"
-headers = ["lib/compresscheck.h", "lib/lagrange.h"]
-sources = ["src/test_compress_check.cc"]
-link-libraries = ["grlib"]
-compile-features = ["cxx_std_20"]
+# [target.compresscheck]
+# type = "executable"
+# headers = ["lib/compresscheck.h", "lib/lagrange.h"]
+# sources = ["src/test_compress_check.cc"]
+# link-libraries = ["grlib"]
+# compile-features = ["cxx_std_20"]
 
 # [target.demo]
 # type = "executable"
@@ -60,30 +60,38 @@ compile-features = ["cxx_std_20"]
 # link-libraries = ["grlib"]
 
 
-[target.grtowertest]
+# [target.grtowertest]
+# type = "executable"
+# headers = [#"Test/UnitTests/GaloisRingTowering/testGRTowering.inc",
+#            "test/UnitTests/UnitTest.h",
+#            "test/UnitTests/GaloisRingTowering/testGRTowering.h",]
+# sources = ["test/UnitTests/UnitTest.cc", "test/UnitTests/GaloisRingTowering/testGRTowering.cc"]
+# link-libraries = ["grlib"]
+# compile-features = ["cxx_std_20"]
+
+
+# [target.grtest]
+# type = "executable"
+# headers = ["test/UnitTests/UnitTest.h",
+#            "test/UnitTests/GaloisRing/testGR.h",]
+# sources = ["test/UnitTests/UnitTest.cc", "test/UnitTests/GaloisRing/testGR.cc"]
+# link-libraries = ["grlib"]
+# compile-features = ["cxx_std_20"]
+
+
+# [target.grbenchmark]
+# type = "executable"
+# sources = ["src/benchmark_GR.cc"]
+# link-libraries = ["grlib"]
+# compile-features = ["cxx_std_20"]
+
+
+[target.kaperformance]
 type = "executable"
-headers = [#"Test/UnitTests/GaloisRingTowering/testGRTowering.inc",
-           "test/UnitTests/UnitTest.h",
-           "test/UnitTests/GaloisRingTowering/testGRTowering.h",]
-sources = ["test/UnitTests/UnitTest.cc", "test/UnitTests/GaloisRingTowering/testGRTowering.cc"]
+sources = ["src/test_ka.cc"]
 link-libraries = ["grlib"]
 compile-features = ["cxx_std_20"]
-
-
-[target.grtest]
-type = "executable"
-headers = ["test/UnitTests/UnitTest.h",
-           "test/UnitTests/GaloisRing/testGR.h",]
-sources = ["test/UnitTests/UnitTest.cc", "test/UnitTests/GaloisRing/testGR.cc"]
-link-libraries = ["grlib"]
-compile-features = ["cxx_std_20"]
-
-
-[target.grbenchmark]
-type = "executable"
-sources = ["src/benchmark_GR.cc"]
-link-libraries = ["grlib"]
-compile-features = ["cxx_std_20"]
+gcc.compile-options = ["-Wall"]
 
 
 

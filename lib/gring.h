@@ -440,6 +440,10 @@ class GR1e
     private:
         std::array<Z2k<k>, d> polys_;
 
+    // temporary use
+    public:
+    inline static bool KA_MULT_FLAG_ = false;
+
 };
 
 /**
@@ -714,6 +718,81 @@ namespace ops {
         return reduction_polynomial_impl<k, num_reduction_monomials<k>()>::value();
     }
 
+    template <int k>
+    struct integer_factor_impl {
+        using type = std::vector<int>;
+        constexpr static type value() {
+            type responses[] = {
+                {},              // 0 
+                {1},             // 1 
+                {2},             // 2 = 2
+                {3},             // 3 = 3
+                {2, 2},          // 4 = 2 * 2
+                {5},             // 5 = 5
+                {3, 2},          // 6 = 3 * 2
+                {7},             // 7 = 7
+                {2, 2, 2},       // 8 = 2 * 2 * 2
+                {3, 3},          // 9 = 3 * 3
+                {5, 2},          // 10 = 5 * 2
+                {11},            // 11 = 11
+                {3, 2, 2},       // 12 = 3 * 2 * 2
+                {13},            // 13 = 13
+                {7, 2},          // 14 = 7 * 2
+                {5, 3},          // 15 = 5 * 3
+                {2, 2, 2, 2},    // 16 = 2 * 2 * 2 * 2
+                {17},            // 17 = 17
+                {3, 3, 2},       // 18 = 3 * 3 * 2
+                {19},            // 19 = 19
+                {5, 2, 2},       // 20 = 5 * 2 * 2
+                {7, 3},          // 21 = 7 * 3
+                {11, 2},         // 22 = 11 * 2
+                {23},            // 23 = 23
+                {3, 2, 2, 2},    // 24 = 3 * 2 * 2 * 2
+                {5, 5},          // 25 = 5 * 5
+                {13, 2},         // 26 = 13 * 2
+                {3, 3, 3},       // 27 = 3 * 3 * 3
+                {7, 2, 2},       // 28 = 7 * 2 * 2
+                {29},            // 29 = 29
+                {5, 3, 2},       // 30 = 5 * 3 * 2
+                {31},            // 31 = 31
+                {2, 2, 2, 2, 2}, // 32 = 2 * 2 * 2 * 2 * 2
+                {11, 3},         // 33 = 11 * 3
+                {17, 2},         // 34 = 17 * 2
+                {7, 5},          // 35 = 7 * 5
+                {3, 3, 2, 2},    // 36 = 3 * 3 * 2 * 2
+                {37},            // 37 = 37
+                {19, 2},         // 38 = 19 * 2
+                {13, 3},         // 39 = 13 * 3
+                {5, 2, 2, 2},    // 40 = 5 * 2 * 2 * 2
+                {41},            // 41 = 41
+                {7, 3, 2},       // 42 = 7 * 3 * 2
+                {43},            // 43 = 43
+                {11, 2, 2},      // 44 = 11 * 2 * 2
+                {5, 3, 3},       // 45 = 5 * 3 * 3
+                {23, 2},         // 46 = 23 * 2
+                {47},            // 47 = 47
+                {3, 2, 2, 2, 2}, // 48 = 3 * 2 * 2 * 2 * 2 
+                {7, 7},          // 49 = 7 * 7
+                {5, 5, 2},       // 50 = 5 * 5 * 2
+                {17, 3},         // 51 = 17 * 3
+                {13, 2, 2},      // 52 = 13 * 2 * 2
+                {53},            // 53 = 53
+                {3, 3, 2, 2},    // 54 = 3 * 3 * 2 * 2
+                {11, 5},         // 55 = 11 * 5
+                {7, 2, 2, 2},    // 56 = 7 * 2 * 2 * 2
+                {19, 3},         // 57 = 3 * 19
+                {29, 2},         // 58 = 29 * 2
+                {59},            // 59 = 59
+                {5, 3, 2, 2},    // 60 = 5 * 3 * 2 * 2
+                {61},            // 61 = 61
+                {31, 2},         // 62 = 31 * 2
+                {7, 3, 3},       // 63 = 7 * 3 * 3
+                {2, 2, 2, 2, 2, 2}// 64 = 2 * 2 * 2 * 2 * 2 * 2
+        };
+        return responses[k];
+        }
+    };
+
     template <int n, int d, typename R>
     std::array<R, n> reduce_once(const std::array<R, n>& x, const int& red) { // Trinomial
 
@@ -833,6 +912,164 @@ namespace ops {
         }
         return mult;
     }
+
+    template <int n, typename R>
+    std::array<R, n * 2 - 1> KA_one_iter(const std::array<R, n>& a, const std::array<R, n>& b) {
+        std::array<R, n * 2 - 1> res; // [0, n - 1]
+        std::array<R, n> d;
+        for (int i = 0; i < n; ++i) {
+            d[i] = a[i] * b[i];
+        }
+
+        for (int s = 0; s < n - 1; s++) {
+            for (int t = s + 1; t < n; t++) {
+                // brings extra 2n - 3 addtions
+                res[s + t] = res[s + t] + (a[s] + a[t]) * (b[s] + b[t]) - d[s] - d[t];
+            }
+        }
+
+        res[0] = d[0];
+        res[2 * n - 2] = d[n - 1];
+        for (int i = 2; i < 2 * n - 2; i += 2) {
+            res[i] += d[i / 2];
+        }
+
+        return res;
+        // c[0] = a[0] * b[0];
+        // c[n * 2 - 2] = a[n - 1] * b[n - 1];
+        // for (int i = 1; i < 2 * n - 1; i++) {
+        //     R c_i = R::zero();
+        //     for (int s = 0; s < (i + 1) / 2; s++) {
+        //         int t = i - s;
+        //         R d_st = (a[s] + a[t]) * (b[s] + b[t]);
+        //         R d_s_t = a[s] * b[s] + a[t] * b[t];
+        //         c_i += d_st - d_s_t;
+        //     }
+        //     if (i % 2 == 0) {
+        //         c_i += a[i / 2] * b[i / 2];
+        //     }
+        //     c[i] = c_i;
+        // }
+        // return c;
+    }
+
+    /*
+    template <int n, typename R>  // 这里的a,b都是初始的多项式
+    std::array<R, n * 2 - 1> KA_recursive(const std::array<R, n>& a, const std::array<R, n>& b) {
+        // determine the recuisive depth with factorization of n
+        std::vector<uint64_t> factors = integer_factor_impl<n>::value();
+        int depth = factors.size();
+        std::array<R, n * 2 - 1> c;
+        if (depth == 1) {
+            return KA_one_iter<n, R>(a, b);
+        } 
+        else {
+            // parse the polynomial as a degree of factors[i],
+            // with each polynomial of terms of factors[i] + 1, 
+            // then with n/factors[i] polynomials, then combine the Di coefficients 
+            // by the 1-iter Karatsuba method, notice the treatment of 0 terms in between
+            int deg = factors[i];
+            int sub_n = n / deg; 
+
+            for (int i = 0; i < deg; ++i) {
+                for (int j = 0; j < sub_n; ++j) {
+                    A[i][j] = a[i * sub_n + j];
+                    B[i][j] = b[i * sub_n + j];
+                }
+            }
+            std::array<R, sub_n> D;
+            std::array<R, sub_n> Dij;
+            std::array<R, n * 2 - 1> c; // [0, n - 1]
+            for (int i = 1; i < sub_n; i++) {
+                D[i] = A[i] * B[i];
+                for (int s = 0; s < (i + 1) / 2; s++) {
+                    int t = i - s;
+                    Dij[s] = (a[s] + a[t]) * (b[s] + b[t]); //Dij的长度有问题
+                }
+            }
+            c[0] = D[0];
+            c[n * 2 - 2] = D[n - 1];
+            for (int i = 1; i < 2 * n - 1; i++) {
+                R c_i = R::zero();
+                for (int s = 0; s < (i + 1) / 2; s++) {
+                    int t = i - s;
+                    c_i += Dij[s] - D[s] = D[t];
+                }
+                if (i % 2 == 0) {
+                    c_i += a[i / 2] * b[i / 2];
+                }
+                c[i] = c_i;
+            }
+            
+            for (int i = 0; i < factor; ++i) {
+                c_parts[i] = KA_recursive<sub_n, R>(a_parts[i], b_parts[i]);
+            }
+
+            // 合并递归结果：将子多项式组合成最终结果
+            // 使用Karatsuba的方法来合并结果
+            // 注意：你可能需要更复杂的合并方式来处理多个子多项式
+
+            // TODO: Implement combination logic
+
+            return c;  // 返回组合后的结果
+        }
+    }
+
+}
+
+    template <int n, int m, typename R>  // 这里的a,b都是初始的多项式
+    std::array<R, 2 * m - 1> KA_recursive_inner(const std::array<R, n>& a, 
+                                                const std::array<R, n>& b
+                                                uint64_t i) {
+        // parse the polynomial as a degree of factors[i],
+        // with each polynomial of terms of factors[i] + 1, 
+        // then with n/factors[i] polynomials, then combine the Di coefficients 
+        // by the 1-iter Karatsuba method, notice the treatment of 0 terms in between
+        std::vector<uint64_t> factors = integer_factor_impl<n>::value();
+        int depth = factors.size();
+        uint64_t fac = factors[i];
+
+        // fac degree, but with n/fac polynomials
+
+        std::array<R, sub_n> D;
+        std::array<R, sub_n> Dij;
+        std::array<R, n * 2 - 1> c; // [0, n - 1]
+            for (int i = 1; i < sub_n; i++) {
+                D[i] = A[i] * B[i];
+                for (int s = 0; s < (i + 1) / 2; s++) {
+                    int t = i - s;
+                    Dij[s] = (a[s] + a[t]) * (b[s] + b[t]); //Dij的长度有问题
+                }
+            }
+            c[0] = D[0];
+            c[n * 2 - 2] = D[n - 1];
+            for (int i = 1; i < 2 * n - 1; i++) {
+                R c_i = R::zero();
+                for (int s = 0; s < (i + 1) / 2; s++) {
+                    int t = i - s;
+                    c_i += Dij[s] - D[s] = D[t];
+                }
+                if (i % 2 == 0) {
+                    c_i += a[i / 2] * b[i / 2];
+                }
+                c[i] = c_i;
+            }
+            
+            for (int i = 0; i < factor; ++i) {
+                c_parts[i] = KA_recursive<sub_n, R>(a_parts[i], b_parts[i]);
+            }
+
+            // 合并递归结果：将子多项式组合成最终结果
+            // 使用Karatsuba的方法来合并结果
+            // 注意：你可能需要更复杂的合并方式来处理多个子多项式
+
+            // TODO: Implement combination logic
+
+            return c;  // 返回组合后的结果
+        }
+    }
+    */
+
 }
 
 
@@ -841,8 +1078,10 @@ GR1e<k, d> GR1e<k, d>::operator*(const GR1e<k, d>& o) const {
     std::array<Z2k<k>, d> a = polys_;
     std::array<Z2k<k>, d> b = o.polys_;
     //TODO: to further deal with a bigger than 64 bits
+    if (GR1e<k, d>::KA_MULT_FLAG_) return GR1e<k, d>(ops::reduce<k, 2*d - 1, d, Z2k<k>>(ops::KA_one_iter<d, Z2k<k>>(a, b)));
     return GR1e<k, d>(ops::reduce<k, 2*d - 1, d, Z2k<k>>(ops::multiply<d, Z2k<k>>(a, b)));
 }
+
 
 template <int k, int d>
 GR1e<k, d>& GR1e<k, d>::operator*=(const GR1e<k, d>& o) { return *this = (*this) * o; }

@@ -57,158 +57,32 @@ target_link_libraries(grlib INTERFACE
 	"${CMAKE_CURRENT_SOURCE_DIR}/third_party/XKCP/bin/compact/libXKCP.a"
 )
 
-# Target: saccheck
-set(saccheck_SOURCES
+# Target: kaperformance
+set(kaperformance_SOURCES
 	cmake.toml
-	"lib/lagrange.h"
-	"lib/saccheck.h"
-	"src/test_sac_check.cc"
+	"src/test_ka.cc"
 )
 
-add_executable(saccheck)
+add_executable(kaperformance)
 
-target_sources(saccheck PRIVATE ${saccheck_SOURCES})
-source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR} FILES ${saccheck_SOURCES})
+target_sources(kaperformance PRIVATE ${kaperformance_SOURCES})
+source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR} FILES ${kaperformance_SOURCES})
 
-target_compile_features(saccheck PRIVATE
+target_compile_features(kaperformance PRIVATE
 	cxx_std_20
 )
 
-target_link_libraries(saccheck PRIVATE
-	grlib
-)
-
-get_directory_property(CMKR_VS_STARTUP_PROJECT DIRECTORY ${PROJECT_SOURCE_DIR} DEFINITION VS_STARTUP_PROJECT)
-if(NOT CMKR_VS_STARTUP_PROJECT)
-	set_property(DIRECTORY ${PROJECT_SOURCE_DIR} PROPERTY VS_STARTUP_PROJECT saccheck)
+if(CMAKE_CXX_COMPILER_ID STREQUAL "GNU" OR CMAKE_C_COMPILER_ID STREQUAL "GNU") # gcc
+	target_compile_options(kaperformance PRIVATE
+		-Wall
+	)
 endif()
 
-# Target: innprodcheck
-set(innprodcheck_SOURCES
-	cmake.toml
-	"lib/innprodcheck.h"
-	"lib/lagrange.h"
-	"src/test_innerproduct_check.cc"
-)
-
-add_executable(innprodcheck)
-
-target_sources(innprodcheck PRIVATE ${innprodcheck_SOURCES})
-source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR} FILES ${innprodcheck_SOURCES})
-
-target_compile_features(innprodcheck PRIVATE
-	cxx_std_20
-)
-
-target_link_libraries(innprodcheck PRIVATE
+target_link_libraries(kaperformance PRIVATE
 	grlib
 )
 
 get_directory_property(CMKR_VS_STARTUP_PROJECT DIRECTORY ${PROJECT_SOURCE_DIR} DEFINITION VS_STARTUP_PROJECT)
 if(NOT CMKR_VS_STARTUP_PROJECT)
-	set_property(DIRECTORY ${PROJECT_SOURCE_DIR} PROPERTY VS_STARTUP_PROJECT innprodcheck)
-endif()
-
-# Target: compresscheck
-set(compresscheck_SOURCES
-	cmake.toml
-	"lib/compresscheck.h"
-	"lib/lagrange.h"
-	"src/test_compress_check.cc"
-)
-
-add_executable(compresscheck)
-
-target_sources(compresscheck PRIVATE ${compresscheck_SOURCES})
-source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR} FILES ${compresscheck_SOURCES})
-
-target_compile_features(compresscheck PRIVATE
-	cxx_std_20
-)
-
-target_link_libraries(compresscheck PRIVATE
-	grlib
-)
-
-get_directory_property(CMKR_VS_STARTUP_PROJECT DIRECTORY ${PROJECT_SOURCE_DIR} DEFINITION VS_STARTUP_PROJECT)
-if(NOT CMKR_VS_STARTUP_PROJECT)
-	set_property(DIRECTORY ${PROJECT_SOURCE_DIR} PROPERTY VS_STARTUP_PROJECT compresscheck)
-endif()
-
-# Target: grtowertest
-set(grtowertest_SOURCES
-	cmake.toml
-	"test/UnitTests/GaloisRingTowering/testGRTowering.cc"
-	"test/UnitTests/GaloisRingTowering/testGRTowering.h"
-	"test/UnitTests/UnitTest.cc"
-	"test/UnitTests/UnitTest.h"
-)
-
-add_executable(grtowertest)
-
-target_sources(grtowertest PRIVATE ${grtowertest_SOURCES})
-source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR} FILES ${grtowertest_SOURCES})
-
-target_compile_features(grtowertest PRIVATE
-	cxx_std_20
-)
-
-target_link_libraries(grtowertest PRIVATE
-	grlib
-)
-
-get_directory_property(CMKR_VS_STARTUP_PROJECT DIRECTORY ${PROJECT_SOURCE_DIR} DEFINITION VS_STARTUP_PROJECT)
-if(NOT CMKR_VS_STARTUP_PROJECT)
-	set_property(DIRECTORY ${PROJECT_SOURCE_DIR} PROPERTY VS_STARTUP_PROJECT grtowertest)
-endif()
-
-# Target: grtest
-set(grtest_SOURCES
-	cmake.toml
-	"test/UnitTests/GaloisRing/testGR.cc"
-	"test/UnitTests/GaloisRing/testGR.h"
-	"test/UnitTests/UnitTest.cc"
-	"test/UnitTests/UnitTest.h"
-)
-
-add_executable(grtest)
-
-target_sources(grtest PRIVATE ${grtest_SOURCES})
-source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR} FILES ${grtest_SOURCES})
-
-target_compile_features(grtest PRIVATE
-	cxx_std_20
-)
-
-target_link_libraries(grtest PRIVATE
-	grlib
-)
-
-get_directory_property(CMKR_VS_STARTUP_PROJECT DIRECTORY ${PROJECT_SOURCE_DIR} DEFINITION VS_STARTUP_PROJECT)
-if(NOT CMKR_VS_STARTUP_PROJECT)
-	set_property(DIRECTORY ${PROJECT_SOURCE_DIR} PROPERTY VS_STARTUP_PROJECT grtest)
-endif()
-
-# Target: grbenchmark
-set(grbenchmark_SOURCES
-	cmake.toml
-	"src/benchmark_GR.cc"
-)
-
-add_executable(grbenchmark)
-
-target_sources(grbenchmark PRIVATE ${grbenchmark_SOURCES})
-source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR} FILES ${grbenchmark_SOURCES})
-
-target_compile_features(grbenchmark PRIVATE
-	cxx_std_20
-)
-
-target_link_libraries(grbenchmark PRIVATE
-	grlib
-)
-
-get_directory_property(CMKR_VS_STARTUP_PROJECT DIRECTORY ${PROJECT_SOURCE_DIR} DEFINITION VS_STARTUP_PROJECT)
-if(NOT CMKR_VS_STARTUP_PROJECT)
-	set_property(DIRECTORY ${PROJECT_SOURCE_DIR} PROPERTY VS_STARTUP_PROJECT grbenchmark)
+	set_property(DIRECTORY ${PROJECT_SOURCE_DIR} PROPERTY VS_STARTUP_PROJECT kaperformance)
 endif()
