@@ -19,6 +19,7 @@ make compact/libXKCP.a
 ### Run
 To build the sacrificing check protocol, build
 ```bash
+rm -rf build
 cmake -B build 
 cmake --build build
 ./build/saccheck

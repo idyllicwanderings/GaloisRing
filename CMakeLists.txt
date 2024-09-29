@@ -72,12 +72,6 @@ target_compile_features(kaperformance PRIVATE
 	cxx_std_20
 )
 
-if(CMAKE_CXX_COMPILER_ID STREQUAL "GNU" OR CMAKE_C_COMPILER_ID STREQUAL "GNU") # gcc
-	target_compile_options(kaperformance PRIVATE
-		-Wall
-	)
-endif()
-
 target_link_libraries(kaperformance PRIVATE
 	grlib
 )

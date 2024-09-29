@@ -91,7 +91,7 @@ type = "executable"
 sources = ["src/test_ka.cc"]
 link-libraries = ["grlib"]
 compile-features = ["cxx_std_20"]
-gcc.compile-options = ["-Wall"]
+#gcc.compile-options = ["-Wall"]
 
 
 
