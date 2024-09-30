@@ -156,6 +156,7 @@ class Z2k
         }
 
         explicit Z2k<k>(F f, bool /*skip mask*/) : val_(std::move(f & MASK)) {
+
         }
 
         Z2k() : val_(0) {}
@@ -182,6 +183,8 @@ class Z2k
         bool operator==(const Z2k& o) const { return (val_ == o.val_); }
 
         bool operator!=(const Z2k& o) const { return (val_ != o.val_); }
+
+        //Z2k<k>& operator=(const Z2k& o) const { return *this = o; }
 
         std::array<bool, k> to_bits() const {
             std::array<bool, k> res;
@@ -248,6 +251,12 @@ class GR1e
         explicit GR1e<k, d>(const std::array<T, d>& eles): polys_(eles) {}
         explicit GR1e<k, d>(const std::array<Z2k<k>, d>& eles): polys_(eles) {}
         GR1e() { polys_.fill(Z2k<k>());}
+
+        explicit GR1e(const std::vector<Z2k<k>>& vec) {
+            if (vec.size() != d) { throw std::out_of_range("Vector size does not match the expected array size.");}
+            std::copy(vec.begin(), vec.end(), polys_.begin());
+        }
+
 
         
         template <typename T>
@@ -418,14 +427,14 @@ class GR1e
             return GR1e<k, d>(res); 
         }
 
-        static  std::vector<GR1e<k, d>> exceptional_seq(int m) {
+        static std::vector<GR1e<k, d>> exceptional_seq(int m) {
             std::vector<GR1e<k, d>> res(m);
             assert(m <= (1 << d));
             // , "the ring only has a maximal sequence of at most 2^d length");
             for (int i = 0; i < m; i++) { 
-                std::vector<F> seq(d);  
+                std::vector<Z2k<k>> seq(d);  
                 for (int j = 0; j < d; j++) {
-                    seq[j] = (i >> j) & 1; //extract jth bit
+                    seq[j] = Z2k<k>((i >> j) & 1); //extract jth bit
                 }
                 res[i] = GR1e<k, d>(seq);
             }
@@ -969,7 +978,9 @@ namespace ops {
         return res;
     }
 
-
+    /**
+     * TODO: add dummy coefficients
+     */
     template <int n, typename R> 
     //std::array<R, n * 2 - 1> KA_recursive(const std::array<R, n>& a, const std::array<R, n>& b) {
     std::array<R, n * 2 - 1> KA_recursive(std::span<const R> a, std::span<const R> b) {
@@ -1238,12 +1249,10 @@ GR1e<k1, d> extendGR(const GR1e<k0, d>& base) {
     static_assert(k1 > k0, "Z2k must be larger");
     GR1e<k1, d> res;
     for (int i = 0; i < d; i++) {
-        res[i] = base[i];
+        res[i] = Z2k<k1>(base[i].force_int());
     }
     return res;
 }
-
-
 
 
 

@@ -45,4 +45,8 @@ int main() {
     end = std::chrono::high_resolution_clock::now();
     std::cout << "KA recursive Multiplication: " << std::chrono::duration_cast<std::chrono::nanoseconds>(end - start).count() << "ns" << std::endl;
     assert(c1 == c3);
+    
+    std::cout << c1.force_str() << std::endl;
+    std::cout << c2.force_str() << std::endl;
+    std::cout << c3.force_str() << std::endl;
 }

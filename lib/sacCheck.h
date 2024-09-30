@@ -2,17 +2,19 @@
 #include "gring.h"
 #include "lagrange.h"
 
-#define PARTY_NUM 10 
+#ifndef __SACRIFISING_BASED_CHECK_H
+#define __SACRIFISING_BASED_CHECK_H
 
-
-
-
+/**
+ *  PARTY_NUM x multiplication_num
+ */
 template <typename Rs, typename Rl, int k, int s>
-void sacrificing_check(const std::vector<std::vector<Rs>> x_shares, 
-                       const std::vector<std::vector<Rs>> y_shares, 
-                       const std::vector<std::vector<Rs>> z_shares) 
+void sacrificing_check(const std::vector<std::vector<Rs>>& x_shares, 
+                       const std::vector<std::vector<Rs>>& y_shares, 
+                       const std::vector<std::vector<Rs>>& z_shares,
+                       const std::vector<Rs>& ex_seq) 
 {
-    randomness::RO& ro;
+    randomness::RO ro;
     ro.gen_random_bytes();
 
     /* =============== 1. Generate sharing of witness x, y, z =============== */
@@ -24,6 +26,7 @@ void sacrificing_check(const std::vector<std::vector<Rs>> x_shares,
     static_assert(dl % ds == 0, "dl must be a multiple of ds");
     uint64_t m = x_shares[0].size();
     assert(y_shares[0].size() == m && z_shares[0].size() == m);
+    int PARTY_NUM =  ex_seq.size();   // from 1 to n, not including R::zero()
 
     // std::vector<std::vector<InShare>> x_shares;
     // std::vector<std::vector<InShare>> y_shares;
@@ -54,42 +57,58 @@ void sacrificing_check(const std::vector<std::vector<Rs>> x_shares,
     
     std::vector<std::vector<ChkShare>> a_shares;
     std::vector<std::vector<ChkShare>> c_shares;
+    std::vector<ChkShare> ex_seq_lifted;
 
     std::vector<Rl> a = Rl::random_vector(m, ro);
-    std::vector<Rl> c = elewise_product<Rl>(a, lift_y_shares);
+    for (int i = 0; i < m; i++) {
+        c_shares.emplace_back(detail::elewise_product<ChkShare>(a, lift_y_shares[i]));
+    }
+
+    for (int i = 0; i < PARTY_NUM; i++) {
+        ex_seq_lifted.emplace_back(liftGR<k + s, ds, dl>(ex_seq[i]));
+    }
 
     for (int i = 0; i < m; i++) {
-        a_shares.emplace_back(generate_sharing<ChkShare>(a[i], PARTY_NUM));
-        c_shares.emplace_back(generate_sharing<ChkShare>(c[i], PARTY_NUM));
+        a_shares.emplace_back(detail::generate_sharing<ChkShare>(a[i], ex_seq_lifted, PARTY_NUM));
     }
 
     /* ===================== 4. generate random epilson ================================ */
-    #ifdef GRtower
-        // TODO: to support for GR towers，不好搞。。
-    #else
-        Rl epsilon = extendGR<1 + s, k + s, dl>(GR1e<1 + s, dl>::random_element());
-    #endif
+    // #ifdef GRtower
+    //     // TODO: to support for GR towers，不好搞。。
+    // #else
+        
+    // #endif
+    Rl epsilon = extendGR<1 + s, k + s, dl>(GR1e<1 + s, dl>::random_element(ro));
     
     /* ===================== 5. recover check value ==================================== */
     std::vector<Rl> alpha(m);
     std::vector<std::vector<ChkShare>> alpha_shares;
 
     for (int i = 0; i < m; i++) {
-        auto val = elewise_subtract<Rl>(dot_product<Rl>(epsilon, lift_x_shares[i]), a_shares[i]);
+        auto val = detail::elewise_subtract<Rl>(detail::dot_product<Rl>(lift_x_shares[i], epsilon), a_shares[i]);
         alpha_shares.emplace_back(val);
     }
 
     for (int i = 0; i < m; i++) { //reconstruct alpha
-        alpha[i] = interpolate(alpha_shares[i], Rl::zero());
+        alpha[i] = detail::interpolate<Rl>(alpha_shares[i], ex_seq_lifted, Rl::zero());
     }
 
     /* ===================== 6. zero check ============================================ */
+    // TODO: modify this part, make sure the party_num aligns with the shares num,
+    // TODO: modify the threshold t 
+
+    // std::vector<std::vector<Rl>> opened_vals(PARTY_NUM);
     for (int i = 0; i < PARTY_NUM; i++) {
+        std::vector<Rl> col(m);
         for (int j = 0; j < m; j++) {
-            Rl opened_val = interpolate(epsilon * lift_z_shares[i][j] - c_shares[i][j] - alpha[i] * lift_y_shares[i][j], Rl::zero());
-            assert(opened_val == Rl::zero());
-        }
+            col.emplace_back(lift_z_shares[i][j] * epsilon \
+                            - c_shares[i][j] - alpha_shares[i][j] * lift_y_shares[i][j]);
+        } 
+        Rl opened_val = detail::interpolate<Rl>(col, ex_seq_lifted, Rl::zero());
+        assert(opened_val == Rl::zero());   
     }
 }
 
 #undef PARTY_NUM
+
+#endif

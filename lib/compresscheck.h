@@ -1,6 +1,10 @@
 #include "gring.h"
 #include "lagrange.h"
 
+#ifndef __COMPRESSED_MULTIPLICATION_CHECK_H
+#define __COMPRESSED_MULTIPLICATION_CHECK_H
+
+
 // #define PARTY_NUM 10 
 // #define COMPRESS_FACTOR 10
 #define RAND_FLAG 1
@@ -228,3 +232,4 @@ void compressed_multiplication_check(const std::vector<std::vector<Rs>>& x_share
 #undef COMPRESS_FACTOR
 #undef RAND_FLAG
 
+#endif

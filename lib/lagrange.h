@@ -1,7 +1,15 @@
 #include "gring.h"
+#include "random.h" 
+
+
+#ifndef __LAGRANDGE_H
+#define __LAGRANDGE_H
 
 
 namespace detail {
+
+
+
 
     // TODO: move it to lagrange
     double log_base(double base, double x) {
@@ -118,16 +126,23 @@ namespace detail {
         uint64_t d_prod = R::get_d();
         assert(ys.size() < (1ull << static_cast<uint64_t>(std::pow(2, d_prod))));
         R res;
-        /// 0 作为secret, 1 到 ys.size() 作为shares
+        /// zero 作为secret, alpha_1 到 alpha_ys.size() 作为shares
         for (std::size_t i = 0; i < ys.size(); i++) {
             res += ys[i] * detail::lagrange_l(1, ys.size() + 1, alphas, i + 1, x);
         }
         return res;
     }
 
-    void interpolate_preprocess() {
-        
+
+    template <typename Rs, typename R>
+    std::vector<R> lift_alphas(const std::vector<Rs>& alphas) {
+        std::vector<R> res;
+        for (const auto& alpha : alphas) {
+            res.push_back();
+        }
+        return res;
     }
+
 
     template <typename R>
     std::vector<R> elewise_product(const std::vector<R>& a, const std::vector<R>& b) {
@@ -175,13 +190,16 @@ namespace detail {
     }
 
     template <typename R>
-    std::vector<R> generate_sharing(const R& v, const std::vector<R> alphas, int t, int n) {
+    std::vector<R> generate_sharing(const R& v, const std::vector<R> alphas, int t) {
+        int n = alphas.size();
         std::vector<R> ys(n);
         // generate a polynomial of f(x) =(((a0x + a1)x + a2)x + a3)x + … )x + a_{t+1}( i.e. v).
         std::vector<R> coeffs(t + 1);
         coeffs[0] = v;
+        randomness::RO ro;
+        ro.gen_random_bytes();
         for (int i = 0; i < t; i++) {
-            coeffs.push_back(R::random_element());
+            coeffs.push_back(R::random_element(ro));   // TODO: to remove ro???
         }
 
         // compute 1 to n of the shares
@@ -208,3 +226,5 @@ namespace detail {
 
 
 }
+
+#endif
