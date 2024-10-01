@@ -124,7 +124,7 @@ namespace detail {
     template <typename R>
     R interpolate(const std::vector<R>& ys, const std::vector<R>& alphas, const R& x) {
         uint64_t d_prod = R::get_d();
-        assert(ys.size() < (1ull << static_cast<uint64_t>(std::pow(2, d_prod))));
+        assert(ys.size() < (static_cast<uint64_t>(std::pow(2, d_prod))));
         R res;
         /// zero 作为secret, alpha_1 到 alpha_ys.size() 作为shares
         for (std::size_t i = 0; i < ys.size(); i++) {
@@ -146,9 +146,11 @@ namespace detail {
 
     template <typename R>
     std::vector<R> elewise_product(const std::vector<R>& a, const std::vector<R>& b) {
-        std::vector<R> prod;
+        std::vector<R> prod(a.size());
+        assert(a.size() == b.size());
+        std::cout << "a.size(): " << a.size() << std::endl;
         for (int i = 0; i < a.size(); i++) {
-            prod.push_back(a[i] * b[i]);
+            prod[i] = (a[i] * b[i]);
         }
         return prod;
     }
@@ -203,9 +205,9 @@ namespace detail {
         }
 
         // compute 1 to n of the shares
-        assert(alphas.size() >=  n + 1);
+        assert(n >=  t + 1);
         for (int i = 1; i <= n; i++) {
-            ys[i] = (horner_eval(coeffs, alphas[i]));
+            ys[i - 1] = (horner_eval(coeffs, alphas[i]));
         }
         return ys;
     }

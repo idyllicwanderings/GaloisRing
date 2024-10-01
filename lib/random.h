@@ -18,7 +18,7 @@ extern "C" {
 
 #define SEED_BYTE_LEN 16
 #define SHA3_WIDTH 256
-#define OUT_BYTE_LEN 256 * 8
+#define OUT_BYTE_LEN 256 * 256
 
 namespace randomness {
 
