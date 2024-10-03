@@ -36,6 +36,7 @@ namespace arith {
     enum MULT_TYPE {
         KA_ONE_ITER,
         KA_RECURSIVE,
+        KA_RECURSIVE_DUMMY,
         PLAIN
     };
  
@@ -959,13 +960,11 @@ namespace ops {
     std::array<R, n * 2 - 1> KA_one_iter(std::span<const R> a, std::span<const R> b) {
         std::array<R, n * 2 - 1> res; // [0, n - 1]
         std::array<R, n> d;
-        for (int i = 0; i < n; ++i) {
+        for (int i = 0; i < n; i++) {
             d[i] = a[i] * b[i];
         }
-
         for (int s = 0; s < n - 1; s++) {
-            for (int t = s + 1; t < n; t++) {
-                // brings extra 2n - 3 addtions
+            for (int t = s + 1; t < n; t++) {  // extra 2n - 3 addtions
                 res[s + t] = res[s + t] + (a[s] + a[t]) * (b[s] + b[t]) - d[s] - d[t];
             }
         }
@@ -980,23 +979,53 @@ namespace ops {
 
     /**
      * TODO: add dummy coefficients
+     *      to see further explanation, the paper
+     *      'Generalizations of the Karatsuba Algorithm for Efficient Implementations'
+     *      the notations here follows the paper.
+     *      
+     *      Tackling the overlapping parts:
+     *      We have n coefficients -> m "coefficients" with each coefficient being 
+     *          a polynomial of nn coefficients:
+     *              e.g. a_n*x^n + a_{n-1}*x^{n-1} + ... + a_0
+     *                  -> A_{m-1}*x^{(m-1)*nn} + A_{m-2}*x^{(m-2)*nn}... + A_0.
+     *      so when n = 6, m = 2, nn = 3: 
+     *          a_5*x^5 + a_4*x^4 + a_3*x^3 + a_2*x^2 + a_1*x + a_0 -> A_1*x^3 + A_0,
+     *          where deg(A_1) = deg(A_0) = nn - 1.
+     *      if we consider the multiplication of two polynomials A and B,
+     *      where A = A_{m-1}*x^{(m-1)*nn} + A_{m-2}*x^{(m-2)*nn}... + A_0
+     *      and B = B_{m-1}*x^{(m-1)*nn} + B_{m-2}*x^{(m-2)*nn}... + B_0.
+     *      we can obtain C = A * B = C_{2m-2}*x^{(2m-2)*nn} + C_{2m-3}*x^{(2m-3)*nn} + ... + C_0,
+     *      where deg(C_i) = 2*nn - 2,
+     *      so the overlapping part has (i*nn + 2*nn - 2) - (i+1)*nn + 1 = nn - 1 items.
+     * 
      */
     template <int n, typename R> 
     //std::array<R, n * 2 - 1> KA_recursive(const std::array<R, n>& a, const std::array<R, n>& b) {
-    std::array<R, n * 2 - 1> KA_recursive(std::span<const R> a, std::span<const R> b) {
+    std::array<R, n * 2 - 1> KA_recursive(std::span<const R> a, std::span<const R> b, 
+                                          bool is_dummy = false) {
+
+
+        // if n is not a power of 2, pad both arrays to the nearest power of 2
+        constexpr int pow2_ceil = 1 << (static_cast<int>(std::ceil(std::log2(n))));
+
+        if (pow2_ceil != n && is_dummy) {
+            std::vector<R> a_padded(pow2_ceil, R::zero());
+            std::vector<R> b_padded(pow2_ceil, R::zero());
+
+            std::copy(a.begin(), a.end(), a_padded.begin());
+            std::copy(b.begin(), b.end(), b_padded.begin());
+
+            auto padded = KA_recursive<pow2_ceil, R>(a_padded, b_padded);
+            std::array<R, n * 2 - 1> truncated;
+            std::copy(padded.begin(), padded.begin() + (n * 2 - 1), truncated.begin());
+            return truncated;
+        }
     
-         constexpr int m = integer_factor_impl<n>::value();
+        constexpr int m = integer_factor_impl<n>::value();
         if (m == n) {
             return KA_one_iter<n, R>(a, b);
         } 
         constexpr size_t nn = static_cast<std::size_t>(n / m);
-        // static_assert(m == 2, "m should be 2");
-        // static_assert(nn * m == n, "n should be divisible by m");
-        // static_assert(nn < n and nn > 0, "n should be less than m and greater than 0"); 
-        // static_assert(sizeof(R) > 0, "R must have a valid size.");
-        // static_assert(std::is_trivially_copyable<R>::value, "R must be trivially copyable.");
-        // static_assert(std::is_standard_layout<R>::value, "R must have a standard layout.");
-
 
         std::array<std::span<const R>, m> aa, bb;
         //std::vector<std::span<R>> aa(m), bb(m);
@@ -1004,37 +1033,14 @@ namespace ops {
             aa[i] = std::span<const R>(a.data() + i * nn, nn);
             bb[i] = std::span<const R>(b.data() + i * nn, nn);
         }
-
-        // std::array<std::array<R, nn>, m> aa, bb;
-        // for (int i = 0; i < m; i++) {
-        //     std::copy(a.begin() + i * nn, a.begin() + (i + 1) * nn, aa[i].begin());
-        //     std::copy(b.begin() + i * nn, b.begin() + (i + 1) * nn, bb[i].begin());
-        // }
-        /*
-            n coefficients -> m "coefficients" with each coefficient
-            being a polynomial of nn coefficients
-            e.g. a_n*x^n + a_{n-1}*x^{n-1} + ... + a_0
-            -> A_{m-1}*x^{(m-1)*nn} + A_{m-2}*x^{(m-2)*nn}... + A_0
-            when n = 6, m = 2, nn = 3: 
-            a_5*x^5 + a_4*x^4 + a_3*x^3 + a_2*x^2 + a_1*x + a_0 -> A_1*x^3 + A_0
-            where deg(A_1) = deg(A_0) = nn - 1
-            Consider the multiplication of two polynomials A and B
-            where A = A_{m-1}*x^{(m-1)*nn} + A_{m-2}*x^{(m-2)*nn}... + A_0
-            B = B_{m-1}*x^{(m-1)*nn} + B_{m-2}*x^{(m-2)*nn}... + B_0
-            we get C = A * B = C_{2m-2}*x^{(2m-2)*nn} + C_{2m-3}*x^{(2m-3)*nn} + ... + C_0
-            where deg(C_i) = 2*nn - 2
-            so the overlapping part has (i*nn + 2*nn - 2) - (i+1)*nn + 1 = nn - 1 items
-        */
         std::array<std::array<R, 2 * nn - 1>, m> d;
         for (int i = 0; i < m; ++i) {
             d[i] = KA_recursive<nn, R>(aa[i], bb[i]);
         }
-
         std::array<std::array<R, 2 * nn - 1>, 2 * m - 1> dst;
         for (int i = 0; i < 2 * m - 1; ++i) {
             dst[i].fill(R::zero());
         }
-
         for (int s = 0; s < m - 1; s++) {
             for (int t = s + 1; t < m; t++) {
                 std::array<R, nn> aast = elewise_add<nn, R>(aa[s], aa[t]);
@@ -1050,18 +1056,15 @@ namespace ops {
         }
 
         std::array<R, 2 * n - 1> res;
-        // TODO: sum up overlapping dst
         auto v = res.begin();
-        std::copy(d[0].begin(), d[0].end(), res.begin());
-        // d[0].size() - (nn - 1) = 2*nn - 1 - nn + 1 = nn
+        std::copy(d[0].begin(), d[0].end(), res.begin());  // d[0].size() - (nn - 1) = 2*nn - 1 - nn + 1 = nn
         v += nn;
         for (int i = 1; i < 2 * m - 2; ++i) {
             for (int j = 0; j < nn - 1; ++j) {
                 *v += dst[i][j];
                 v++;
             }
-            std::copy(dst[i].begin() + nn - 1, dst[i].end(), v);
-            // 2*nn - 1 - (nn - 1) - (nn - 1) = 1
+            std::copy(dst[i].begin() + nn - 1, dst[i].end(), v);  // 2*nn - 1 - (nn - 1) - (nn - 1) = 1
             v++;
         }
         for (int j = 0; j < nn - 1; ++j) {
@@ -1204,6 +1207,9 @@ GR1e<k, d> GR1e<k, d>::operator*(const GR1e<k, d>& o) const {
     }
     else if (GR1e<k, d>::MULT_METHOD_ == arith::KA_RECURSIVE) {
         return GR1e<k, d>(ops::reduce<k, 2*d - 1, d, Z2k<k>>(ops::KA_recursive<d, Z2k<k>>(a, b)));
+    }
+    else if (GR1e<k, d>::MULT_METHOD_ == arith::KA_RECURSIVE_DUMMY) {
+        return GR1e<k, d>(ops::reduce<k, 2*d - 1, d, Z2k<k>>(ops::KA_recursive<d, Z2k<k>>(a, b, true)));
     }
     return GR1e<k, d>(ops::reduce<k, 2*d - 1, d, Z2k<k>>(ops::multiply<d, Z2k<k>>(a, b)));
 }

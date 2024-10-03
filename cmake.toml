@@ -30,13 +30,13 @@ headers = ["lib/gring.h", "lib/grlifttables.h", "lib/grmodtables.h", "lib/random
 compile-features = ["cxx_std_20"]
 
 
-[target.saccheck]
-type = "executable"
-headers = ["lib/saccheck.h", "lib/lagrange.h"]
-# TODO: 
-sources = ["src/test_sac_check.cc"]
-link-libraries = ["grlib"]
-compile-features = ["cxx_std_20"]
+# [target.saccheck]
+# type = "executable"
+# headers = ["lib/saccheck.h", "lib/lagrange.h"]
+# # TODO: 
+# sources = ["src/test_sac_check.cc"]
+# link-libraries = ["grlib"]
+# compile-features = ["cxx_std_20"]
 
 
 # [target.innprodcheck]
@@ -86,12 +86,12 @@ compile-features = ["cxx_std_20"]
 # compile-features = ["cxx_std_20"]
 
 
-# [target.kaperformance]
-# type = "executable"
-# sources = ["src/test_ka.cc"]
-# link-libraries = ["grlib"]
-# compile-features = ["cxx_std_20"]
-# gcc.compile-options = ["-Wall"]
+[target.kaperformance]
+type = "executable"
+sources = ["src/test_ka.cc"]
+link-libraries = ["grlib"]
+compile-features = ["cxx_std_20"]
+gcc.compile-options = ["-Wall"]
 
 
 

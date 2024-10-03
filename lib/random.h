@@ -18,7 +18,7 @@ extern "C" {
 
 #define SEED_BYTE_LEN 16
 #define SHA3_WIDTH 256
-#define OUT_BYTE_LEN 256 * 256
+#define OUT_BYTE_LEN 256 * 256 
 
 namespace randomness {
 
@@ -59,7 +59,11 @@ class RO {
             memcpy(out, out_ + p_, byte_len);
             p_ += byte_len;
         } else {
-            std::cout << "random.h error: requested length exceeds the available length" << std::endl;
+            gen_random_bytes();
+            memcpy(out, out_ + p_, byte_len);
+            p_ += byte_len;
+            std::cout << "random.h : re-generated the bytes if the requested length  exceeds the available length" << std::endl;
+            //std::cout << "random.h error: requested length exceeds the available length" << std::endl;
         // TODO: Handle the error if requested length exceeds the available length
         }
     }

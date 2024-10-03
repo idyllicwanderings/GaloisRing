@@ -24,6 +24,15 @@ cmake -B build
 cmake --build build
 ./build/saccheck
 ```
+### Multiplication benchmarking
+To run different kinds of multiplication(`PLAIN`, `KA_ONE_ITER`, `KA_RECURSIVE`, `KA_RECURSIVE_DUMMY`), modify `src/test_ka.cc` and then run
+
+```bash
+rm -rf build
+cmake -B build 
+cmake --build build
+./build/kaperformance
+```
 
 ### Benchmarking
 To run the benchmarking results, modify the parameterization in `src/run_mb_gr`and run it,

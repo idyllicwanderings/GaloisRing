@@ -57,28 +57,32 @@ target_link_libraries(grlib INTERFACE
 	"${CMAKE_CURRENT_SOURCE_DIR}/third_party/XKCP/bin/compact/libXKCP.a"
 )
 
-# Target: saccheck
-set(saccheck_SOURCES
+# Target: kaperformance
+set(kaperformance_SOURCES
 	cmake.toml
-	"lib/lagrange.h"
-	"lib/saccheck.h"
-	"src/test_sac_check.cc"
+	"src/test_ka.cc"
 )
 
-add_executable(saccheck)
+add_executable(kaperformance)
 
-target_sources(saccheck PRIVATE ${saccheck_SOURCES})
-source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR} FILES ${saccheck_SOURCES})
+target_sources(kaperformance PRIVATE ${kaperformance_SOURCES})
+source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR} FILES ${kaperformance_SOURCES})
 
-target_compile_features(saccheck PRIVATE
+target_compile_features(kaperformance PRIVATE
 	cxx_std_20
 )
 
-target_link_libraries(saccheck PRIVATE
+if(CMAKE_CXX_COMPILER_ID STREQUAL "GNU" OR CMAKE_C_COMPILER_ID STREQUAL "GNU") # gcc
+	target_compile_options(kaperformance PRIVATE
+		-Wall
+	)
+endif()
+
+target_link_libraries(kaperformance PRIVATE
 	grlib
 )
 
 get_directory_property(CMKR_VS_STARTUP_PROJECT DIRECTORY ${PROJECT_SOURCE_DIR} DEFINITION VS_STARTUP_PROJECT)
 if(NOT CMKR_VS_STARTUP_PROJECT)
-	set_property(DIRECTORY ${PROJECT_SOURCE_DIR} PROPERTY VS_STARTUP_PROJECT saccheck)
+	set_property(DIRECTORY ${PROJECT_SOURCE_DIR} PROPERTY VS_STARTUP_PROJECT kaperformance)
 endif()

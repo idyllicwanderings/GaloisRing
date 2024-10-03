@@ -3,13 +3,12 @@
 #include "lagrange.h"
 
 
-#define PARTY_NUM 10 
-
-
 template <typename Rs, typename Rl, int k, int s>
 void inner_product_check(const std::vector<std::vector<Rs>>& x_shares, 
                          const std::vector<std::vector<Rs>>& y_shares, 
-                         const std::vector<std::vector<Rs>>& z_shares)
+                         const std::vector<std::vector<Rs>>& z_shares,
+                         const std::vector<Rs>& ex_seq,
+                         int t)
 {
     randomness::RO& ro;
     ro.gen_random_bytes();
@@ -21,18 +20,10 @@ void inner_product_check(const std::vector<std::vector<Rs>>& x_shares,
     constexpr uint64_t ds = Rs::get_d();
     constexpr uint64_t dl = Rl::get_d();
     static_assert(dl % ds == 0, "dl must be a multiple of ds");
+    uint64_t PARTY_NUM = x_shares[0].size();
+    assert(y_shares[0].size() == PARTY_NUM && z_shares[0].size() == PARTY_NUM);
     uint64_t n = x_shares[0].size();
-    assert(y_shares[0].size() == n && z_shares[0].size() == n);
 
-    // std::vector<std::vector<InShare>> x_shares;
-    // std::vector<std::vector<InShare>> y_shares;
-    // std::vector<std::vector<InShare>> z_shares; 
-
-    // for (int i = 0; i < n; i++) {
-    //     x_shares.emplace_back(generate_sharing<InShare>(in_x[i], PARTY_NUM));
-    //     y_shares.emplace_back(generate_sharing<InShare>(in_y[i], PARTY_NUM));
-    //     z_shares.emplace_back(generate_sharing<InShare>(in_z[i], PARTY_NUM));
-    // }
 
     /* ===================== 2. lift input shares to the check ring===================== */
     std::vector<std::vector<ChkShare>> lift_x_shares;
@@ -50,8 +41,12 @@ void inner_product_check(const std::vector<std::vector<Rs>>& x_shares,
         }
     }
 
+    std::vector<ChkShare> ex_seq_lifted;
+    for (int i = 0; i < PARTY_NUM; i++) {
+        ex_seq_lifted.emplace_back(liftGR<k + s, ds, dl>(ex_seq[i]));
+    }
+
     /* ===================== 3. generate random masking ================================ */
-    
 
     std::vector<std::vector<ChkShare>> a_shares;
     std::vector<ChkShare> c_shares;
