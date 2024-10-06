@@ -128,7 +128,7 @@ namespace detail {
         R res;
         /// zero 作为secret, alpha_1 到 alpha_ys.size() 作为shares
         for (std::size_t i = 0; i < ys.size(); i++) {
-            res += ys[i] * detail::lagrange_l(1, ys.size() + 1, alphas, i + 1, x);
+            res += ys[i] * detail::lagrange_l(0, ys.size(), alphas, i, x);
         }
         return res;
     }
@@ -184,8 +184,8 @@ namespace detail {
 
     template <typename R>
     R horner_eval(const std::vector<R>& coeffs, const R& x) {
-        R res = coeffs[0];
-        for (int i = 1; i < coeffs.size(); i++) {
+        R res = coeffs.back();
+        for (int i = coeffs.size() - 2; i >= 0; i--) {
             res = res * x + coeffs[i];
         }
         return res;
@@ -201,13 +201,14 @@ namespace detail {
         randomness::RO ro;
         ro.gen_random_bytes();
         for (int i = 0; i < t; i++) {
-            coeffs.push_back(R::random_element(ro));   // TODO: to remove ro???
+            coeffs[i + 1] = R::random_element(ro);
+            // coeffs.push_back(R::random_element(ro));   // TODO: to remove ro???
         }
 
         // compute 1 to n of the shares
         assert(n >=  t + 1);
-        for (int i = 1; i <= n; i++) {
-            ys[i - 1] = (horner_eval(coeffs, alphas[i]));
+        for (int i = 0; i < n; i++) {
+            ys[i] = (horner_eval(coeffs, alphas[i]));
         }
         return ys;
     }

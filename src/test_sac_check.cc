@@ -30,9 +30,9 @@
     
 int main () {
     #define k 16
-    #define s 16
-    #define n 40
-    int PARTY_NUM = 10;
+    #define s 16  
+    #define n 2
+    int PARTY_NUM = 5;
     using Rs = GR1e<32, 8>;
     using Rl = GR1e<32, 16>;
 
@@ -51,9 +51,14 @@ int main () {
 
     // generate random multiplications
 
-    for (int i = 0; i < n; i++) {
+    for (int i = 0; i < n; i++) {  //correctness check
         in_z.push_back(in_x[i] * in_y[i]);
     }
+
+    // for (int i = 0; i < n - 1; i++) { //soundness check
+    //     in_z.push_back(in_x[i] * in_y[i]);
+    // }
+    // in_z.push_back(Rs::random_element(ro));
 
     // generate sharings      // multiplication_num x PARTY_NUM
     std::vector<std::vector<Rs>> x_shares;
@@ -68,12 +73,16 @@ int main () {
         z_shares.emplace_back(detail::generate_sharing<Rs>(in_z[i], ex_seq, t));
     }
 
+
     // can you switch it back ???
     std::vector<std::vector<Rs>> x_shares_final, y_shares_final, z_shares_final;
     // now it is PARTY_NUM x multiplication_num
     detail::transpose(x_shares, x_shares_final);
     detail::transpose(y_shares, y_shares_final);
     detail::transpose(z_shares, z_shares_final); 
+
+
+    std::cout << "prepared shares" << std::endl;
 
     sacrificing_check<Rs, Rl, k, s>(x_shares_final, y_shares_final, z_shares_final, ex_seq, t);
 
