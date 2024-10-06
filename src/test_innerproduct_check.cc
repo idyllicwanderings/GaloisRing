@@ -3,7 +3,7 @@
 #include "../lib/random.h"
 
 int main () {
-     #define k 16
+    #define k 16
     #define s 16  
     #define n 2
     int PARTY_NUM = 5;

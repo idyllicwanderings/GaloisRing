@@ -23,17 +23,15 @@ void inner_product_check(const std::vector<std::vector<Rs>>& x_shares,
     constexpr uint64_t ds = Rs::get_d();
     constexpr uint64_t dl = Rl::get_d();
     static_assert(dl % ds == 0, "dl must be a multiple of ds");
-    uint64_t PARTY_NUM = x_shares.size();
-    assert(y_shares.size() == PARTY_NUM && z_shares.size() == PARTY_NUM);
-    uint64_t n = ex_seq.size();
-    
+    uint64_t m = x_shares[0].size();
+    uint64_t PARTY_NUM = ex_seq.size();
     std::cout << "defined parameters" << std::endl;
 
     /* ===================== 2. lift input shares to the check ring===================== */
     std::vector<std::vector<ChkShare>> lift_x_shares(PARTY_NUM), lift_y_shares(PARTY_NUM), lift_z_shares(PARTY_NUM);
 
     for (int i = 0; i < PARTY_NUM; i++) {
-        for (int j = 0; j < n; j++) {
+        for (int j = 0; j < m; j++) {
             #ifdef GRtower
                 // TODO: to support for GR towers
             #else
@@ -44,9 +42,9 @@ void inner_product_check(const std::vector<std::vector<Rs>>& x_shares,
         }
     }
 
-    std::vector<ChkShare> ex_seq_lifted(n);
-    for (int i = 0; i < n; i++) {
-        ex_seq_lifted[i] = (liftGR<k + s, ds, dl>(ex_seq[i]));
+    std::vector<ChkShare> ex_seq_lifted(PARTY_NUM);
+    for (int i = 0; i < PARTY_NUM; i++) {
+        ex_seq_lifted[i] = liftGR<k + s, ds, dl>(ex_seq[i]);
     }
 
     std::cout << "lifted shares" << std::endl;
@@ -56,19 +54,21 @@ void inner_product_check(const std::vector<std::vector<Rs>>& x_shares,
     std::vector<std::vector<ChkShare>> a_shares(PARTY_NUM);
     std::vector<ChkShare> c_shares(PARTY_NUM);
 
-    std::vector<Rl> a = Rl::random_vector(n, ro);
+    std::vector<Rl> a = Rl::random_vector(m, ro);
 
-    for (int i = 0; i < n; i++) {
+
+    for (int i = 0; i < PARTY_NUM; i++) {
+        c_shares[i] =  detail::dot_product<ChkShare>(a, lift_y_shares[i]);
+    }
+
+    for (int i = 0; i < m; i++) {
         std::vector<ChkShare> shares = detail::generate_sharing<ChkShare>(a[i], ex_seq_lifted, t);
         for (int j = 0; j < PARTY_NUM; j++) {
             a_shares[j].emplace_back(shares[j]); 
         }
     }
     
-    // TODO: modify this
-    for (int i = 0; i < PARTY_NUM; i++) {
-        c_shares[i] =  detail::dot_product<Rl>(a_shares[i], lift_y_shares[i]);
-    }
+
 
     std::cout << "generated random masking" << std::endl;
 
@@ -76,10 +76,10 @@ void inner_product_check(const std::vector<std::vector<Rs>>& x_shares,
     #ifdef GRtower
         // TODO: to support for GR towers，不好搞。。
     #else
-        auto eplison_n_unextended = GR1e<1 + s, dl>::random_vector(n, ro);
+        auto eplison_n_unextended = GR1e<1 + s, dl>::random_vector(m, ro);
         
-        std::vector<Rl> epsilon_n(n);
-        for (int i = 0; i < n; i++) {
+        std::vector<Rl> epsilon_n(m);
+        for (int i = 0; i < m; i++) {
             epsilon_n[i] = extendGR<1 + s, k + s, dl>(eplison_n_unextended[i]);
         }
     #endif
@@ -87,7 +87,6 @@ void inner_product_check(const std::vector<std::vector<Rs>>& x_shares,
     std::cout << "generated random epsilon" << std::endl;
     
     /* ===================== 5. recover check value ==================================== */
-    std::vector<Rl> alpha(n);
     std::vector<std::vector<ChkShare>> alpha_shares(PARTY_NUM), alpha_shares_t;
 
     for (int i = 0; i < PARTY_NUM; i++) {
@@ -99,7 +98,8 @@ void inner_product_check(const std::vector<std::vector<Rs>>& x_shares,
 
     std::cout << "transpose success" << std::endl;
 
-    for (int i = 0; i < n; i++) { //reconstruct alpha
+    std::vector<Rl> alpha(m);
+    for (int i = 0; i < m; i++) { //reconstruct alpha
         alpha[i] =  detail::interpolate(alpha_shares_t[i], ex_seq_lifted, Rl::zero());
     }
 
@@ -108,6 +108,7 @@ void inner_product_check(const std::vector<std::vector<Rs>>& x_shares,
     for (int i = 0; i < PARTY_NUM; i++) {
         Rl val =  detail::dot_product<Rl>(epsilon_n, lift_z_shares[i]) \
                     - c_shares[i] -  detail::dot_product<Rl>(alpha, lift_y_shares[i]);
+        std::cout << "interpolated check value: " << val.force_str() << std::endl;
         col[i] = val;
     }
 
