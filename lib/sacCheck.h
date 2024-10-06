@@ -122,6 +122,5 @@ void sacrificing_check(const std::vector<std::vector<Rs>>& x_shares,
     std::cout << "zero check passed" << std::endl;
 }
 
-#undef PARTY_NUM
 
 #endif
