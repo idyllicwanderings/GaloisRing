@@ -327,6 +327,10 @@ class GR1e
         static constexpr int get_d() {
             return d0_;
         }
+
+        static constexpr int get_k() {
+            return k_;
+        }
         
         GR1e<k, d> inv() {
             GR1e<k, d> res = arith::fast_exp_fermat<GR1e<k, d>>(*this, d, k);
@@ -560,6 +564,10 @@ class GRT1e<R, d> {
 
         static constexpr int get_d() {
             return d0_;
+        }
+
+        static constexpr int get_k() {
+            return k_;
         }
 
         static inline GRT1e<R, d> random_element(randomness::RO& ro) {

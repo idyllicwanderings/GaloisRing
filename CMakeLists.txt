@@ -57,28 +57,28 @@ target_link_libraries(grlib INTERFACE
 	"${CMAKE_CURRENT_SOURCE_DIR}/third_party/XKCP/bin/compact/libXKCP.a"
 )
 
-# Target: innprodcheck
-set(innprodcheck_SOURCES
+# Target: compresscheck
+set(compresscheck_SOURCES
 	cmake.toml
-	"lib/innprodcheck.h"
+	"lib/compresscheck.h"
 	"lib/lagrange.h"
-	"src/test_innerproduct_check.cc"
+	"src/test_compress_check.cc"
 )
 
-add_executable(innprodcheck)
+add_executable(compresscheck)
 
-target_sources(innprodcheck PRIVATE ${innprodcheck_SOURCES})
-source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR} FILES ${innprodcheck_SOURCES})
+target_sources(compresscheck PRIVATE ${compresscheck_SOURCES})
+source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR} FILES ${compresscheck_SOURCES})
 
-target_compile_features(innprodcheck PRIVATE
+target_compile_features(compresscheck PRIVATE
 	cxx_std_20
 )
 
-target_link_libraries(innprodcheck PRIVATE
+target_link_libraries(compresscheck PRIVATE
 	grlib
 )
 
 get_directory_property(CMKR_VS_STARTUP_PROJECT DIRECTORY ${PROJECT_SOURCE_DIR} DEFINITION VS_STARTUP_PROJECT)
 if(NOT CMKR_VS_STARTUP_PROJECT)
-	set_property(DIRECTORY ${PROJECT_SOURCE_DIR} PROPERTY VS_STARTUP_PROJECT innprodcheck)
+	set_property(DIRECTORY ${PROJECT_SOURCE_DIR} PROPERTY VS_STARTUP_PROJECT compresscheck)
 endif()

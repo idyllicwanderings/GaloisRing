@@ -56,19 +56,7 @@ namespace detail {
         return res * denom.inv();
     }
 
-    template <typename R>
-    std::vector<R> lagrange_coeff(const std::vector<R>& xcoords, const std::vector<R>& ycoords) {
-        std::vector<R> res(xcoords.size());
-        for (int i = 0; i < xcoords.size(); i++) {
-            std::vector<R> coeffs = point_coeff(i, xcoords);
-            for (int k = 0; k < xcoords.size(); k++) {
-                res[k] += ycoords[i] * coeffs[k];
-            }
-        }
-        return res;
-    }
-
-    /**
+      /**
      * subfunction of lagrange_coeff
      */
     template <typename R>
@@ -120,6 +108,20 @@ namespace detail {
             // }
             // res = new_coeffs;
     }
+
+    template <typename R>
+    std::vector<R> lagrange_coeff(const std::vector<R>& xcoords, const std::vector<R>& ycoords) {
+        std::vector<R> res(xcoords.size());
+        for (int i = 0; i < xcoords.size(); i++) {
+            std::vector<R> coeffs = point_coeff(i, xcoords);
+            for (int k = 0; k < xcoords.size(); k++) {
+                res[k] += ycoords[i] * coeffs[k];
+            }
+        }
+        return res;
+    }
+
+
 
     template <typename R>
     R interpolate(const std::vector<R>& ys, const std::vector<R>& alphas, const R& x) {
