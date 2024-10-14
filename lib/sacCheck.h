@@ -13,7 +13,7 @@ void sacrificing_check(const std::vector<std::vector<Rs>>& x_shares,
                        const std::vector<std::vector<Rs>>& y_shares, 
                        const std::vector<std::vector<Rs>>& z_shares,
                        const std::vector<Rs>& ex_seq,
-                       int t) 
+                       int threshold) 
 {
     randomness::RO ro;
     ro.gen_random_bytes();
@@ -62,7 +62,7 @@ void sacrificing_check(const std::vector<std::vector<Rs>>& x_shares,
     }
 
     for (int i = 0; i < m; i++) {
-        std::vector<ChkShare> shares = detail::generate_sharing<ChkShare>(a[i], ex_seq_lifted, t);
+        std::vector<ChkShare> shares = detail::generate_sharing<ChkShare>(a[i], ex_seq_lifted, threshold);
         for (int j = 0; j < PARTY_NUM; j++) {
             a_shares[j].emplace_back(shares[j]); 
         }

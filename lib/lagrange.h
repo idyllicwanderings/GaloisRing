@@ -111,6 +111,7 @@ namespace detail {
 
     template <typename R>
     std::vector<R> lagrange_coeff(const std::vector<R>& xcoords, const std::vector<R>& ycoords) {
+        assert(xcoords.size() == ycoords.size());
         std::vector<R> res(xcoords.size());
         for (int i = 0; i < xcoords.size(); i++) {
             std::vector<R> coeffs = point_coeff(i, xcoords);
@@ -118,6 +119,8 @@ namespace detail {
                 res[k] += ycoords[i] * coeffs[k];
             }
         }
+        // reverse the coefficients to [0...n-1]'
+        // std::reverse(res.begin(), res.end());
         return res;
     }
 
@@ -150,7 +153,6 @@ namespace detail {
     std::vector<R> elewise_product(const std::vector<R>& a, const std::vector<R>& b) {
         std::vector<R> prod(a.size());
         assert(a.size() == b.size());
-        std::cout << "a.size(): " << a.size() << std::endl;
         for (int i = 0; i < a.size(); i++) {
             prod[i] = (a[i] * b[i]);
         }

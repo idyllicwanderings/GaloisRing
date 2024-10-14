@@ -6,10 +6,10 @@
 int main () {
     #define k 16
     #define s 16  
-    #define n 2
+    #define n 8
     #define COMPRESS_FACTOR 2
 
-    int PARTY_NUM = 5;
+    int PARTY_NUM = 6;
     using Rs = GR1e<32, 8>;
     using Rl = GR1e<32, 16>;
 
@@ -17,6 +17,20 @@ int main () {
     ro.gen_random_bytes();
     std::vector<Rs> ex_zero = Rs::exceptional_seq(PARTY_NUM + 1);
     std::vector<Rs> ex_seq(ex_zero.begin() + 1, ex_zero.end());
+
+
+    // test detail::lagrange_coeff(z_full, alpha_end)
+    // have langrage coefficients as f(ex_seq) = x
+    // std::vector<Rs> test_x = Rs::random_vector(ex_seq.size(), ro);
+    // std::vector<Rs> coeffs = detail::lagrange_coeff<Rs>(ex_seq, test_x);
+
+    // Rs res = detail::horner_eval<Rs>(coeffs, ex_seq[0]);
+    // std::cout << "res: " << res.force_str() << std::endl;
+    // std::cout << "test_x[0]: " << test_x[0].force_str() << std::endl;
+
+    // assert(res == test_x[0]);
+    // std::cout << "lagrange_coeff test passed" << std::endl;
+
 
     // for (int i = 0; i < PARTY_NUM; i++) {
     //     std::cout << ex_seq[i].force_str() << std::endl;
