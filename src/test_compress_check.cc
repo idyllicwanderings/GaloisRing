@@ -42,14 +42,13 @@ int main () {
 
     // generate random multiplications
 
-    for (int i = 0; i < n; i++) {  //correctness check
-        in_z.push_back(in_x[i] * in_y[i]);
-    }
-
-    // for (int i = 0; i < n - 1; i++) { //soundness check
+    // for (int i = 0; i < n; i++) {  //correctness check
     //     in_z.push_back(in_x[i] * in_y[i]);
     // }
-    // in_z.push_back(Rs::random_element(ro));
+
+    for (int i = 0; i < n; i++) { //soundness check
+        in_z.push_back(Rs::random_element(ro));
+    }
 
     // generate sharings      // multiplication_num x PARTY_NUM
     std::vector<std::vector<Rs>> x_shares;

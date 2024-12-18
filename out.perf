@@ -1,0 +1,150 @@
+compresscheck   14902  2479.713742:          1 cycles:Pu: 
+	ffffffffa4f25a86 [unknown] ([unknown])
+	ffffffffa4f240c4 [unknown] ([unknown])
+	ffffffffa50012e1 [unknown] ([unknown])
+	    7f097ec0e290 _start+0x0 (/usr/lib/x86_64-linux-gnu/ld-linux-x86-64.so.2)
+
+compresscheck   14902  2479.713786:          1 cycles:Pu: 
+	    7f097ec0e293 _start+0x3 (/usr/lib/x86_64-linux-gnu/ld-linux-x86-64.so.2)
+
+compresscheck   14902  2479.713797:          1 cycles:Pu: 
+	ffffffffa5000be0 [unknown] ([unknown])
+	    7f097ec0e293 _start+0x3 (/usr/lib/x86_64-linux-gnu/ld-linux-x86-64.so.2)
+
+compresscheck   14902  2479.713810:         29 cycles:Pu: 
+	ffffffffa40e58f2 [unknown] ([unknown])
+	ffffffffa4f2559d [unknown] ([unknown])
+	ffffffffa5000c02 [unknown] ([unknown])
+	    7f097ec0f071 _dl_start+0x41 (/usr/lib/x86_64-linux-gnu/ld-linux-x86-64.so.2)
+	    7f097ec0e298 _dl_start_user+0x0 (/usr/lib/x86_64-linux-gnu/ld-linux-x86-64.so.2)
+
+compresscheck   14902  2479.713827:       3416 cycles:Pu: 
+	ffffffffa5000be0 [unknown] ([unknown])
+	    7f097ec0f340 _dl_start+0x310 (/usr/lib/x86_64-linux-gnu/ld-linux-x86-64.so.2)
+	    7f097ec0e298 _dl_start_user+0x0 (/usr/lib/x86_64-linux-gnu/ld-linux-x86-64.so.2)
+
+compresscheck   14902  2479.721510:     329742 cycles:Pu: 
+	ffffffffa42bde15 [unknown] ([unknown])
+	ffffffffa42c29ca [unknown] ([unknown])
+	ffffffffa42c338f [unknown] ([unknown])
+	ffffffffa40e5aa2 [unknown] ([unknown])
+	ffffffffa4f2559d [unknown] ([unknown])
+	ffffffffa5000c02 [unknown] ([unknown])
+	    7f097ebff340 _dl_relocate_object+0x5e0 (/usr/lib/x86_64-linux-gnu/ld-linux-x86-64.so.2)
+	    7f097ec11a63 dl_main+0x2183 (/usr/lib/x86_64-linux-gnu/ld-linux-x86-64.so.2)
+	    7f097ec0d83c _dl_sysdep_start+0x3fc (/usr/lib/x86_64-linux-gnu/ld-linux-x86-64.so.2)
+	              40 [unknown] ([unknown])
+
+compresscheck   14902  2479.741232:          1 cycles:Pu: 
+	    55fff82a0428 GR1e<64, 4>::GR1e<unsigned long long>(std::initializer_list<unsigned long long>)+0x6e (/mnt/d/Cryptography/MPCitH/galois_ring/build/compresscheck)
+	    55fff809e066 __static_initialization_and_destruction_0(int, int)+0x117 (/mnt/d/Cryptography/MPCitH/galois_ring/build/compresscheck)
+	    55fff829fe64 _GLOBAL__sub_I__ZN10randomness6to_intEPKhi+0x17 (/mnt/d/Cryptography/MPCitH/galois_ring/build/compresscheck)
+	    7f097e6aaebb __libc_start_main@@GLIBC_2.34+0xfb (/usr/lib/x86_64-linux-gnu/libc.so.6)
+
+compresscheck   14902  2479.741255:          1 cycles:Pu: 
+	    55fff82e0018 Z2k<64>::Z2k()+0x10 (/mnt/d/Cryptography/MPCitH/galois_ring/build/compresscheck)
+	    55fff82a03a1 std::array<Z2k<64>, 4ul>::array()+0x29 (/mnt/d/Cryptography/MPCitH/galois_ring/build/compresscheck)
+	    55fff82a03f9 GR1e<64, 4>::GR1e<unsigned long long>(std::initializer_list<unsigned long long>)+0x3f (/mnt/d/Cryptography/MPCitH/galois_ring/build/compresscheck)
+	    55fff809e0de __static_initialization_and_destruction_0(int, int)+0x18f (/mnt/d/Cryptography/MPCitH/galois_ring/build/compresscheck)
+	    55fff829fe64 _GLOBAL__sub_I__ZN10randomness6to_intEPKhi+0x17 (/mnt/d/Cryptography/MPCitH/galois_ring/build/compresscheck)
+	    7f097e6aaebb __libc_start_main@@GLIBC_2.34+0xfb (/usr/lib/x86_64-linux-gnu/libc.so.6)
+
+compresscheck   14902  2479.741263:          1 cycles:Pu: 
+	    55fff82f0233 std::__array_traits<Z2k<64>, 6ul>::_S_ref(Z2k<64> const (&) [6], unsigned long)+0x14 (/mnt/d/Cryptography/MPCitH/galois_ring/build/compresscheck)
+	    55fff82e00ef std::array<Z2k<64>, 6ul>::operator[](unsigned long)+0x27 (/mnt/d/Cryptography/MPCitH/galois_ring/build/compresscheck)
+	    55fff82a056e GR1e<64, 6>::GR1e<unsigned long long>(std::initializer_list<unsigned long long>)+0xa0 (/mnt/d/Cryptography/MPCitH/galois_ring/build/compresscheck)
+	    55fff809e189 __static_initialization_and_destruction_0(int, int)+0x23a (/mnt/d/Cryptography/MPCitH/galois_ring/build/compresscheck)
+	    55fff829fe64 _GLOBAL__sub_I__ZN10randomness6to_intEPKhi+0x17 (/mnt/d/Cryptography/MPCitH/galois_ring/build/compresscheck)
+	    7f097e6aaebb __libc_start_main@@GLIBC_2.34+0xfb (/usr/lib/x86_64-linux-gnu/libc.so.6)
+
+compresscheck   14902  2479.741271:         56 cycles:Pu: 
+	    55fff82a0696 GR1e<64, 8>::GR1e<unsigned long long>(std::initializer_list<unsigned long long>)+0xb4 (/mnt/d/Cryptography/MPCitH/galois_ring/build/compresscheck)
+	    55fff809e308 __static_initialization_and_destruction_0(int, int)+0x3b9 (/mnt/d/Cryptography/MPCitH/galois_ring/build/compresscheck)
+	    55fff829fe64 _GLOBAL__sub_I__ZN10randomness6to_intEPKhi+0x17 (/mnt/d/Cryptography/MPCitH/galois_ring/build/compresscheck)
+	    7f097e6aaebb __libc_start_main@@GLIBC_2.34+0xfb (/usr/lib/x86_64-linux-gnu/libc.so.6)
+
+compresscheck   14902  2479.741279:       8568 cycles:Pu: 
+	    55fff82a0c05 GR1e<64, 18>::GR1e<unsigned long long>(std::initializer_list<unsigned long long>)+0xbf (/mnt/d/Cryptography/MPCitH/galois_ring/build/compresscheck)
+	    55fff809eca0 __static_initialization_and_destruction_0(int, int)+0xd51 (/mnt/d/Cryptography/MPCitH/galois_ring/build/compresscheck)
+	    55fff829fe64 _GLOBAL__sub_I__ZN10randomness6to_intEPKhi+0x17 (/mnt/d/Cryptography/MPCitH/galois_ring/build/compresscheck)
+	    7f097e6aaebb __libc_start_main@@GLIBC_2.34+0xfb (/usr/lib/x86_64-linux-gnu/libc.so.6)
+
+compresscheck   14902  2479.782622:    1430942 cycles:Pu: 
+	    55fff82e3208 Z2k<19>::Z2k()+0x16 (/mnt/d/Cryptography/MPCitH/galois_ring/build/compresscheck)
+	    55fff82b2d29 std::array<Z2k<19>, 18ul>::array()+0x29 (/mnt/d/Cryptography/MPCitH/galois_ring/build/compresscheck)
+	    55fff82b2d81 GR1e<19, 18>::GR1e<unsigned long>(std::initializer_list<unsigned long>)+0x3f (/mnt/d/Cryptography/MPCitH/galois_ring/build/compresscheck)
+	    55fff8125ee5 __static_initialization_and_destruction_0(int, int)+0x87f96 (/mnt/d/Cryptography/MPCitH/galois_ring/build/compresscheck)
+	    55fff829fe64 _GLOBAL__sub_I__ZN10randomness6to_intEPKhi+0x17 (/mnt/d/Cryptography/MPCitH/galois_ring/build/compresscheck)
+	    7f097e6aaebb __libc_start_main@@GLIBC_2.34+0xfb (/usr/lib/x86_64-linux-gnu/libc.so.6)
+
+compresscheck   14902  2479.903108:  180780583 cycles:Pu: 
+	    55fff82fe356 Z2k<32>::operator*(Z2k<32> const&) const+0x3c (/mnt/d/Cryptography/MPCitH/galois_ring/build/compresscheck)
+	    55fff830189b std::array<Z2k<32>, ((16)*(2))-(1)> ops::multiply<16, Z2k<32> >(std::array<Z2k<32>, 16> const&, std::array<Z2k<32>, 16> const&)+0x7e (/mnt/d/Cryptography/MPCitH/galois_ring/build/compresscheck)
+	    55fff82fc240 GR1e<32, 16>::operator*(GR1e<32, 16> const&) const+0x30a (/mnt/d/Cryptography/MPCitH/galois_ring/build/compresscheck)
+	    55fff8304ce9 GR1e<32, 16>::operator*=(GR1e<32, 16> const&)+0x3f (/mnt/d/Cryptography/MPCitH/galois_ring/build/compresscheck)
+	    55fff83088a7 GR1e<32, 16> arith::fast_exp_fermat<GR1e<32, 16> >(GR1e<32, 16>, int, int)+0x55 (/mnt/d/Cryptography/MPCitH/galois_ring/build/compresscheck)
+	    55fff8304dc6 GR1e<32, 16>::inv()+0x80 (/mnt/d/Cryptography/MPCitH/galois_ring/build/compresscheck)
+	    55fff82ff205 GR1e<32, 16> detail::lagrange_l<GR1e<32, 16> >(unsigned long const&, unsigned long const&, std::vector<GR1e<32, 16>, std::allocator<GR1e<32, 16> > >, unsigned long, GR1e<32, 16>)+0x1ff (/mnt/d/Cryptography/MPCitH/galois_ring/build/compresscheck)
+	    55fff82fa3d7 GR1e<32, 16> detail::interpolate<GR1e<32, 16> >(std::vector<GR1e<32, 16>, std::allocator<GR1e<32, 16> > > const&, std::vector<GR1e<32, 16>, std::allocator<GR1e<32, 16> > > const&, GR1e<32, 16> const&)+0x19b (/mnt/d/Cryptography/MPCitH/galois_ring/build/compresscheck)
+	    55fff82ecf36 void compressed_multiplication_check<GR1e<32, 8>, GR1e<32, 16>, 2>(std::vector<std::vector<GR1e<32, 8>, std::allocator<GR1e<32, 8> > >, std::allocator<std::vector<GR1e<32, 8>, std::allocator<GR1e<32, 8> > > > > const&, std::vector<std::vector<GR1e<32, 8>, std::allocator<GR1e<32, 8> > >, std::allocator<std::vector<GR1e<32, 8>, std::allocator<GR1e<32, 8> > > > > const&, std::vector<std::vector<GR1e<32, 8>, std::allocator<GR1e<32, 8> > >, std::allocator<std::vector<GR1e<32, 8>, std::allocator<GR1e<32, 8> > > > > const&, std::vector<GR1e<32, 8>, std::allocator<GR1e<32, 8> > > const&, int)+0x138f (/mnt/d/Cryptography/MPCitH/galois_ring/build/compresscheck)
+	    55fff809dcf7 main+0x444 (/mnt/d/Cryptography/MPCitH/galois_ring/build/compresscheck)
+	    7f097e6aad90 __libc_start_call_main+0x80 (/usr/lib/x86_64-linux-gnu/libc.so.6)
+
+compresscheck   14902  2479.931861:  110072113 cycles:Pu: 
+	    55fff8304e10 Z2k<32>::Z2k(unsigned int, bool)+0x10 (/mnt/d/Cryptography/MPCitH/galois_ring/build/compresscheck)
+	    55fff82ff2b4 Z2k<32>::operator-(Z2k<32> const&) const+0x46 (/mnt/d/Cryptography/MPCitH/galois_ring/build/compresscheck)
+	    55fff8305bdd std::array<Z2k<32>, 31> ops::reduce_once<31, 16, Z2k<32> >(std::array<Z2k<32>, 31> const&, std::tuple<int, int, int> const&)+0x38d (/mnt/d/Cryptography/MPCitH/galois_ring/build/compresscheck)
+	    55fff83009da std::array<Z2k<32>, 16> ops::reduce<32, 31, 16, Z2k<32> >(std::array<Z2k<32>, 31> const&)+0x7e (/mnt/d/Cryptography/MPCitH/galois_ring/build/compresscheck)
+	    55fff82fc259 GR1e<32, 16>::operator*(GR1e<32, 16> const&) const+0x323 (/mnt/d/Cryptography/MPCitH/galois_ring/build/compresscheck)
+	    55fff8304ce9 GR1e<32, 16>::operator*=(GR1e<32, 16> const&)+0x3f (/mnt/d/Cryptography/MPCitH/galois_ring/build/compresscheck)
+	    55fff83088a7 GR1e<32, 16> arith::fast_exp_fermat<GR1e<32, 16> >(GR1e<32, 16>, int, int)+0x55 (/mnt/d/Cryptography/MPCitH/galois_ring/build/compresscheck)
+	    55fff8304dc6 GR1e<32, 16>::inv()+0x80 (/mnt/d/Cryptography/MPCitH/galois_ring/build/compresscheck)
+	    55fff82ff205 GR1e<32, 16> detail::lagrange_l<GR1e<32, 16> >(unsigned long const&, unsigned long const&, std::vector<GR1e<32, 16>, std::allocator<GR1e<32, 16> > >, unsigned long, GR1e<32, 16>)+0x1ff (/mnt/d/Cryptography/MPCitH/galois_ring/build/compresscheck)
+	    55fff82fa3d7 GR1e<32, 16> detail::interpolate<GR1e<32, 16> >(std::vector<GR1e<32, 16>, std::allocator<GR1e<32, 16> > > const&, std::vector<GR1e<32, 16>, std::allocator<GR1e<32, 16> > > const&, GR1e<32, 16> const&)+0x19b (/mnt/d/Cryptography/MPCitH/galois_ring/build/compresscheck)
+	    55fff82ecf36 void compressed_multiplication_check<GR1e<32, 8>, GR1e<32, 16>, 2>(std::vector<std::vector<GR1e<32, 8>, std::allocator<GR1e<32, 8> > >, std::allocator<std::vector<GR1e<32, 8>, std::allocator<GR1e<32, 8> > > > > const&, std::vector<std::vector<GR1e<32, 8>, std::allocator<GR1e<32, 8> > >, std::allocator<std::vector<GR1e<32, 8>, std::allocator<GR1e<32, 8> > > > > const&, std::vector<std::vector<GR1e<32, 8>, std::allocator<GR1e<32, 8> > >, std::allocator<std::vector<GR1e<32, 8>, std::allocator<GR1e<32, 8> > > > > const&, std::vector<GR1e<32, 8>, std::allocator<GR1e<32, 8> > > const&, int)+0x138f (/mnt/d/Cryptography/MPCitH/galois_ring/build/compresscheck)
+	    55fff809dcf7 main+0x444 (/mnt/d/Cryptography/MPCitH/galois_ring/build/compresscheck)
+	    7f097e6aad90 __libc_start_call_main+0x80 (/usr/lib/x86_64-linux-gnu/libc.so.6)
+
+compresscheck   14902  2479.954412:   86504321 cycles:Pu: 
+	    55fff830575a std::array<Z2k<32>, 31ul>::operator[](unsigned long)+0x4 (/mnt/d/Cryptography/MPCitH/galois_ring/build/compresscheck)
+	    55fff82fc240 GR1e<32, 16>::operator*(GR1e<32, 16> const&) const+0x30a (/mnt/d/Cryptography/MPCitH/galois_ring/build/compresscheck)
+	    55fff8304ce9 GR1e<32, 16>::operator*=(GR1e<32, 16> const&)+0x3f (/mnt/d/Cryptography/MPCitH/galois_ring/build/compresscheck)
+	    55fff82ff19a GR1e<32, 16> detail::lagrange_l<GR1e<32, 16> >(unsigned long const&, unsigned long const&, std::vector<GR1e<32, 16>, std::allocator<GR1e<32, 16> > >, unsigned long, GR1e<32, 16>)+0x194 (/mnt/d/Cryptography/MPCitH/galois_ring/build/compresscheck)
+	    55fff82fa3d7 GR1e<32, 16> detail::interpolate<GR1e<32, 16> >(std::vector<GR1e<32, 16>, std::allocator<GR1e<32, 16> > > const&, std::vector<GR1e<32, 16>, std::allocator<GR1e<32, 16> > > const&, GR1e<32, 16> const&)+0x19b (/mnt/d/Cryptography/MPCitH/galois_ring/build/compresscheck)
+	    55fff82ed139 void compressed_multiplication_check<GR1e<32, 8>, GR1e<32, 16>, 2>(std::vector<std::vector<GR1e<32, 8>, std::allocator<GR1e<32, 8> > >, std::allocator<std::vector<GR1e<32, 8>, std::allocator<GR1e<32, 8> > > > > const&, std::vector<std::vector<GR1e<32, 8>, std::allocator<GR1e<32, 8> > >, std::allocator<std::vector<GR1e<32, 8>, std::allocator<GR1e<32, 8> > > > > const&, std::vector<std::vector<GR1e<32, 8>, std::allocator<GR1e<32, 8> > >, std::allocator<std::vector<GR1e<32, 8>, std::allocator<GR1e<32, 8> > > > > const&, std::vector<GR1e<32, 8>, std::allocator<GR1e<32, 8> > > const&, int)+0x1592 (/mnt/d/Cryptography/MPCitH/galois_ring/build/compresscheck)
+	    55fff809dcf7 main+0x444 (/mnt/d/Cryptography/MPCitH/galois_ring/build/compresscheck)
+	    7f097e6aad90 __libc_start_call_main+0x80 (/usr/lib/x86_64-linux-gnu/libc.so.6)
+
+compresscheck   14902  2479.974428:   75306846 cycles:Pu: 
+	    55fff830e03f KeccakP1600_Permute_NroundsLFSR+0x19f (/mnt/d/Cryptography/MPCitH/galois_ring/build/compresscheck)
+	 70a000000000000 [unknown] ([unknown])
+
+compresscheck   14902  2479.992374:   66616498 cycles:Pu: 
+	    55fff82e557a Z2k<32>::Z2k()+0x16 (/mnt/d/Cryptography/MPCitH/galois_ring/build/compresscheck)
+	    55fff8300525 std::array<Z2k<32>, 31ul>::array()+0x29 (/mnt/d/Cryptography/MPCitH/galois_ring/build/compresscheck)
+	    55fff830593e std::array<Z2k<32>, 31> ops::reduce_once<31, 16, Z2k<32> >(std::array<Z2k<32>, 31> const&, std::tuple<int, int, int> const&)+0xee (/mnt/d/Cryptography/MPCitH/galois_ring/build/compresscheck)
+	    55fff83009da std::array<Z2k<32>, 16> ops::reduce<32, 31, 16, Z2k<32> >(std::array<Z2k<32>, 31> const&)+0x7e (/mnt/d/Cryptography/MPCitH/galois_ring/build/compresscheck)
+	    55fff82fc259 GR1e<32, 16>::operator*(GR1e<32, 16> const&) const+0x323 (/mnt/d/Cryptography/MPCitH/galois_ring/build/compresscheck)
+	    55fff8304ce9 GR1e<32, 16>::operator*=(GR1e<32, 16> const&)+0x3f (/mnt/d/Cryptography/MPCitH/galois_ring/build/compresscheck)
+	    55fff83088a7 GR1e<32, 16> arith::fast_exp_fermat<GR1e<32, 16> >(GR1e<32, 16>, int, int)+0x55 (/mnt/d/Cryptography/MPCitH/galois_ring/build/compresscheck)
+	    55fff8304dc6 GR1e<32, 16>::inv()+0x80 (/mnt/d/Cryptography/MPCitH/galois_ring/build/compresscheck)
+	    55fff82ff205 GR1e<32, 16> detail::lagrange_l<GR1e<32, 16> >(unsigned long const&, unsigned long const&, std::vector<GR1e<32, 16>, std::allocator<GR1e<32, 16> > >, unsigned long, GR1e<32, 16>)+0x1ff (/mnt/d/Cryptography/MPCitH/galois_ring/build/compresscheck)
+	    55fff82fa3d7 GR1e<32, 16> detail::interpolate<GR1e<32, 16> >(std::vector<GR1e<32, 16>, std::allocator<GR1e<32, 16> > > const&, std::vector<GR1e<32, 16>, std::allocator<GR1e<32, 16> > > const&, GR1e<32, 16> const&)+0x19b (/mnt/d/Cryptography/MPCitH/galois_ring/build/compresscheck)
+	    55fff82ee970 void compressed_multiplication_check<GR1e<32, 8>, GR1e<32, 16>, 2>(std::vector<std::vector<GR1e<32, 8>, std::allocator<GR1e<32, 8> > >, std::allocator<std::vector<GR1e<32, 8>, std::allocator<GR1e<32, 8> > > > > const&, std::vector<std::vector<GR1e<32, 8>, std::allocator<GR1e<32, 8> > >, std::allocator<std::vector<GR1e<32, 8>, std::allocator<GR1e<32, 8> > > > > const&, std::vector<std::vector<GR1e<32, 8>, std::allocator<GR1e<32, 8> > >, std::allocator<std::vector<GR1e<32, 8>, std::allocator<GR1e<32, 8> > > > > const&, std::vector<GR1e<32, 8>, std::allocator<GR1e<32, 8> > > const&, int)+0x2dc9 (/mnt/d/Cryptography/MPCitH/galois_ring/build/compresscheck)
+	    55fff809dcf7 main+0x444 (/mnt/d/Cryptography/MPCitH/galois_ring/build/compresscheck)
+	    7f097e6aad90 __libc_start_call_main+0x80 (/usr/lib/x86_64-linux-gnu/libc.so.6)
+
+compresscheck   14902  2480.007992:   59785415 cycles:Pu: 
+	    55fff8303896 Z2k<32>::operator+(Z2k<32> const&) const+0x32 (/mnt/d/Cryptography/MPCitH/galois_ring/build/compresscheck)
+	    55fff82fe3b7 Z2k<32>::operator+=(Z2k<32> const&)+0x27 (/mnt/d/Cryptography/MPCitH/galois_ring/build/compresscheck)
+	    55fff83018ca std::array<Z2k<32>, ((16)*(2))-(1)> ops::multiply<16, Z2k<32> >(std::array<Z2k<32>, 16> const&, std::array<Z2k<32>, 16> const&)+0xad (/mnt/d/Cryptography/MPCitH/galois_ring/build/compresscheck)
+	    55fff82fc240 GR1e<32, 16>::operator*(GR1e<32, 16> const&) const+0x30a (/mnt/d/Cryptography/MPCitH/galois_ring/build/compresscheck)
+	    55fff8304ce9 GR1e<32, 16>::operator*=(GR1e<32, 16> const&)+0x3f (/mnt/d/Cryptography/MPCitH/galois_ring/build/compresscheck)
+	    55fff83088b4 GR1e<32, 16> arith::fast_exp_fermat<GR1e<32, 16> >(GR1e<32, 16>, int, int)+0x62 (/mnt/d/Cryptography/MPCitH/galois_ring/build/compresscheck)
+	    55fff8304dc6 GR1e<32, 16>::inv()+0x80 (/mnt/d/Cryptography/MPCitH/galois_ring/build/compresscheck)
+	    55fff82ff205 GR1e<32, 16> detail::lagrange_l<GR1e<32, 16> >(unsigned long const&, unsigned long const&, std::vector<GR1e<32, 16>, std::allocator<GR1e<32, 16> > >, unsigned long, GR1e<32, 16>)+0x1ff (/mnt/d/Cryptography/MPCitH/galois_ring/build/compresscheck)
+	    55fff82fa3d7 GR1e<32, 16> detail::interpolate<GR1e<32, 16> >(std::vector<GR1e<32, 16>, std::allocator<GR1e<32, 16> > > const&, std::vector<GR1e<32, 16>, std::allocator<GR1e<32, 16> > > const&, GR1e<32, 16> const&)+0x19b (/mnt/d/Cryptography/MPCitH/galois_ring/build/compresscheck)
+	    55fff82eeb20 void compressed_multiplication_check<GR1e<32, 8>, GR1e<32, 16>, 2>(std::vector<std::vector<GR1e<32, 8>, std::allocator<GR1e<32, 8> > >, std::allocator<std::vector<GR1e<32, 8>, std::allocator<GR1e<32, 8> > > > > const&, std::vector<std::vector<GR1e<32, 8>, std::allocator<GR1e<32, 8> > >, std::allocator<std::vector<GR1e<32, 8>, std::allocator<GR1e<32, 8> > > > > const&, std::vector<std::vector<GR1e<32, 8>, std::allocator<GR1e<32, 8> > >, std::allocator<std::vector<GR1e<32, 8>, std::allocator<GR1e<32, 8> > > > > const&, std::vector<GR1e<32, 8>, std::allocator<GR1e<32, 8> > > const&, int)+0x2f79 (/mnt/d/Cryptography/MPCitH/galois_ring/build/compresscheck)
+	    55fff809dcf7 main+0x444 (/mnt/d/Cryptography/MPCitH/galois_ring/build/compresscheck)
+	    7f097e6aad90 __libc_start_call_main+0x80 (/usr/lib/x86_64-linux-gnu/libc.so.6)
+
