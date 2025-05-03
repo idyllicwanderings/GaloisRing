@@ -142,167 +142,167 @@ namespace arith {
      * @todo: multiplication and addition by SIMD SSE family
      * 
      */
-    class int128 {
-        public:
+    // class int128 {
+    //     public:
 
-            int128() : m_val(_mm_set_epi64x(0, 0)) {}
+    //         int128() : m_val(_mm_set_epi64x(0, 0)) {}
 
-            int128(__m128i x) : m_val(std::move(x)) {}
+    //         int128(__m128i x) : m_val(std::move(x)) {}
 
-            int128(long long x) : m_val(_mm_set_epi64x(0, x)) {}
+    //         int128(long long x) : m_val(_mm_set_epi64x(0, x)) {}
 
-            int128(long long lo, long long hi) : m_val(_mm_set_epi64x(hi, lo)) {}
+    //         int128(long long lo, long long hi) : m_val(_mm_set_epi64x(hi, lo)) {}
 
-            static int128 make_mask(int k) {
-                if (k == 0) {
-                    return 0;
-                } else if (k < 64) {
-                    return int128((1ull << k) - 1);
-                } else if (k == 64) {
-                    return int128(-1);
-                } else if (k < 128) {
-                    return int128(_mm_set_epi64x((1ull << (k - 64)) - 1, -1));
-                } else if (k == 128) {
-                    return int128(_mm_set_epi64x(-1, -1));
-                } else {
-                    __builtin_unreachable();
-                }
-            }
+    //         static int128 make_mask(int k) {
+    //             if (k == 0) {
+    //                 return 0;
+    //             } else if (k < 64) {
+    //                 return int128((1ull << k) - 1);
+    //             } else if (k == 64) {
+    //                 return int128(-1);
+    //             } else if (k < 128) {
+    //                 return int128(_mm_set_epi64x((1ull << (k - 64)) - 1, -1));
+    //             } else if (k == 128) {
+    //                 return int128(_mm_set_epi64x(-1, -1));
+    //             } else {
+    //                 __builtin_unreachable();
+    //             }
+    //         }
 
-            int128 operator&(const int128& o) const {
-                return m_val & o.m_val;
-            }
+    //         int128 operator&(const int128& o) const {
+    //             return m_val & o.m_val;
+    //         }
 
-            int128& operator&=(const int128& o) {
-                return *this = *this & o;
-            }
+    //         int128& operator&=(const int128& o) {
+    //             return *this = *this & o;
+    //         }
 
-            int128 operator^(const int128& o) const {
-                return m_val ^ o.m_val;
-            }
+    //         int128 operator^(const int128& o) const {
+    //             return m_val ^ o.m_val;
+    //         }
 
-            int128& operator^=(const int128& o) {
-                return *this = *this ^ o;
-            }
+    //         int128& operator^=(const int128& o) {
+    //             return *this = *this ^ o;
+    //         }
 
-            int128 operator*(const int128& o) const {
-                __m128i a0 = m_val;                  
-                __m128i a1 = _mm_srli_si128(m_val, 8);
+    //         int128 operator*(const int128& o) const {
+    //             __m128i a0 = m_val;                  
+    //             __m128i a1 = _mm_srli_si128(m_val, 8);
 
-                __m128i b0 = o.m_val;                    
-                __m128i b1 = _mm_srli_si128(o.m_val, 8); 
+    //             __m128i b0 = o.m_val;                    
+    //             __m128i b1 = _mm_srli_si128(o.m_val, 8); 
 
-                __m128i low = _mm_mul_epu32(a0, b0); 
-                __m128i high = _mm_mul_epu32(a1, b1);
+    //             __m128i low = _mm_mul_epu32(a0, b0); 
+    //             __m128i high = _mm_mul_epu32(a1, b1);
 
-                __m128i mid1 = _mm_mul_epu32(a0, b1);
-                __m128i mid2 = _mm_mul_epu32(a1, b0);
+    //             __m128i mid1 = _mm_mul_epu32(a0, b1);
+    //             __m128i mid2 = _mm_mul_epu32(a1, b0);
 
-                __m128i mid = _mm_add_epi64(mid1, mid2);
+    //             __m128i mid = _mm_add_epi64(mid1, mid2);
 
-                __m128i carry = _mm_srli_epi64(mid, 32); 
+    //             __m128i carry = _mm_srli_epi64(mid, 32); 
 
-                low = _mm_add_epi64(low, mid);
-                high = _mm_add_epi64(high, carry);
+    //             low = _mm_add_epi64(low, mid);
+    //             high = _mm_add_epi64(high, carry);
 
-                __m128i res = _mm_unpacklo_epi64(low, high);
+    //             __m128i res = _mm_unpacklo_epi64(low, high);
 
-                return res;
-            }
+    //             return res;
+    //         }
 
-            int128 operator*=(const int128& o) {
-                return *this = *this * o;
-            }
+    //         int128 operator*=(const int128& o) {
+    //             return *this = *this * o;
+    //         }
 
-            int128 operator+(const int128& o) const {
-                //TODO: SIMD addition
-            }
+    //         int128 operator+(const int128& o) const {
+    //             //TODO: SIMD addition
+    //         }
 
-            int128& operator+=(const int128& o) {
-                return *this = *this + o;
-            }
+    //         int128& operator+=(const int128& o) {
+    //             return *this = *this + o;
+    //         }
 
-            int128 operator>>(int s) const {
-                __m128i packed_shifted = _mm_srli_epi64(m_val, s); // Shift both parts
-                __m128i cross_boundary = m_val;
-                if (s < 64) {
-                    cross_boundary = _mm_slli_epi64(m_val, 64 - s); // LSB of high to become MSB of low
-                } else if (s > 64) {
-                    cross_boundary = _mm_srli_epi64(m_val, s - 64); // MSB of high to become LSB of low
-                }
-                return packed_shifted ^ _mm_srli_si128(cross_boundary, 8); // Right shift the mixin by 8 *bytes* to bring high into low
-            }
+    //         int128 operator>>(int s) const {
+    //             __m128i packed_shifted = _mm_srli_epi64(m_val, s); // Shift both parts
+    //             __m128i cross_boundary = m_val;
+    //             if (s < 64) {
+    //                 cross_boundary = _mm_slli_epi64(m_val, 64 - s); // LSB of high to become MSB of low
+    //             } else if (s > 64) {
+    //                 cross_boundary = _mm_srli_epi64(m_val, s - 64); // MSB of high to become LSB of low
+    //             }
+    //             return packed_shifted ^ _mm_srli_si128(cross_boundary, 8); // Right shift the mixin by 8 *bytes* to bring high into low
+    //         }
 
-            int128& operator>>=(int s) {
-                return *this = (*this) >> s;
-            }
+    //         int128& operator>>=(int s) {
+    //             return *this = (*this) >> s;
+    //         }
 
-            int128 operator<<(int s) const {
-                __m128i packed_shifted = _mm_slli_epi64(m_val, s); // Shift both parts
-                __m128i cross_boundary = m_val;
-                if (s < 64) {
-                    cross_boundary = _mm_srli_epi64(m_val, 64 - s); // MSB of low to become LSB of high
-                } else if (s > 64) {
-                    cross_boundary = _mm_slli_epi64(m_val, s - 64); // LSB of low to become MSB of high
-                }
-                return packed_shifted ^ _mm_slli_si128(cross_boundary, 8); // Left shift by 8 bytes to bring low into high
-            }
-            int128& operator<<=(int s) {
-                return *this = (*this) << s;
-            }
+    //         int128 operator<<(int s) const {
+    //             __m128i packed_shifted = _mm_slli_epi64(m_val, s); // Shift both parts
+    //             __m128i cross_boundary = m_val;
+    //             if (s < 64) {
+    //                 cross_boundary = _mm_srli_epi64(m_val, 64 - s); // MSB of low to become LSB of high
+    //             } else if (s > 64) {
+    //                 cross_boundary = _mm_slli_epi64(m_val, s - 64); // LSB of low to become MSB of high
+    //             }
+    //             return packed_shifted ^ _mm_slli_si128(cross_boundary, 8); // Left shift by 8 bytes to bring low into high
+    //         }
+    //         int128& operator<<=(int s) {
+    //             return *this = (*this) << s;
+    //         }
 
-            bool operator==(const int128& o) const {
-                const __m128i tmp = m_val ^ o.m_val;
-                return _mm_test_all_zeros(tmp, tmp);
-            }
-            bool operator!=(const int128& o) const {
-                return !(*this == o);
-            }
+    //         bool operator==(const int128& o) const {
+    //             const __m128i tmp = m_val ^ o.m_val;
+    //             return _mm_test_all_zeros(tmp, tmp);
+    //         }
+    //         bool operator!=(const int128& o) const {
+    //             return !(*this == o);
+    //         }
 
-            bool operator<(const unsigned long long& other) { // Special case for this, because it's a pain to do with another int128
-                return !(
-                        _mm_test_all_zeros(m_val, _mm_set_epi64x(-1, 0))                  // if anything is in the top 64 bits, it's definitely bigger
-                     || static_cast<unsigned long long>(_mm_cvtsi128_si64(m_val)) >= other // otherwise, unsigned compare the rest
-                     );
-            }
+    //         bool operator<(const unsigned long long& other) { // Special case for this, because it's a pain to do with another int128
+    //             return !(
+    //                     _mm_test_all_zeros(m_val, _mm_set_epi64x(-1, 0))                  // if anything is in the top 64 bits, it's definitely bigger
+    //                  || static_cast<unsigned long long>(_mm_cvtsi128_si64(m_val)) >= other // otherwise, unsigned compare the rest
+    //                  );
+    //         }
 
-            std::int64_t low() const {
-                return _mm_extract_epi64(m_val, 0);
-            }
+    //         std::int64_t low() const {
+    //             return _mm_extract_epi64(m_val, 0);
+    //         }
 
-            std::int64_t high() const {
-                return _mm_extract_epi64(m_val, 1);
-            }
+    //         std::int64_t high() const {
+    //             return _mm_extract_epi64(m_val, 1);
+    //         }
 
-            explicit operator __m128i() const {
-                return m_val;
-            }
-            __m128i reveal() const {
-                return m_val;
-            }
+    //         explicit operator __m128i() const {
+    //             return m_val;
+    //         }
+    //         __m128i reveal() const {
+    //             return m_val;
+    //         }
 
-        private:
-            __m128i m_val;
-    };
+    //     private:
+    //         __m128i m_val;
+    // };
 
 
-    class int256 {
+    // class int256 {
 
-    }
+    // }
 
-    inline std::ostream& operator<<(std::ostream& os, const int128& x) {
-        return os << std::hex << std::setfill('0') << std::setw(16) << x.high()
-            << std::hex << std::setfill('0') << std::setw(16) << x.low();
-    }
+    // inline std::ostream& operator<<(std::ostream& os, const int128& x) {
+    //     return os << std::hex << std::setfill('0') << std::setw(16) << x.high()
+    //         << std::hex << std::setfill('0') << std::setw(16) << x.low();
+    // }
 
-    template <typename T>
-    T extract(const int128& x) {
-        if constexpr(std::is_same_v<T, int128>) {
-            return x;
-        } else {
-            return T(x.low());
-        }
-    }
+    // template <typename T>
+    // T extract(const int128& x) {
+    //     if constexpr(std::is_same_v<T, int128>) {
+    //         return x;
+    //     } else {
+    //         return T(x.low());
+    //     }
+    // }
 
 };
 
@@ -1171,7 +1171,7 @@ namespace ops {
             return truncated;
         }
         
-        std::array<R, n * 2 - 1> res; // [0, n - 1]
+        // std::array<R, n * 2 - 1> res; // [0, n - 1]
         std::array<R, n> d;
         for (int i = 0; i < n; i++) {
             d[i] = a[i] * b[i];

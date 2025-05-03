@@ -4,6 +4,8 @@
 
 Sagemath 10.3
 
+Jinja2 #for template rendering
+
 Install the following packages for sagemath:
 ```bash
 sage --pip install (--user) tqdm

@@ -47,12 +47,28 @@ compile-features = ["cxx_std_20"]
 # compile-features = ["cxx_std_20"]
 
 
-[target.compresscheck]
+# [target.compresscheck]
+# type = "executable"
+# headers = ["lib/compresscheck.h", "lib/lagrange.h"]
+# sources = ["src/test_compress_check.cc"]
+# link-libraries = ["grlib"]
+# compile-features = ["cxx_std_20"]
+
+[target.mpcbenchmark]
 type = "executable"
-headers = ["lib/compresscheck.h", "lib/lagrange.h"]
-sources = ["src/test_compress_check.cc"]
+headers = ["lib/compresscheck.h","lib/innprodcheck.h", "lib/saccheck.h", "lib/lagrange.h"]
+sources = ["src/benchmark_MPC.cc"]
 link-libraries = ["grlib"]
 compile-features = ["cxx_std_20"]
+
+# compile-definitions = [ #does not work correctly now
+#   "PARTY_NUM=6",
+#   "n=64",
+#   "TEST_CORRECTNESS=OFF",
+#   'CHECK_TYPE="check_compress"'
+# ]
+
+
 
 # [target.demo]
 # type = "executable"

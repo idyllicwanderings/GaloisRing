@@ -178,7 +178,7 @@ void compressed_multiplication_check(const std::vector<std::vector<Rs>> &x_share
     randomness::RO ro;
     ro.gen_random_bytes();
 
-    std::cout << "generated parameters" << std::endl;
+    // std::cout << "generated parameters" << std::endl;
 
     /* ===================== 2. lift input shares to the check ring===================== */
     std::vector<std::vector<ChkShare>> lift_x_shares(PARTY_NUM), lift_y_shares(PARTY_NUM), lift_z_shares(PARTY_NUM);
@@ -203,7 +203,7 @@ void compressed_multiplication_check(const std::vector<std::vector<Rs>> &x_share
         ex_seq_lifted[i] = liftGR<k, ds, dl>(ex_seq[i]);
     }
 
-    std::cout << "lifted shares" << std::endl;
+    // std::cout << "lifted shares" << std::endl;
 
     /* ===================== 3. generate inner product tuple =========================== */
 
@@ -225,7 +225,7 @@ void compressed_multiplication_check(const std::vector<std::vector<Rs>> &x_share
         zj_shares[i] = detail::dot_product<ChkShare>(lift_z_shares[i], yita);
     }
 
-    std::cout << "generated inner product tuple" << std::endl;
+    // std::cout << "generated inner product tuple" << std::endl;
 
     int DEBUGGG = 0;
     if (DEBUGGG == 1)
@@ -246,18 +246,18 @@ void compressed_multiplication_check(const std::vector<std::vector<Rs>> &x_share
 
         Rl opened_val = detail::interpolate(val, ex_seq_lifted, Rl::zero());
 
-        std::cout << "1st round  opened_val = " << opened_val.force_str() << std::endl;
+        // std::cout << "1st round  opened_val = " << opened_val.force_str() << std::endl;
 
         assert(opened_val == Rl::zero());
 
-        std::cout << "round zero check passed" << std::endl;
-        std::cout << "the first check passed" << std::endl;
+        // std::cout << "round zero check passed" << std::endl;
+        // std::cout << "the first check passed" << std::endl;
     }
 
     /* ===================== 4. execute the subroutine    ============================== */
     uint64_t logv_m = detail::log_base(COMPRESS_V, m);
 
-    std::cout << "logv_m = " << logv_m << std::endl;  
+    // std::cout << "logv_m = " << logv_m << std::endl;  
 
     for (int j = 1; j <= logv_m; j++)
     {
@@ -322,14 +322,14 @@ void compressed_multiplication_check(const std::vector<std::vector<Rs>> &x_share
         }
         // std::cout << "sum_c = " << sum_c.force_str() << std::endl;
         c[COMPRESS_V - 1] = z - sum_c;
-        std::cout << "c[COMPRESS_V - 1] = " << c[COMPRESS_V - 1].force_str() << std::endl;
+        // std::cout << "c[COMPRESS_V - 1] = " << c[COMPRESS_V - 1].force_str() << std::endl;
         
         ChkShare amb = ChkShare::zero();
         // for (int s = 0; s < COMPRESS_V; s++) {
             // amb += detail::dot_product<ChkShare>(a[s], b[s]);
         // }
         amb = detail::dot_product<ChkShare>(a[COMPRESS_V - 1], b[COMPRESS_V - 1]);
-        std::cout << "amb = " << amb.force_str() << std::endl;
+        // std::cout << "amb = " << amb.force_str() << std::endl;
 
         // compute z_i from hint oracle
         std::vector<std::vector<ChkShare>> a_t, b_t; // l * v
@@ -372,7 +372,7 @@ void compressed_multiplication_check(const std::vector<std::vector<Rs>> &x_share
             }
         }
 
-        std::cout << "generated polynomials f, g" << std::endl;
+        // std::cout << "generated polynomials f, g" << std::endl;
 
         // generate shares for f, g
         std::vector<std::vector<std::vector<ChkShare>>> f_shares(PARTY_NUM, std::vector<std::vector<ChkShare>>(l, std::vector<ChkShare>(f[0].size())));
@@ -391,7 +391,7 @@ void compressed_multiplication_check(const std::vector<std::vector<Rs>> &x_share
             }
         }
 
-        std::cout << "generated shares for f, g" << std::endl;
+        // std::cout << "generated shares for f, g" << std::endl;
 
         std::vector<ChkShare> z_2nd_half(v - 1); // z: [ν + 1, 2ν − 1]
         for (int s = v; s < 2 * v - 1; s++)
@@ -413,7 +413,7 @@ void compressed_multiplication_check(const std::vector<std::vector<Rs>> &x_share
             }
         }
 
-        std::cout << "generated z_2nd_half" << std::endl;
+        // std::cout << "generated z_2nd_half" << std::endl;
 
         /*====================== 3. compute polynomial h ===================================== */
 
@@ -438,7 +438,7 @@ void compressed_multiplication_check(const std::vector<std::vector<Rs>> &x_share
             }
         }
 
-        std::cout << "generated shares for polynomial h" << std::endl;
+        // std::cout << "generated shares for polynomial h" << std::endl;
 
         // NOTE: the challenge should be the same!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
         /*====================== 4. obtain challenge from exceptional sequence =============== */
@@ -450,9 +450,9 @@ void compressed_multiplication_check(const std::vector<std::vector<Rs>> &x_share
         // challenge should be selected from [v + 1, 2^d - 1]
         
         ChkShare chal_ele = alpha[chal_byte]; // make sure alpha in [ v + 1, 2v + 1],注意这里index in alpha是[v, 2v]!!!
-        std::cout << "------------------------------------" << std::endl;
-        std::cout << "chal_byte = " << static_cast<uint32_t>(chal_byte) << std::endl;
-        std::cout << "------------------------------------" << std::endl;
+        //std::cout << "------------------------------------" << std::endl;
+        //std::cout << "chal_byte = " << static_cast<uint32_t>(chal_byte) << std::endl;
+        //std::cout << "------------------------------------" << std::endl;
 
         /*====================== 5. obtain output of the polynomials ========================= */
         for (int i = 0; i < PARTY_NUM; i++)
@@ -467,7 +467,7 @@ void compressed_multiplication_check(const std::vector<std::vector<Rs>> &x_share
             zj_shares[i] = detail::horner_eval(h_shares[i], chal_ele);
         }
 
-        std::cout << "round " << j << " finished" << std::endl;
+        // std::cout << "round " << j << " finished" << std::endl;
 
         // for (int i = 0; i < PARTY_NUM; i++) {
         //     if (l == 1) {
@@ -507,11 +507,11 @@ void compressed_multiplication_check(const std::vector<std::vector<Rs>> &x_share
 
             Rl opened_val = detail::interpolate(val, ex_seq_lifted, Rl::zero());
 
-            std::cout << "round " << j << " opened_val = " << opened_val.force_str() << std::endl;
+            // std::cout << "round " << j << " opened_val = " << opened_val.force_str() << std::endl;
 
             assert(opened_val == Rl::zero());
 
-            std::cout << "round" << j << " zero check passed" << std::endl;
+            // std::cout << "round" << j << " zero check passed" << std::endl;
         }
     }
 
@@ -521,11 +521,11 @@ void compressed_multiplication_check(const std::vector<std::vector<Rs>> &x_share
     for (int i = 0; i < PARTY_NUM; i++)
     {
         xjs[i] = xj_shares[i][0];
-        std::cout << "xj_shares[" << i << "].size() = " << xj_shares[i].size() << std::endl;
+        // std::cout << "xj_shares[" << i << "].size() = " << xj_shares[i].size() << std::endl;
     }
 
     Rl x_logv_m = detail::interpolate(xjs, ex_seq_lifted, Rl::zero());
-    std::cout << "reconstructed x values" << std::endl;
+    // std::cout << "reconstructed x values" << std::endl;
 
     /* ===================== 6. verify the result ====================================== */
     std::vector<ChkShare> val(PARTY_NUM);
@@ -537,11 +537,11 @@ void compressed_multiplication_check(const std::vector<std::vector<Rs>> &x_share
 
     Rl opened_val = detail::interpolate(val, ex_seq_lifted, Rl::zero());
 
-    std::cout << "opened_val = " << opened_val.force_str() << std::endl;
+    // std::cout << "opened_val = " << opened_val.force_str() << std::endl;
 
     assert(opened_val == Rl::zero());
 
-    std::cout << "zero check passed" << std::endl;
+    // std::cout << "zero check passed" << std::endl;
 }
 
 #undef PARTY_NUM

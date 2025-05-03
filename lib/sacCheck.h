@@ -43,7 +43,7 @@ void sacrificing_check(const std::vector<std::vector<Rs>>& x_shares,
         }
     }
 
-    std::cout << "lifted shares" << std::endl;
+    // std::cout << "lifted shares" << std::endl;
 
     /* ===================== 3. generate random masking ================================ */
     
@@ -72,7 +72,7 @@ void sacrificing_check(const std::vector<std::vector<Rs>>& x_shares,
     //     a_shares.emplace_back(detail::generate_sharing<ChkShare>(a[i], ex_seq_lifted, t));
     // }
 
-    std::cout << "generated random masking" << std::endl;
+    // std::cout << "generated random masking" << std::endl;
 
 
     /* ===================== 4. generate random epilson ================================ */
@@ -94,14 +94,14 @@ void sacrificing_check(const std::vector<std::vector<Rs>>& x_shares,
 
     detail::transpose(alpha_shares, alpha_shares_t);
 
-    std::cout << "transpose success" << std::endl;
+    // std::cout << "transpose success" << std::endl;
 
     for (int i = 0; i < m; i++) { //reconstruct alpha
      
         alpha[i] = detail::interpolate<Rl>(alpha_shares_t[i], ex_seq_lifted, Rl::zero());
     }
 
-    std::cout << "recovered check value" << std::endl;
+    // std::cout << "recovered check value" << std::endl;
 
     /* ===================== 6. zero check ============================================ */
     // TODO: modify this part, make sure the party_num aligns with the shares num,
@@ -116,10 +116,10 @@ void sacrificing_check(const std::vector<std::vector<Rs>>& x_shares,
             col[i] = lift_z_shares[i][j] * epsilon - c_shares[i][j] - alpha[j] * lift_y_shares[i][j];
         } 
         Rl opened_val = detail::interpolate<Rl>(col, ex_seq_lifted, Rl::zero());
-        std::cout << "opened val: " << opened_val.force_str() << std::endl;
+        // std::cout << "opened val: " << opened_val.force_str() << std::endl;
         assert(opened_val == Rl::zero());   
     }
-    std::cout << "zero check passed" << std::endl;
+    // std::cout << "zero check passed" << std::endl;
 }
 
 

@@ -7,6 +7,8 @@
 #include <cstdint>
 #include <cstdlib>
 #include <string>
+#include <chrono>
+#include <functional>
 
 #define k 7
 #define d1 2

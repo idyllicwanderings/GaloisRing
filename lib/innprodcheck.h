@@ -25,7 +25,8 @@ void inner_product_check(const std::vector<std::vector<Rs>>& x_shares,
     static_assert(dl % ds == 0, "dl must be a multiple of ds");
     uint64_t m = x_shares[0].size();
     uint64_t PARTY_NUM = ex_seq.size();
-    std::cout << "defined parameters" << std::endl;
+    
+    //std::cout << "defined parameters" << std::endl;
 
     /* ===================== 2. lift input shares to the check ring===================== */
     std::vector<std::vector<ChkShare>> lift_x_shares(PARTY_NUM), lift_y_shares(PARTY_NUM), lift_z_shares(PARTY_NUM);
@@ -47,7 +48,7 @@ void inner_product_check(const std::vector<std::vector<Rs>>& x_shares,
         ex_seq_lifted[i] = liftGR<k + s, ds, dl>(ex_seq[i]);
     }
 
-    std::cout << "lifted shares" << std::endl;
+    // std::cout << "lifted shares" << std::endl;
 
     /* ===================== 3. generate random masking ================================ */
 
@@ -70,7 +71,7 @@ void inner_product_check(const std::vector<std::vector<Rs>>& x_shares,
     
 
 
-    std::cout << "generated random masking" << std::endl;
+    // std::cout << "generated random masking" << std::endl;
 
     /* ===================== 4. generate random epilson ================================ */
     #ifdef GRtower
@@ -84,7 +85,7 @@ void inner_product_check(const std::vector<std::vector<Rs>>& x_shares,
         }
     #endif
 
-    std::cout << "generated random epsilon" << std::endl;
+    // std::cout << "generated random epsilon" << std::endl;
     
     /* ===================== 5. recover check value ==================================== */
     std::vector<std::vector<ChkShare>> alpha_shares(PARTY_NUM), alpha_shares_t;
@@ -96,7 +97,7 @@ void inner_product_check(const std::vector<std::vector<Rs>>& x_shares,
     
     detail::transpose(alpha_shares, alpha_shares_t);
 
-    std::cout << "transpose success" << std::endl;
+    // std::cout << "transpose success" << std::endl;
 
     std::vector<Rl> alpha(m);
     for (int i = 0; i < m; i++) { //reconstruct alpha
@@ -108,17 +109,17 @@ void inner_product_check(const std::vector<std::vector<Rs>>& x_shares,
     for (int i = 0; i < PARTY_NUM; i++) {
         Rl val =  detail::dot_product<Rl>(epsilon_n, lift_z_shares[i]) \
                     - c_shares[i] -  detail::dot_product<Rl>(alpha, lift_y_shares[i]);
-        std::cout << "interpolated check value: " << val.force_str() << std::endl;
+        // std::cout << "interpolated check value: " << val.force_str() << std::endl;
         col[i] = val;
     }
 
-    std::cout << "reconstructed check value" << std::endl;
+    //std::cout << "reconstructed check value" << std::endl;
     
     Rl opened_val = detail::interpolate(col, ex_seq_lifted, Rl::zero());
-    std::cout << "opened value: " << opened_val.force_str() << std::endl;
+    //std::cout << "opened value: " << opened_val.force_str() << std::endl;
     assert(opened_val == Rl::zero());
 
-    std::cout << "zero check success" << std::endl;
+    //std::cout << "zero check success" << std::endl;
 
     
 }

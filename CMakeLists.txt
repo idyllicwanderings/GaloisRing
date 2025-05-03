@@ -57,28 +57,30 @@ target_link_libraries(grlib INTERFACE
 	"${CMAKE_CURRENT_SOURCE_DIR}/third_party/XKCP/bin/compact/libXKCP.a"
 )
 
-# Target: compresscheck
-set(compresscheck_SOURCES
+# Target: mpcbenchmark
+set(mpcbenchmark_SOURCES
 	cmake.toml
 	"lib/compresscheck.h"
+	"lib/innprodcheck.h"
 	"lib/lagrange.h"
-	"src/test_compress_check.cc"
+	"lib/saccheck.h"
+	"src/benchmark_MPC.cc"
 )
 
-add_executable(compresscheck)
+add_executable(mpcbenchmark)
 
-target_sources(compresscheck PRIVATE ${compresscheck_SOURCES})
-source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR} FILES ${compresscheck_SOURCES})
+target_sources(mpcbenchmark PRIVATE ${mpcbenchmark_SOURCES})
+source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR} FILES ${mpcbenchmark_SOURCES})
 
-target_compile_features(compresscheck PRIVATE
+target_compile_features(mpcbenchmark PRIVATE
 	cxx_std_20
 )
 
-target_link_libraries(compresscheck PRIVATE
+target_link_libraries(mpcbenchmark PRIVATE
 	grlib
 )
 
 get_directory_property(CMKR_VS_STARTUP_PROJECT DIRECTORY ${PROJECT_SOURCE_DIR} DEFINITION VS_STARTUP_PROJECT)
 if(NOT CMKR_VS_STARTUP_PROJECT)
-	set_property(DIRECTORY ${PROJECT_SOURCE_DIR} PROPERTY VS_STARTUP_PROJECT compresscheck)
+	set_property(DIRECTORY ${PROJECT_SOURCE_DIR} PROPERTY VS_STARTUP_PROJECT mpcbenchmark)
 endif()
