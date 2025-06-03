@@ -7,8 +7,9 @@
 
 /**
  *  PARTY_NUM x multiplication_num
+ * threshold = 0 means additive sharing
  */
-template <typename Rs, typename Rl, int k, int s>
+template <typename Rs, typename Rl, int k, int s, int PARTY_NUM>
 void sacrificing_check(const std::vector<std::vector<Rs>>& x_shares, 
                        const std::vector<std::vector<Rs>>& y_shares, 
                        const std::vector<std::vector<Rs>>& z_shares,
@@ -26,7 +27,8 @@ void sacrificing_check(const std::vector<std::vector<Rs>>& x_shares,
     static_assert(dl % ds == 0, "dl must be a multiple of ds");
     uint64_t m = x_shares[0].size();
     assert(y_shares[0].size() == m && z_shares[0].size() == m);
-    int PARTY_NUM =  ex_seq.size();   // from 1 to n, not including R::zero()
+    
+    //int PARTY_NUM =  ex_seq.size();   // from 1 to n, not including R::zero()
 
     /* ===================== 2. lift input shares to the check ring===================== */
     std::vector<std::vector<ChkShare>> lift_x_shares(PARTY_NUM), lift_y_shares(PARTY_NUM), lift_z_shares(PARTY_NUM);
@@ -36,9 +38,15 @@ void sacrificing_check(const std::vector<std::vector<Rs>>& x_shares,
             #ifdef GRtower
                 // TODO: to support for GR towers
             #else
+            if constexpr (ds == dl) {
+                lift_x_shares[i].emplace_back(x_shares[i][j]);
+                lift_y_shares[i].emplace_back(y_shares[i][j]);
+                lift_z_shares[i].emplace_back(z_shares[i][j]);
+            } else {
                 lift_x_shares[i].emplace_back(liftGR<k + s, ds, dl>(x_shares[i][j]));
                 lift_y_shares[i].emplace_back(liftGR<k + s, ds, dl>(y_shares[i][j]));
                 lift_z_shares[i].emplace_back(liftGR<k + s, ds, dl>(z_shares[i][j]));
+            }
             #endif
         }
     }
@@ -56,13 +64,20 @@ void sacrificing_check(const std::vector<std::vector<Rs>>& x_shares,
         c_shares[i] = detail::elewise_product<ChkShare>(a, lift_y_shares[i]);
     }
 
-
-    for (int i = 0; i < PARTY_NUM; i++) {
-        ex_seq_lifted.emplace_back(liftGR<k + s, ds, dl>(ex_seq[i]));
+    if (threshold != 0) { // threshold == 0 means additive sharing
+        for (int i = 0; i < PARTY_NUM; i++) {
+            if constexpr (ds == dl) {
+                ex_seq_lifted.emplace_back(ex_seq[i]);
+            } else {
+                ex_seq_lifted.emplace_back(liftGR<k + s, ds, dl>(ex_seq[i]));
+            }
+        }
     }
 
     for (int i = 0; i < m; i++) {
-        std::vector<ChkShare> shares = detail::generate_sharing<ChkShare>(a[i], ex_seq_lifted, threshold);
+
+        std::vector<ChkShare> shares = (threshold == 0)? detail::generate_additive_shares<ChkShare>(a[i], PARTY_NUM) : 
+                                                 detail::generate_sharing<ChkShare>(a[i], ex_seq_lifted, threshold);
         for (int j = 0; j < PARTY_NUM; j++) {
             a_shares[j].emplace_back(shares[j]); 
         }
@@ -98,7 +113,9 @@ void sacrificing_check(const std::vector<std::vector<Rs>>& x_shares,
 
     for (int i = 0; i < m; i++) { //reconstruct alpha
      
-        alpha[i] = detail::interpolate<Rl>(alpha_shares_t[i], ex_seq_lifted, Rl::zero());
+        alpha[i] = (threshold == 0)? detail::reconstruct_additive_shares<Rl>(alpha_shares_t[i]) : 
+                             detail::interpolate<Rl>(alpha_shares_t[i], ex_seq_lifted, Rl::zero());
+        // std::cout << "alpha[" << i << "]"<< std::endl;
     }
 
     // std::cout << "recovered check value" << std::endl;
@@ -115,11 +132,13 @@ void sacrificing_check(const std::vector<std::vector<Rs>>& x_shares,
             // col[i] = Rl::zero();
             col[i] = lift_z_shares[i][j] * epsilon - c_shares[i][j] - alpha[j] * lift_y_shares[i][j];
         } 
-        Rl opened_val = detail::interpolate<Rl>(col, ex_seq_lifted, Rl::zero());
-        // std::cout << "opened val: " << opened_val.force_str() << std::endl;
+        Rl opened_val = (threshold == 0)? detail::reconstruct_additive_shares<Rl>(col) :
+                                  detail::interpolate<Rl>(col, ex_seq_lifted, Rl::zero());
+        //std::cout << "opened val: " << opened_val.force_str() << std::endl;
+        // std::cout << "reconstructed check value " << j << std::endl;
         assert(opened_val == Rl::zero());   
     }
-    // std::cout << "zero check passed" << std::endl;
+    //std::cout << "zero check passed" << std::endl;
 }
 
 

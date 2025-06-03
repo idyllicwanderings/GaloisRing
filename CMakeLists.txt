@@ -76,6 +76,11 @@ target_compile_features(mpcbenchmark PRIVATE
 	cxx_std_20
 )
 
+target_compile_options(mpcbenchmark PRIVATE
+	-msse4.1
+	-march=native
+)
+
 target_link_libraries(mpcbenchmark PRIVATE
 	grlib
 )
@@ -83,4 +88,67 @@ target_link_libraries(mpcbenchmark PRIVATE
 get_directory_property(CMKR_VS_STARTUP_PROJECT DIRECTORY ${PROJECT_SOURCE_DIR} DEFINITION VS_STARTUP_PROJECT)
 if(NOT CMKR_VS_STARTUP_PROJECT)
 	set_property(DIRECTORY ${PROJECT_SOURCE_DIR} PROPERTY VS_STARTUP_PROJECT mpcbenchmark)
+endif()
+
+# Target: demo
+set(demo_SOURCES
+	cmake.toml
+	"lib/compresscheck.h"
+	"lib/innprodcheck.h"
+	"lib/lagrange.h"
+	"lib/saccheck.h"
+	"src/demo.cc"
+)
+
+add_executable(demo)
+
+target_sources(demo PRIVATE ${demo_SOURCES})
+source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR} FILES ${demo_SOURCES})
+
+target_compile_features(demo PRIVATE
+	cxx_std_20
+)
+
+target_compile_options(demo PRIVATE
+	-msse4.1
+	-march=native
+)
+
+target_link_libraries(demo PRIVATE
+	grlib
+)
+
+get_directory_property(CMKR_VS_STARTUP_PROJECT DIRECTORY ${PROJECT_SOURCE_DIR} DEFINITION VS_STARTUP_PROJECT)
+if(NOT CMKR_VS_STARTUP_PROJECT)
+	set_property(DIRECTORY ${PROJECT_SOURCE_DIR} PROPERTY VS_STARTUP_PROJECT demo)
+endif()
+
+# Target: kaperformance
+set(kaperformance_SOURCES
+	cmake.toml
+	"src/test_ka.cc"
+)
+
+add_executable(kaperformance)
+
+target_sources(kaperformance PRIVATE ${kaperformance_SOURCES})
+source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR} FILES ${kaperformance_SOURCES})
+
+target_compile_features(kaperformance PRIVATE
+	cxx_std_20
+)
+
+if(CMAKE_CXX_COMPILER_ID STREQUAL "GNU" OR CMAKE_C_COMPILER_ID STREQUAL "GNU") # gcc
+	target_compile_options(kaperformance PRIVATE
+		-Wall
+	)
+endif()
+
+target_link_libraries(kaperformance PRIVATE
+	grlib
+)
+
+get_directory_property(CMKR_VS_STARTUP_PROJECT DIRECTORY ${PROJECT_SOURCE_DIR} DEFINITION VS_STARTUP_PROJECT)
+if(NOT CMKR_VS_STARTUP_PROJECT)
+	set_property(DIRECTORY ${PROJECT_SOURCE_DIR} PROPERTY VS_STARTUP_PROJECT kaperformance)
 endif()

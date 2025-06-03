@@ -2,9 +2,9 @@
 #define __GALOIS_RING_H
 
 //TODO: 以下四个东西。。compilation wrong
-// #include <emmintrin.h>
-// #include <smmintrin.h>
-// #include <wmmintrin.h>
+#include <emmintrin.h>
+#include <smmintrin.h>
+#include <wmmintrin.h>
 #include <iomanip>
 #include <algorithm>
 #include <cassert>
@@ -32,6 +32,253 @@
 #include "random.h"
 
 namespace arith {
+
+    /**
+     * @brief: 128 bit integer class 
+     * @todo: multiplication and addition by SIMD SSE family
+     * 
+     */
+    
+    class int128 {
+        public:
+
+            int128() : m_val(_mm_set_epi64x(0, 0)) {}
+
+            int128(__m128i x) : m_val(std::move(x)) {}
+
+            int128(long long x) : m_val(_mm_set_epi64x(0, x)) {}
+
+            int128(long long lo, long long hi) : m_val(_mm_set_epi64x(hi, lo)) {}
+
+            static int128 make_mask(int k) {
+                if (k == 0) {
+                    return 0;
+                } else if (k < 64) {
+                    return int128((1ull << k) - 1);
+                } else if (k == 64) {
+                    return int128(-1);
+                } else if (k < 128) {
+                    return int128(_mm_set_epi64x((1ull << (k - 64)) - 1, -1));
+                } else if (k == 128) {
+                    return int128(_mm_set_epi64x(-1, -1));
+                } else {
+                    __builtin_unreachable();
+                }
+            }
+
+            int128 operator&(const int128& o) const {
+                return m_val & o.m_val;
+            }
+
+            int128& operator&=(const int128& o) {
+                return *this = *this & o;
+            }
+
+            int128 operator^(const int128& o) const {
+                return m_val ^ o.m_val;
+            }
+
+            int128& operator^=(const int128& o) {
+                return *this = *this ^ o;
+            }
+
+            int128 operator~() const {
+                return int128(_mm_xor_si128(m_val, _mm_set1_epi8(-1))); // 0xFF = -1
+            }
+
+            int128 operator*(const int128& o) const {
+                //TODO
+                uint64_t a_lo = static_cast<uint64_t>(_mm_extract_epi64(m_val, 0));
+                uint64_t a_hi = static_cast<uint64_t>(_mm_extract_epi64(m_val, 1));
+                uint64_t b_lo = static_cast<uint64_t>(_mm_extract_epi64(o.m_val, 0));
+                uint64_t b_hi = static_cast<uint64_t>(_mm_extract_epi64(o.m_val, 1));
+        
+                // 32 bits: a0, a1, a2, a3
+                __m128i va = _mm_set_epi32(
+                    a_hi >> 32, a_hi & 0xFFFFFFFF,
+                    a_lo >> 32, a_lo & 0xFFFFFFFF);
+                __m128i vb = _mm_set_epi32(
+                    b_hi >> 32, b_hi & 0xFFFFFFFF,
+                    b_lo >> 32, b_lo & 0xFFFFFFFF);
+
+                //  a0×b0 and a2×b2
+                __m128i prod_even = _mm_mul_epu32(va, vb);
+
+                // alignas(16) uint32_t tmp[4];
+
+                // _mm_store_si128((__m128i*)tmp, va);
+                // std::cout << "va 32-bit chunks (hi to lo): "
+                // << tmp[3] << " " << tmp[2] << " " << tmp[1] << " " << tmp[0] << std::endl;
+
+                // _mm_store_si128((__m128i*)tmp, vb);
+                // std::cout << "vb 32-bit chunks (hi to lo): "
+                // << tmp[3] << " " << tmp[2] << " " << tmp[1] << " " << tmp[0] << std::endl;
+
+                // _mm_store_si128((__m128i*)tmp, prod_even);
+                // std::cout << "prod_even 32-bit chunks (hi to lo): "
+                // << tmp[3] << " " << tmp[2] << " " << tmp[1] << " " << tmp[0] << std::endl;
+
+                //  a1×b1 and a3×b3
+                __m128i va_odd = _mm_shuffle_epi32(va, _MM_SHUFFLE(2, 3, 0, 1));
+                __m128i vb_odd = _mm_shuffle_epi32(vb, _MM_SHUFFLE(2, 3, 0, 1));
+                __m128i prod_odd = _mm_mul_epu32(va_odd, vb_odd);
+
+                // _mm_store_si128((__m128i*)tmp, prod_odd);
+                // std::cout << "prod_odd 32-bit chunks (hi to lo): "
+                // << tmp[3] << " " << tmp[2] << " " << tmp[1] << " " << tmp[0] << std::endl;
+
+                
+                uint64_t p00 = static_cast<uint64_t>(_mm_extract_epi64(prod_even, 0)); 
+                uint64_t p11 = static_cast<uint64_t>(_mm_extract_epi64(prod_odd, 0));  
+                uint64_t p22 = static_cast<uint64_t>(_mm_extract_epi64(prod_even, 1)); 
+                uint64_t p33 = static_cast<uint64_t>(_mm_extract_epi64(prod_odd, 1));  
+
+
+                // std::cout << "p00: " << std::dec << p00 << std::endl;
+                // std::cout << "p11: " << std::dec << p11 << std::endl;
+                // std::cout << "p22: " << std::dec << p22 << std::endl;
+                // std::cout << "p33: " << std::dec << p33 << std::endl;
+
+        
+                // manual：a0*b1, a1*b0, ..., a2*b3, a3*b2
+                uint64_t a0 = static_cast<uint32_t>(a_lo);
+                uint64_t a1 = static_cast<uint32_t>(a_lo >> 32);
+                uint64_t a2 = static_cast<uint32_t>(a_hi);
+                uint64_t a3 = static_cast<uint32_t>(a_hi >> 32);
+                uint64_t b0 = static_cast<uint32_t>(b_lo);
+                uint64_t b1 = static_cast<uint32_t>(b_lo >> 32);
+                uint64_t b2 = static_cast<uint32_t>(b_hi);
+                uint64_t b3 = static_cast<uint32_t>(b_hi >> 32);
+
+                // std::cout << "a0: " << std::dec << a0 << std::endl;
+                // std::cout << "a1: " << std::dec << a1 << std::endl;
+                // std::cout << "a2: " << std::dec << a2 << std::endl;
+                // std::cout << "a3: " << std::dec << a3 << std::endl;
+        
+                uint64_t p01 = a0 * b1, p10 = a1 * b0;
+                uint64_t p02 = a0 * b2, p20 = a2 * b0;
+                uint64_t p03 = a0 * b3, p30 = a3 * b0;
+                uint64_t p12 = a1 * b2, p21 = a2 * b1;
+                uint64_t p13 = a1 * b3, p31 = a3 * b1;
+                uint64_t p23 = a2 * b3, p32 = a3 * b2;
+
+                // std::cout << "p01: " << std::dec << p01 << std::endl;
+                // std::cout << "p10: " << std::dec << p10 << std::endl;
+                // std::cout << "p02: " << std::dec << p02 << std::endl;
+                // std::cout << "p20: " << std::dec << p20 << std::endl;
+                // std::cout << "p03: " << std::dec << p03 << std::endl;
+                // std::cout << "p30: " << std::dec << p30 << std::endl;
+                // std::cout << "p12: " << std::dec << p12 << std::endl;
+                // std::cout << "p21: " << std::dec << p21 << std::endl;
+                // std::cout << "p13: " << std::dec << p13 << std::endl;
+                // std::cout << "p31: " << std::dec << p31 << std::endl;
+                // std::cout << "p23: " << std::dec << p23 << std::endl;
+        
+                // low 64 bits: a0*b0 + a1*b2 + a2*b1 + a3*b3
+                uint64_t mid = (p01 + p10) << 32;
+                bool carry_mid = (mid < (p01 & 0xFFFFFFFF));  // p01 + p10 carry or not
+                uint64_t low = p00 + mid;
+                bool carry_low = (low < p00);  // p00 + (mid << 32) carry or not
+                uint64_t carry = carry_mid + carry_low;
+                
+                // higher 64 bits
+                uint64_t high = p11 + p20 + p02;
+                high += ((p01 + p10) >> 32);
+                high += ((p03 + p30 + p12 + p21) << 32);
+                high += carry;
+        
+                return int128(low, high);
+            }
+
+            int128 operator*=(const int128& o) {
+                return *this = *this * o;
+            }
+
+            int128 operator+(const int128& o) const {
+                //TODO: SIMD addition
+                __m128i lo = _mm_add_epi64(m_val, o.m_val);
+                __m128i carry = _mm_cmpgt_epi64(m_val, lo);
+                // 提取高64位并加上进位
+                __m128i hi = _mm_add_epi64(_mm_srli_si128(m_val, 8), _mm_srli_si128(o.m_val, 8));
+                hi = _mm_add_epi64(hi, _mm_unpacklo_epi64(_mm_setzero_si128(), carry));
+                return int128(_mm_unpacklo_epi64(lo, hi));
+
+            }
+
+            int128& operator+=(const int128& o) {
+                return *this = *this + o;
+            }
+
+            int128 operator-(const int128& o) const {
+                return *this + (~o + int128(1));
+            }
+            
+            int128& operator-=(const int128& o) {
+                return *this = *this - o;
+            }
+
+            int128 operator>>(int s) const {
+                __m128i packed_shifted = _mm_srli_epi64(m_val, s); // Shift both parts
+                __m128i cross_boundary = m_val;
+                if (s < 64) {
+                    cross_boundary = _mm_slli_epi64(m_val, 64 - s); // LSB of high to become MSB of low
+                } else if (s > 64) {
+                    cross_boundary = _mm_srli_epi64(m_val, s - 64); // MSB of high to become LSB of low
+                }
+                return packed_shifted ^ _mm_srli_si128(cross_boundary, 8); // Right shift the mixin by 8 *bytes* to bring high into low
+            }
+
+            int128& operator>>=(int s) {
+                return *this = (*this) >> s;
+            }
+
+            int128 operator<<(int s) const {
+                __m128i packed_shifted = _mm_slli_epi64(m_val, s); // Shift both parts
+                __m128i cross_boundary = m_val;
+                if (s < 64) {
+                    cross_boundary = _mm_srli_epi64(m_val, 64 - s); // MSB of low to become LSB of high
+                } else if (s > 64) {
+                    cross_boundary = _mm_slli_epi64(m_val, s - 64); // LSB of low to become MSB of high
+                }
+                return packed_shifted ^ _mm_slli_si128(cross_boundary, 8); // Left shift by 8 bytes to bring low into high
+            }
+            int128& operator<<=(int s) {
+                return *this = (*this) << s;
+            }
+
+            bool operator==(const int128& o) const {
+                const __m128i tmp = m_val ^ o.m_val;
+                return _mm_test_all_zeros(tmp, tmp);
+            }
+            bool operator!=(const int128& o) const {
+                return !(*this == o);
+            }
+
+            bool operator<(const unsigned long long& other) { // Special case for this, because it's a pain to do with another int128
+                return !(
+                        _mm_test_all_zeros(m_val, _mm_set_epi64x(-1, 0))                  // if anything is in the top 64 bits, it's definitely bigger
+                     || static_cast<unsigned long long>(_mm_cvtsi128_si64(m_val)) >= other // otherwise, unsigned compare the rest
+                    );
+            }
+
+            std::int64_t low() const {
+                return _mm_extract_epi64(m_val, 0);
+            }
+
+            std::int64_t high() const {
+                return _mm_extract_epi64(m_val, 1);
+            }
+
+            explicit operator __m128i() const {
+                return m_val;
+            }
+            __m128i reveal() const {
+                return m_val;
+            }
+
+        private:
+            __m128i m_val;
+    };
 
     enum MULT_TYPE {
         KA_ONE_ITER,
@@ -61,6 +308,7 @@ namespace arith {
     template <> struct datatype<1> {using type = uint16_t;};
     template <> struct datatype<2> {using type = uint32_t;};
     template <> struct datatype<3> {using type = uint64_t;};
+    template <> struct datatype<4> {using type = int128;};
 
     template <typename T, int k>
     constexpr T make_mask() {
@@ -137,153 +385,7 @@ namespace arith {
     }
 
     
-    /**
-     * @brief: 128 bit integer class 
-     * @todo: multiplication and addition by SIMD SSE family
-     * 
-     */
-    // class int128 {
-    //     public:
-
-    //         int128() : m_val(_mm_set_epi64x(0, 0)) {}
-
-    //         int128(__m128i x) : m_val(std::move(x)) {}
-
-    //         int128(long long x) : m_val(_mm_set_epi64x(0, x)) {}
-
-    //         int128(long long lo, long long hi) : m_val(_mm_set_epi64x(hi, lo)) {}
-
-    //         static int128 make_mask(int k) {
-    //             if (k == 0) {
-    //                 return 0;
-    //             } else if (k < 64) {
-    //                 return int128((1ull << k) - 1);
-    //             } else if (k == 64) {
-    //                 return int128(-1);
-    //             } else if (k < 128) {
-    //                 return int128(_mm_set_epi64x((1ull << (k - 64)) - 1, -1));
-    //             } else if (k == 128) {
-    //                 return int128(_mm_set_epi64x(-1, -1));
-    //             } else {
-    //                 __builtin_unreachable();
-    //             }
-    //         }
-
-    //         int128 operator&(const int128& o) const {
-    //             return m_val & o.m_val;
-    //         }
-
-    //         int128& operator&=(const int128& o) {
-    //             return *this = *this & o;
-    //         }
-
-    //         int128 operator^(const int128& o) const {
-    //             return m_val ^ o.m_val;
-    //         }
-
-    //         int128& operator^=(const int128& o) {
-    //             return *this = *this ^ o;
-    //         }
-
-    //         int128 operator*(const int128& o) const {
-    //             __m128i a0 = m_val;                  
-    //             __m128i a1 = _mm_srli_si128(m_val, 8);
-
-    //             __m128i b0 = o.m_val;                    
-    //             __m128i b1 = _mm_srli_si128(o.m_val, 8); 
-
-    //             __m128i low = _mm_mul_epu32(a0, b0); 
-    //             __m128i high = _mm_mul_epu32(a1, b1);
-
-    //             __m128i mid1 = _mm_mul_epu32(a0, b1);
-    //             __m128i mid2 = _mm_mul_epu32(a1, b0);
-
-    //             __m128i mid = _mm_add_epi64(mid1, mid2);
-
-    //             __m128i carry = _mm_srli_epi64(mid, 32); 
-
-    //             low = _mm_add_epi64(low, mid);
-    //             high = _mm_add_epi64(high, carry);
-
-    //             __m128i res = _mm_unpacklo_epi64(low, high);
-
-    //             return res;
-    //         }
-
-    //         int128 operator*=(const int128& o) {
-    //             return *this = *this * o;
-    //         }
-
-    //         int128 operator+(const int128& o) const {
-    //             //TODO: SIMD addition
-    //         }
-
-    //         int128& operator+=(const int128& o) {
-    //             return *this = *this + o;
-    //         }
-
-    //         int128 operator>>(int s) const {
-    //             __m128i packed_shifted = _mm_srli_epi64(m_val, s); // Shift both parts
-    //             __m128i cross_boundary = m_val;
-    //             if (s < 64) {
-    //                 cross_boundary = _mm_slli_epi64(m_val, 64 - s); // LSB of high to become MSB of low
-    //             } else if (s > 64) {
-    //                 cross_boundary = _mm_srli_epi64(m_val, s - 64); // MSB of high to become LSB of low
-    //             }
-    //             return packed_shifted ^ _mm_srli_si128(cross_boundary, 8); // Right shift the mixin by 8 *bytes* to bring high into low
-    //         }
-
-    //         int128& operator>>=(int s) {
-    //             return *this = (*this) >> s;
-    //         }
-
-    //         int128 operator<<(int s) const {
-    //             __m128i packed_shifted = _mm_slli_epi64(m_val, s); // Shift both parts
-    //             __m128i cross_boundary = m_val;
-    //             if (s < 64) {
-    //                 cross_boundary = _mm_srli_epi64(m_val, 64 - s); // MSB of low to become LSB of high
-    //             } else if (s > 64) {
-    //                 cross_boundary = _mm_slli_epi64(m_val, s - 64); // LSB of low to become MSB of high
-    //             }
-    //             return packed_shifted ^ _mm_slli_si128(cross_boundary, 8); // Left shift by 8 bytes to bring low into high
-    //         }
-    //         int128& operator<<=(int s) {
-    //             return *this = (*this) << s;
-    //         }
-
-    //         bool operator==(const int128& o) const {
-    //             const __m128i tmp = m_val ^ o.m_val;
-    //             return _mm_test_all_zeros(tmp, tmp);
-    //         }
-    //         bool operator!=(const int128& o) const {
-    //             return !(*this == o);
-    //         }
-
-    //         bool operator<(const unsigned long long& other) { // Special case for this, because it's a pain to do with another int128
-    //             return !(
-    //                     _mm_test_all_zeros(m_val, _mm_set_epi64x(-1, 0))                  // if anything is in the top 64 bits, it's definitely bigger
-    //                  || static_cast<unsigned long long>(_mm_cvtsi128_si64(m_val)) >= other // otherwise, unsigned compare the rest
-    //                  );
-    //         }
-
-    //         std::int64_t low() const {
-    //             return _mm_extract_epi64(m_val, 0);
-    //         }
-
-    //         std::int64_t high() const {
-    //             return _mm_extract_epi64(m_val, 1);
-    //         }
-
-    //         explicit operator __m128i() const {
-    //             return m_val;
-    //         }
-    //         __m128i reveal() const {
-    //             return m_val;
-    //         }
-
-    //     private:
-    //         __m128i m_val;
-    // };
+    
 
 
     // class int256 {
@@ -310,10 +412,10 @@ namespace arith {
 /**
  * 
  * Z2k(F, 1)
- * Only supports k = 1 to 64
+ * Only supports k = 1 to 128
 */
 template<int k>
-requires( 1 <= k && k <= 64 )
+requires( 1 <= k && k <= 128 )
 class Z2k 
 {
     public:
@@ -409,7 +511,7 @@ class GRT1e;
 
 
 template<int k, int d>
-requires ( 1 <= k && k <= 64 && 1 <= d && d <= 32)
+requires ( 1 <= k && k <= 128 && 1 <= d)
 class GR1e
 {
     public: 
@@ -1415,16 +1517,30 @@ GR1e<k, d> GR1e<k, d>::operator*(const GR1e<k, d>& o) const {
     std::array<Z2k<k>, d> a = polys_;
     std::array<Z2k<k>, d> b = o.polys_;
     //TODO: to further deal with a bigger than 64 bits
-    if (GR1e<k, d>::MULT_METHOD_ == arith::KA_ONE_ITER) {
-        return GR1e<k, d>(ops::reduce<k, 2*d - 1, d, Z2k<k>>(ops::KA_one_iter<d, Z2k<k>>(a, b)));
+    if constexpr (d == 1) {
+        if (GR1e<k, d>::MULT_METHOD_ == arith::KA_ONE_ITER) {
+            return GR1e<k, d>(ops::KA_one_iter<d, Z2k<k>>(a, b));
+        }
+        else if (GR1e<k, d>::MULT_METHOD_ == arith::KA_RECURSIVE) {
+            return GR1e<k, d>(ops::KA_recursive<d, Z2k<k>>(a, b));
+        }
+        else if (GR1e<k, d>::MULT_METHOD_ == arith::KA_RECURSIVE_DUMMY) {
+            return GR1e<k, d>(ops::KA_recursive<d, Z2k<k>>(a, b, true));
+        }
+        return GR1e<k, d>(ops::multiply<d, Z2k<k>>(a, b));
     }
-    else if (GR1e<k, d>::MULT_METHOD_ == arith::KA_RECURSIVE) {
-        return GR1e<k, d>(ops::reduce<k, 2*d - 1, d, Z2k<k>>(ops::KA_recursive<d, Z2k<k>>(a, b)));
+    else {
+        if (GR1e<k, d>::MULT_METHOD_ == arith::KA_ONE_ITER) {
+            return GR1e<k, d>(ops::reduce<k, 2*d - 1, d, Z2k<k>>(ops::KA_one_iter<d, Z2k<k>>(a, b)));
+        }
+        else if (GR1e<k, d>::MULT_METHOD_ == arith::KA_RECURSIVE) {
+            return GR1e<k, d>(ops::reduce<k, 2*d - 1, d, Z2k<k>>(ops::KA_recursive<d, Z2k<k>>(a, b)));
+        }
+        else if (GR1e<k, d>::MULT_METHOD_ == arith::KA_RECURSIVE_DUMMY) {
+            return GR1e<k, d>(ops::reduce<k, 2*d - 1, d, Z2k<k>>(ops::KA_recursive<d, Z2k<k>>(a, b, true)));
+        }
+        return GR1e<k, d>(ops::reduce<k, 2*d - 1, d, Z2k<k>>(ops::multiply<d, Z2k<k>>(a, b)));
     }
-    else if (GR1e<k, d>::MULT_METHOD_ == arith::KA_RECURSIVE_DUMMY) {
-        return GR1e<k, d>(ops::reduce<k, 2*d - 1, d, Z2k<k>>(ops::KA_recursive<d, Z2k<k>>(a, b, true)));
-    }
-    return GR1e<k, d>(ops::reduce<k, 2*d - 1, d, Z2k<k>>(ops::multiply<d, Z2k<k>>(a, b)));
 }
 
 
@@ -1433,6 +1549,9 @@ GR1e<k, d>& GR1e<k, d>::operator*=(const GR1e<k, d>& o) { return *this = (*this)
 
 template <BaseRing R, int d>
 GRT1e<R, d> GRT1e<R, d>::operator*(const GRT1e<R, d>& o) const {
+    if constexpr (d == 1) {
+        return GRT1e<R, d>(ops::multiply<d, R>(polys_, o.polys_));
+    }
     return GRT1e<R, d>(ops::reduce<k_, 2*d - 1, d, R>(ops::multiply<d, R>(polys_, o.polys_)));
 }
 
@@ -1450,6 +1569,10 @@ template <int k, int d0, int d1>
 GR1e<k, d1> liftGR(const GR1e<k, d0>& base) {
     static_assert(d1 % d0 == 0, "No subring of correct size exists");
     GR1e<k, d1> res;
+    if (d0 == 1) {
+        res[0] = base[0];
+        return res;
+    }
     for (int j = 0; j < d1; j++) {
         Z2k<k> x_i;
         for (int i = 0; i < d0; i++) {

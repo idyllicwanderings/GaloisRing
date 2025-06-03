@@ -1,0 +1,6 @@
+kaperformance;[unknown];__static_initialization_and_destruction_0 84281870
+kaperformance;_start;[unknown] 1
+kaperformance;_start;_dl_start 1
+kaperformance;_start;_dl_start;[unknown] 574
+kaperformance;_start;_dl_start;_dl_start_final;_dl_sysdep_start;dl_platform_init;init_cpu_features;dl_init_cacheinfo;handle_amd 3195474
+kaperformance;_start;_dl_start;rtld_timer_start;[unknown] 40398

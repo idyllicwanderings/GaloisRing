@@ -157,7 +157,7 @@ void compress_subroutine(/* std::vector<std::vector<R>> &x_in, */
  * Rs is GR(2^k, d0), Rl is GR(2^k, d0* d1)
  * x_shares: x[0] is the first parties' shares
  */
-template <typename Rs, typename Rl, int COMPRESS_V>
+template <typename Rs, typename Rl, int COMPRESS_V, int PARTY_NUM>
 void compressed_multiplication_check(const std::vector<std::vector<Rs>> &x_shares,
                                      const std::vector<std::vector<Rs>> &y_shares,
                                      const std::vector<std::vector<Rs>> &z_shares,
@@ -169,7 +169,7 @@ void compressed_multiplication_check(const std::vector<std::vector<Rs>> &x_share
     constexpr uint64_t ds = Rs::get_d();
     constexpr uint64_t dl = Rl::get_d();
     constexpr uint64_t k = Rs::get_k();
-    uint64_t PARTY_NUM = ex_seq.size();
+    // uint64_t PARTY_NUM = ex_seq.size();
     assert(x_shares.size() == PARTY_NUM && y_shares.size() == PARTY_NUM && z_shares.size() == PARTY_NUM);
     static_assert(dl % ds == 0, "dl must be a multiple of ds");
 
@@ -198,9 +198,10 @@ void compressed_multiplication_check(const std::vector<std::vector<Rs>> &x_share
     }
 
     std::vector<ChkShare> ex_seq_lifted(PARTY_NUM);
-    for (int i = 0; i < PARTY_NUM; i++)
-    {
-        ex_seq_lifted[i] = liftGR<k, ds, dl>(ex_seq[i]);
+    if (threshold > 0) {
+        for (int i = 0; i < PARTY_NUM; i++){
+            ex_seq_lifted[i] = liftGR<k, ds, dl>(ex_seq[i]);
+        }
     }
 
     // std::cout << "lifted shares" << std::endl;
@@ -235,7 +236,12 @@ void compressed_multiplication_check(const std::vector<std::vector<Rs>> &x_share
         std::vector<Rl> xj;
         for (int i = 0; i < m; i++)
         {
-            xj.emplace_back(detail::interpolate(xjs[i], ex_seq_lifted, Rl::zero()));
+            if (threshold == 0) {
+                xj.emplace_back(detail::reconstruct_additive_shares(xjs[i]));
+            }
+            else {
+                xj.emplace_back(detail::interpolate(xjs[i], ex_seq_lifted, Rl::zero()));
+            }
         }
         std::vector<ChkShare> val(PARTY_NUM);
         for (int i = 0; i < PARTY_NUM; i++)
@@ -244,20 +250,22 @@ void compressed_multiplication_check(const std::vector<std::vector<Rs>> &x_share
             val[i] = zero_;
         }
 
-        Rl opened_val = detail::interpolate(val, ex_seq_lifted, Rl::zero());
+        Rl opened_val = (threshold == 0) ? 
+            detail::reconstruct_additive_shares<Rl>(val) :
+            detail::interpolate<Rl>(val, ex_seq_lifted, Rl::zero());
 
         // std::cout << "1st round  opened_val = " << opened_val.force_str() << std::endl;
 
         assert(opened_val == Rl::zero());
 
-        // std::cout << "round zero check passed" << std::endl;
+        std::cout << "round zero check passed" << std::endl;
         // std::cout << "the first check passed" << std::endl;
     }
 
     /* ===================== 4. execute the subroutine    ============================== */
     uint64_t logv_m = detail::log_base(COMPRESS_V, m);
 
-    // std::cout << "logv_m = " << logv_m << std::endl;  
+    //std::cout << "logv_m = " << logv_m << std::endl;  
 
     for (int j = 1; j <= logv_m; j++)
     {
@@ -289,6 +297,8 @@ void compressed_multiplication_check(const std::vector<std::vector<Rs>> &x_share
             b_shares[i] = b_i;
         }
 
+        // std::cout << "parsed polynomials x,y into a,b" << std::endl;
+
         std::vector<std::vector<ChkShare>> a(COMPRESS_V), b(COMPRESS_V); // compress v * l
         for (int s = 0; s < COMPRESS_V; s++)
         {
@@ -301,19 +311,29 @@ void compressed_multiplication_check(const std::vector<std::vector<Rs>> &x_share
                     ap_col[p] = a_shares[p][s][t];
                     bp_col[p] = b_shares[p][s][t];
                 }
-                at[t] = detail::interpolate<ChkShare>(ap_col, ex_seq_lifted, ChkShare::zero());
-                bt[t] = detail::interpolate<ChkShare>(bp_col, ex_seq_lifted, ChkShare::zero());
-            }
+                at[t] = (threshold == 0) ?
+                    detail::reconstruct_additive_shares<ChkShare>(ap_col) :
+                    detail::interpolate<ChkShare>(ap_col, ex_seq_lifted, ChkShare::zero());
+                bt[t] = (threshold == 0) ?
+                    detail::reconstruct_additive_shares<ChkShare>(bp_col) :
+                    detail::interpolate<ChkShare>(bp_col, ex_seq_lifted, ChkShare::zero());
+                //std::cout << "interpolated in line 320 successfully" << t << std::endl;
+                }
             a[s] = at; // save reconstructed a, b , no need for sharing of c
             b[s] = bt;
             c[s] = detail::dot_product<ChkShare>(at, bt);
+            //std::cout << "computed c  " << s << std::endl;
             // std::vector<ChkShare> shares = detail::generate_sharing<ChkShare>(c, ex_seq_lifted, threshold);
             // for (int p = 0; p < PARTY_NUM; p++) {
             //     c_shares[p][s] = shares[p];
             // }
         }
 
-        ChkShare z = detail::interpolate<ChkShare>(zj_shares, ex_seq_lifted, ChkShare::zero());
+        //std::cout << "computed c" << std::endl;
+
+        ChkShare z = (threshold == 0) ?
+            detail::reconstruct_additive_shares<ChkShare>(zj_shares) :
+            detail::interpolate<ChkShare>(zj_shares, ex_seq_lifted, ChkShare::zero());
         // std::cout << "z = " << z.force_str() << std::endl;
         ChkShare sum_c = ChkShare::zero();
         for (int s = 0; s < COMPRESS_V - 1; s++)
@@ -337,6 +357,8 @@ void compressed_multiplication_check(const std::vector<std::vector<Rs>> &x_share
         detail::transpose<ChkShare>(a, a_t);
         detail::transpose<ChkShare>(b, b_t);
 
+        //std::cout << "transposed a, b" << std::endl;
+
 
         // extract the first 2v+2 exceptional sequence
         int v = COMPRESS_V;
@@ -344,6 +366,8 @@ void compressed_multiplication_check(const std::vector<std::vector<Rs>> &x_share
         std::vector<ChkShare> alpha_v(alpha.begin(), alpha.begin() + v);                       // extract first v elements
         std::vector<ChkShare> alpha_vp1(alpha.begin(), alpha.begin() + v + 1);                 // extract first v + 1 elements
         std::vector<ChkShare> alpha_m2(alpha.begin(), alpha.end() - 2);
+
+        //std::cout << "alpha generated" << std::endl;
 
         std::vector<std::vector<ChkShare>> f(l), g(l);
 
@@ -372,7 +396,7 @@ void compressed_multiplication_check(const std::vector<std::vector<Rs>> &x_share
             }
         }
 
-        // std::cout << "generated polynomials f, g" << std::endl;
+        //std::cout << "generated polynomials f, g" << std::endl;
 
         // generate shares for f, g
         std::vector<std::vector<std::vector<ChkShare>>> f_shares(PARTY_NUM, std::vector<std::vector<ChkShare>>(l, std::vector<ChkShare>(f[0].size())));
@@ -381,8 +405,12 @@ void compressed_multiplication_check(const std::vector<std::vector<Rs>> &x_share
         {
             for (int t = 0; t < f[0].size(); t++)
             {
-                std::vector<ChkShare> fshare = detail::generate_sharing<ChkShare>(f[s][t], ex_seq_lifted, threshold);
-                std::vector<ChkShare> gshare = detail::generate_sharing<ChkShare>(g[s][t], ex_seq_lifted, threshold);
+                std::vector<ChkShare> fshare = (threshold == 0) ? 
+                    detail::generate_additive_shares<ChkShare>(f[s][t], PARTY_NUM) :
+                    detail::generate_sharing<ChkShare>(f[s][t], ex_seq_lifted, threshold);
+                std::vector<ChkShare> gshare = (threshold == 0) ? 
+                    detail::generate_additive_shares<ChkShare>(g[s][t], PARTY_NUM) :    
+                    detail::generate_sharing<ChkShare>(g[s][t], ex_seq_lifted, threshold);
                 for (int i = 0; i < PARTY_NUM; i++)
                 {
                     f_shares[i][s][t] = fshare[i];
@@ -391,7 +419,7 @@ void compressed_multiplication_check(const std::vector<std::vector<Rs>> &x_share
             }
         }
 
-        // std::cout << "generated shares for f, g" << std::endl;
+        //std::cout << "generated shares for f, g" << std::endl;
 
         std::vector<ChkShare> z_2nd_half(v - 1); // z: [ν + 1, 2ν − 1]
         for (int s = v; s < 2 * v - 1; s++)
@@ -413,7 +441,7 @@ void compressed_multiplication_check(const std::vector<std::vector<Rs>> &x_share
             }
         }
 
-        // std::cout << "generated z_2nd_half" << std::endl;
+        //std::cout << "generated z_2nd_half" << std::endl;
 
         /*====================== 3. compute polynomial h ===================================== */
 
@@ -431,14 +459,16 @@ void compressed_multiplication_check(const std::vector<std::vector<Rs>> &x_share
         std::vector<std::vector<ChkShare>> h_shares(PARTY_NUM);
         for (int s = 0; s < h.size(); s++)
         {
-            std::vector<ChkShare> hshare = detail::generate_sharing<ChkShare>(h[s], ex_seq_lifted, threshold);
+            std::vector<ChkShare> hshare = (threshold == 0) ? 
+                detail::generate_additive_shares<ChkShare>(h[s], PARTY_NUM) :
+                detail::generate_sharing<ChkShare>(h[s], ex_seq_lifted, threshold);
             for (int i = 0; i < PARTY_NUM; i++)
             {
                 h_shares[i].emplace_back(hshare[i]);
             }
         }
 
-        // std::cout << "generated shares for polynomial h" << std::endl;
+        //std::cout << "generated shares for polynomial h" << std::endl;
 
         // NOTE: the challenge should be the same!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
         /*====================== 4. obtain challenge from exceptional sequence =============== */
@@ -496,7 +526,13 @@ void compressed_multiplication_check(const std::vector<std::vector<Rs>> &x_share
             std::vector<Rl> xj;
             for (int i = 0; i < l; i++)
             {
-                xj.emplace_back(detail::interpolate(xjs[i], ex_seq_lifted, Rl::zero()));
+                if (threshold == 0)
+                {
+                    xj.emplace_back(detail::reconstruct_additive_shares(xjs[i]));
+                }
+                else{
+                    xj.emplace_back(detail::interpolate(xjs[i], ex_seq_lifted, Rl::zero()));
+                }
             }
             std::vector<ChkShare> val(PARTY_NUM);
             for (int i = 0; i < PARTY_NUM; i++)
@@ -505,7 +541,9 @@ void compressed_multiplication_check(const std::vector<std::vector<Rs>> &x_share
                 val[i] = zero_;
             }
 
-            Rl opened_val = detail::interpolate(val, ex_seq_lifted, Rl::zero());
+            Rl opened_val = (threshold == 0)?
+                detail::reconstruct_additive_shares<Rl>(val) :
+                detail::interpolate<Rl>(val, ex_seq_lifted, Rl::zero());
 
             // std::cout << "round " << j << " opened_val = " << opened_val.force_str() << std::endl;
 
@@ -524,8 +562,10 @@ void compressed_multiplication_check(const std::vector<std::vector<Rs>> &x_share
         // std::cout << "xj_shares[" << i << "].size() = " << xj_shares[i].size() << std::endl;
     }
 
-    Rl x_logv_m = detail::interpolate(xjs, ex_seq_lifted, Rl::zero());
-    // std::cout << "reconstructed x values" << std::endl;
+    Rl x_logv_m = (threshold == 0)?
+        detail::reconstruct_additive_shares<Rl>(xjs) :
+        detail::interpolate(xjs, ex_seq_lifted, Rl::zero());
+    //std::cout << "reconstructed x values" << std::endl;
 
     /* ===================== 6. verify the result ====================================== */
     std::vector<ChkShare> val(PARTY_NUM);
@@ -535,7 +575,9 @@ void compressed_multiplication_check(const std::vector<std::vector<Rs>> &x_share
         val[i] = zero_;
     }
 
-    Rl opened_val = detail::interpolate(val, ex_seq_lifted, Rl::zero());
+    Rl opened_val = (threshold == 0) ?
+        detail::reconstruct_additive_shares<Rl>(val) :
+        detail::interpolate<Rl>(val, ex_seq_lifted, Rl::zero());
 
     // std::cout << "opened_val = " << opened_val.force_str() << std::endl;
 

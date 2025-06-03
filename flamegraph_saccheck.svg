@@ -1,0 +1,2538 @@
+<?xml version="1.0" standalone="no"?>
+<!DOCTYPE svg PUBLIC "-//W3C//DTD SVG 1.1//EN" "http://www.w3.org/Graphics/SVG/1.1/DTD/svg11.dtd">
+<svg version="1.1" width="1200" height="374" onload="init(evt)" viewBox="0 0 1200 374" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">
+<!-- Flame graph stack visualization. See https://github.com/brendangregg/FlameGraph for latest version, and http://www.brendangregg.com/flamegraphs.html for examples. -->
+<!-- NOTES:  -->
+<defs>
+	<linearGradient id="background" y1="0" y2="1" x1="0" x2="0" >
+		<stop stop-color="#eeeeee" offset="5%" />
+		<stop stop-color="#eeeeb0" offset="95%" />
+	</linearGradient>
+</defs>
+<style type="text/css">
+	text { font-family:Verdana; font-size:12px; fill:rgb(0,0,0); }
+	#search, #ignorecase { opacity:0.1; cursor:pointer; }
+	#search:hover, #search.show, #ignorecase:hover, #ignorecase.show { opacity:1; }
+	#subtitle { text-anchor:middle; font-color:rgb(160,160,160); }
+	#title { text-anchor:middle; font-size:17px}
+	#unzoom { cursor:pointer; }
+	#frames > *:hover { stroke:black; stroke-width:0.5; cursor:pointer; }
+	.hide { display:none; }
+	.parent { opacity:0.5; }
+</style>
+<script type="text/ecmascript">
+<![CDATA[
+	"use strict";
+	var details, searchbtn, unzoombtn, matchedtxt, svg, searching, currentSearchTerm, ignorecase, ignorecaseBtn;
+	function init(evt) {
+		details = document.getElementById("details").firstChild;
+		searchbtn = document.getElementById("search");
+		ignorecaseBtn = document.getElementById("ignorecase");
+		unzoombtn = document.getElementById("unzoom");
+		matchedtxt = document.getElementById("matched");
+		svg = document.getElementsByTagName("svg")[0];
+		searching = 0;
+		currentSearchTerm = null;
+
+		// use GET parameters to restore a flamegraphs state.
+		var params = get_params();
+		if (params.x && params.y)
+			zoom(find_group(document.querySelector('[x="' + params.x + '"][y="' + params.y + '"]')));
+                if (params.s) search(params.s);
+	}
+
+	// event listeners
+	window.addEventListener("click", function(e) {
+		var target = find_group(e.target);
+		if (target) {
+			if (target.nodeName == "a") {
+				if (e.ctrlKey === false) return;
+				e.preventDefault();
+			}
+			if (target.classList.contains("parent")) unzoom(true);
+			zoom(target);
+			if (!document.querySelector('.parent')) {
+				// we have basically done a clearzoom so clear the url
+				var params = get_params();
+				if (params.x) delete params.x;
+				if (params.y) delete params.y;
+				history.replaceState(null, null, parse_params(params));
+				unzoombtn.classList.add("hide");
+				return;
+			}
+
+			// set parameters for zoom state
+			var el = target.querySelector("rect");
+			if (el && el.attributes && el.attributes.y && el.attributes._orig_x) {
+				var params = get_params()
+				params.x = el.attributes._orig_x.value;
+				params.y = el.attributes.y.value;
+				history.replaceState(null, null, parse_params(params));
+			}
+		}
+		else if (e.target.id == "unzoom") clearzoom();
+		else if (e.target.id == "search") search_prompt();
+		else if (e.target.id == "ignorecase") toggle_ignorecase();
+	}, false)
+
+	// mouse-over for info
+	// show
+	window.addEventListener("mouseover", function(e) {
+		var target = find_group(e.target);
+		if (target) details.nodeValue = "Function: " + g_to_text(target);
+	}, false)
+
+	// clear
+	window.addEventListener("mouseout", function(e) {
+		var target = find_group(e.target);
+		if (target) details.nodeValue = ' ';
+	}, false)
+
+	// ctrl-F for search
+	// ctrl-I to toggle case-sensitive search
+	window.addEventListener("keydown",function (e) {
+		if (e.keyCode === 114 || (e.ctrlKey && e.keyCode === 70)) {
+			e.preventDefault();
+			search_prompt();
+		}
+		else if (e.ctrlKey && e.keyCode === 73) {
+			e.preventDefault();
+			toggle_ignorecase();
+		}
+	}, false)
+
+	// functions
+	function get_params() {
+		var params = {};
+		var paramsarr = window.location.search.substr(1).split('&');
+		for (var i = 0; i < paramsarr.length; ++i) {
+			var tmp = paramsarr[i].split("=");
+			if (!tmp[0] || !tmp[1]) continue;
+			params[tmp[0]]  = decodeURIComponent(tmp[1]);
+		}
+		return params;
+	}
+	function parse_params(params) {
+		var uri = "?";
+		for (var key in params) {
+			uri += key + '=' + encodeURIComponent(params[key]) + '&';
+		}
+		if (uri.slice(-1) == "&")
+			uri = uri.substring(0, uri.length - 1);
+		if (uri == '?')
+			uri = window.location.href.split('?')[0];
+		return uri;
+	}
+	function find_child(node, selector) {
+		var children = node.querySelectorAll(selector);
+		if (children.length) return children[0];
+	}
+	function find_group(node) {
+		var parent = node.parentElement;
+		if (!parent) return;
+		if (parent.id == "frames") return node;
+		return find_group(parent);
+	}
+	function orig_save(e, attr, val) {
+		if (e.attributes["_orig_" + attr] != undefined) return;
+		if (e.attributes[attr] == undefined) return;
+		if (val == undefined) val = e.attributes[attr].value;
+		e.setAttribute("_orig_" + attr, val);
+	}
+	function orig_load(e, attr) {
+		if (e.attributes["_orig_"+attr] == undefined) return;
+		e.attributes[attr].value = e.attributes["_orig_" + attr].value;
+		e.removeAttribute("_orig_"+attr);
+	}
+	function g_to_text(e) {
+		var text = find_child(e, "title").firstChild.nodeValue;
+		return (text)
+	}
+	function g_to_func(e) {
+		var func = g_to_text(e);
+		// if there's any manipulation we want to do to the function
+		// name before it's searched, do it here before returning.
+		return (func);
+	}
+	function update_text(e) {
+		var r = find_child(e, "rect");
+		var t = find_child(e, "text");
+		var w = parseFloat(r.attributes.width.value) -3;
+		var txt = find_child(e, "title").textContent.replace(/\([^(]*\)$/,"");
+		t.attributes.x.value = parseFloat(r.attributes.x.value) + 3;
+
+		// Smaller than this size won't fit anything
+		if (w < 2 * 12 * 0.59) {
+			t.textContent = "";
+			return;
+		}
+
+		t.textContent = txt;
+		var sl = t.getSubStringLength(0, txt.length);
+		// check if only whitespace or if we can fit the entire string into width w
+		if (/^ *$/.test(txt) || sl < w)
+			return;
+
+		// this isn't perfect, but gives a good starting point
+		// and avoids calling getSubStringLength too often
+		var start = Math.floor((w/sl) * txt.length);
+		for (var x = start; x > 0; x = x-2) {
+			if (t.getSubStringLength(0, x + 2) <= w) {
+				t.textContent = txt.substring(0, x) + "..";
+				return;
+			}
+		}
+		t.textContent = "";
+	}
+
+	// zoom
+	function zoom_reset(e) {
+		if (e.attributes != undefined) {
+			orig_load(e, "x");
+			orig_load(e, "width");
+		}
+		if (e.childNodes == undefined) return;
+		for (var i = 0, c = e.childNodes; i < c.length; i++) {
+			zoom_reset(c[i]);
+		}
+	}
+	function zoom_child(e, x, ratio) {
+		if (e.attributes != undefined) {
+			if (e.attributes.x != undefined) {
+				orig_save(e, "x");
+				e.attributes.x.value = (parseFloat(e.attributes.x.value) - x - 10) * ratio + 10;
+				if (e.tagName == "text")
+					e.attributes.x.value = find_child(e.parentNode, "rect[x]").attributes.x.value + 3;
+			}
+			if (e.attributes.width != undefined) {
+				orig_save(e, "width");
+				e.attributes.width.value = parseFloat(e.attributes.width.value) * ratio;
+			}
+		}
+
+		if (e.childNodes == undefined) return;
+		for (var i = 0, c = e.childNodes; i < c.length; i++) {
+			zoom_child(c[i], x - 10, ratio);
+		}
+	}
+	function zoom_parent(e) {
+		if (e.attributes) {
+			if (e.attributes.x != undefined) {
+				orig_save(e, "x");
+				e.attributes.x.value = 10;
+			}
+			if (e.attributes.width != undefined) {
+				orig_save(e, "width");
+				e.attributes.width.value = parseInt(svg.width.baseVal.value) - (10 * 2);
+			}
+		}
+		if (e.childNodes == undefined) return;
+		for (var i = 0, c = e.childNodes; i < c.length; i++) {
+			zoom_parent(c[i]);
+		}
+	}
+	function zoom(node) {
+		var attr = find_child(node, "rect").attributes;
+		var width = parseFloat(attr.width.value);
+		var xmin = parseFloat(attr.x.value);
+		var xmax = parseFloat(xmin + width);
+		var ymin = parseFloat(attr.y.value);
+		var ratio = (svg.width.baseVal.value - 2 * 10) / width;
+
+		// XXX: Workaround for JavaScript float issues (fix me)
+		var fudge = 0.0001;
+
+		unzoombtn.classList.remove("hide");
+
+		var el = document.getElementById("frames").children;
+		for (var i = 0; i < el.length; i++) {
+			var e = el[i];
+			var a = find_child(e, "rect").attributes;
+			var ex = parseFloat(a.x.value);
+			var ew = parseFloat(a.width.value);
+			var upstack;
+			// Is it an ancestor
+			if (0 == 0) {
+				upstack = parseFloat(a.y.value) > ymin;
+			} else {
+				upstack = parseFloat(a.y.value) < ymin;
+			}
+			if (upstack) {
+				// Direct ancestor
+				if (ex <= xmin && (ex+ew+fudge) >= xmax) {
+					e.classList.add("parent");
+					zoom_parent(e);
+					update_text(e);
+				}
+				// not in current path
+				else
+					e.classList.add("hide");
+			}
+			// Children maybe
+			else {
+				// no common path
+				if (ex < xmin || ex + fudge >= xmax) {
+					e.classList.add("hide");
+				}
+				else {
+					zoom_child(e, xmin, ratio);
+					update_text(e);
+				}
+			}
+		}
+		search();
+	}
+	function unzoom(dont_update_text) {
+		unzoombtn.classList.add("hide");
+		var el = document.getElementById("frames").children;
+		for(var i = 0; i < el.length; i++) {
+			el[i].classList.remove("parent");
+			el[i].classList.remove("hide");
+			zoom_reset(el[i]);
+			if(!dont_update_text) update_text(el[i]);
+		}
+		search();
+	}
+	function clearzoom() {
+		unzoom();
+
+		// remove zoom state
+		var params = get_params();
+		if (params.x) delete params.x;
+		if (params.y) delete params.y;
+		history.replaceState(null, null, parse_params(params));
+	}
+
+	// search
+	function toggle_ignorecase() {
+		ignorecase = !ignorecase;
+		if (ignorecase) {
+			ignorecaseBtn.classList.add("show");
+		} else {
+			ignorecaseBtn.classList.remove("show");
+		}
+		reset_search();
+		search();
+	}
+	function reset_search() {
+		var el = document.querySelectorAll("#frames rect");
+		for (var i = 0; i < el.length; i++) {
+			orig_load(el[i], "fill")
+		}
+		var params = get_params();
+		delete params.s;
+		history.replaceState(null, null, parse_params(params));
+	}
+	function search_prompt() {
+		if (!searching) {
+			var term = prompt("Enter a search term (regexp " +
+			    "allowed, eg: ^ext4_)"
+			    + (ignorecase ? ", ignoring case" : "")
+			    + "\nPress Ctrl-i to toggle case sensitivity", "");
+			if (term != null) search(term);
+		} else {
+			reset_search();
+			searching = 0;
+			currentSearchTerm = null;
+			searchbtn.classList.remove("show");
+			searchbtn.firstChild.nodeValue = "Search"
+			matchedtxt.classList.add("hide");
+			matchedtxt.firstChild.nodeValue = ""
+		}
+	}
+	function search(term) {
+		if (term) currentSearchTerm = term;
+		if (currentSearchTerm === null) return;
+
+		var re = new RegExp(currentSearchTerm, ignorecase ? 'i' : '');
+		var el = document.getElementById("frames").children;
+		var matches = new Object();
+		var maxwidth = 0;
+		for (var i = 0; i < el.length; i++) {
+			var e = el[i];
+			var func = g_to_func(e);
+			var rect = find_child(e, "rect");
+			if (func == null || rect == null)
+				continue;
+
+			// Save max width. Only works as we have a root frame
+			var w = parseFloat(rect.attributes.width.value);
+			if (w > maxwidth)
+				maxwidth = w;
+
+			if (func.match(re)) {
+				// highlight
+				var x = parseFloat(rect.attributes.x.value);
+				orig_save(rect, "fill");
+				rect.attributes.fill.value = "rgb(230,0,230)";
+
+				// remember matches
+				if (matches[x] == undefined) {
+					matches[x] = w;
+				} else {
+					if (w > matches[x]) {
+						// overwrite with parent
+						matches[x] = w;
+					}
+				}
+				searching = 1;
+			}
+		}
+		if (!searching)
+			return;
+		var params = get_params();
+		params.s = currentSearchTerm;
+		history.replaceState(null, null, parse_params(params));
+
+		searchbtn.classList.add("show");
+		searchbtn.firstChild.nodeValue = "Reset Search";
+
+		// calculate percent matched, excluding vertical overlap
+		var count = 0;
+		var lastx = -1;
+		var lastw = 0;
+		var keys = Array();
+		for (k in matches) {
+			if (matches.hasOwnProperty(k))
+				keys.push(k);
+		}
+		// sort the matched frames by their x location
+		// ascending, then width descending
+		keys.sort(function(a, b){
+			return a - b;
+		});
+		// Step through frames saving only the biggest bottom-up frames
+		// thanks to the sort order. This relies on the tree property
+		// where children are always smaller than their parents.
+		var fudge = 0.0001;	// JavaScript floating point
+		for (var k in keys) {
+			var x = parseFloat(keys[k]);
+			var w = matches[keys[k]];
+			if (x >= lastx + lastw - fudge) {
+				count += w;
+				lastx = x;
+				lastw = w;
+			}
+		}
+		// display matched percent
+		matchedtxt.classList.remove("hide");
+		var pct = 100 * count / maxwidth;
+		if (pct != 100) pct = pct.toFixed(1)
+		matchedtxt.firstChild.nodeValue = "Matched: " + pct + "%";
+	}
+]]>
+</script>
+<rect x="0.0" y="0" width="1200.0" height="374.0" fill="url(#background)"  />
+<text id="title" x="600.00" y="24" >Flame Graph</text>
+<text id="details" x="10.00" y="357" > </text>
+<text id="unzoom" x="10.00" y="24" class="hide">Reset Zoom</text>
+<text id="search" x="1090.00" y="24" >Search</text>
+<text id="ignorecase" x="1174.00" y="24" >ic</text>
+<text id="matched" x="1090.00" y="357" > </text>
+<g id="frames">
+<g >
+<title>Z2k&lt;34&gt;::Z2k (501,247,513 samples, 0.30%)</title><rect x="614.5" y="133" width="3.5" height="15.0" fill="rgb(219,66,15)" rx="2" ry="2" />
+<text  x="617.46" y="143.5" ></text>
+</g>
+<g >
+<title>std::__array_traits&lt;Z2k&lt;34&gt;, 6ul&gt;::_S_ref (27,377,680 samples, 0.02%)</title><rect x="1175.0" y="165" width="0.2" height="15.0" fill="rgb(253,221,52)" rx="2" ry="2" />
+<text  x="1178.03" y="175.5" ></text>
+</g>
+<g >
+<title>std::array&lt;Z2k&lt;34&gt;, 11ul&gt;::operator[] (15,698,235 samples, 0.01%)</title><rect x="1177.5" y="181" width="0.1" height="15.0" fill="rgb(206,8,1)" rx="2" ry="2" />
+<text  x="1180.49" y="191.5" ></text>
+</g>
+<g >
+<title>std::array&lt;Z2k&lt;34&gt;, 11&gt; ops::reduce_once&lt;11, 6, Z2k&lt;34&gt; &gt; (34,170,525,394 samples, 20.52%)</title><rect x="541.7" y="149" width="242.1" height="15.0" fill="rgb(243,179,42)" rx="2" ry="2" />
+<text  x="544.72" y="159.5" >std::array&lt;Z2k&lt;34&gt;, 11&gt; ops::red..</text>
+</g>
+<g >
+<title>std::array&lt;Z2k&lt;34&gt;, 11ul&gt;::end (80,408,399 samples, 0.05%)</title><rect x="789.6" y="149" width="0.6" height="15.0" fill="rgb(245,185,44)" rx="2" ry="2" />
+<text  x="792.64" y="159.5" ></text>
+</g>
+<g >
+<title>Z2k&lt;34&gt;* std::__copy_move_a2&lt;false, Z2k&lt;34&gt; const*, Z2k&lt;34&gt;*&gt; (19,903,131 samples, 0.01%)</title><rect x="468.2" y="85" width="0.1" height="15.0" fill="rgb(241,167,40)" rx="2" ry="2" />
+<text  x="471.18" y="95.5" ></text>
+</g>
+<g >
+<title>Z2k&lt;34&gt;* std::__copy_move_a2&lt;false, Z2k&lt;34&gt; const*, Z2k&lt;34&gt;*&gt; (40,370,622 samples, 0.02%)</title><rect x="594.6" y="101" width="0.3" height="15.0" fill="rgb(241,167,40)" rx="2" ry="2" />
+<text  x="597.56" y="111.5" ></text>
+</g>
+<g >
+<title>std::array&lt;Z2k&lt;34&gt;, 11ul&gt;::array (4,129,423,964 samples, 2.48%)</title><rect x="209.2" y="101" width="29.3" height="15.0" fill="rgb(246,191,45)" rx="2" ry="2" />
+<text  x="212.21" y="111.5" >st..</text>
+</g>
+<g >
+<title>std::vector&lt;GR1e&lt;34, 6&gt;, std::allocator&lt;GR1e&lt;34, 6&gt; &gt; &gt; detail::dot_product&lt;GR1e&lt;34, 6&gt; &gt; (354,882,163 samples, 0.21%)</title><rect x="1172.8" y="229" width="2.5" height="15.0" fill="rgb(246,188,45)" rx="2" ry="2" />
+<text  x="1175.79" y="239.5" ></text>
+</g>
+<g >
+<title>Z2k&lt;34&gt;* std::__copy_move&lt;false, true, std::random_access_iterator_tag&gt;::__copy_m&lt;Z2k&lt;34&gt; &gt; (15,604,115 samples, 0.01%)</title><rect x="1182.9" y="117" width="0.1" height="15.0" fill="rgb(216,54,13)" rx="2" ry="2" />
+<text  x="1185.86" y="127.5" ></text>
+</g>
+<g >
+<title>Z2k&lt;34&gt;* std::__niter_base&lt;Z2k&lt;34&gt;*&gt; (44,489,151 samples, 0.03%)</title><rect x="117.3" y="101" width="0.3" height="15.0" fill="rgb(217,56,13)" rx="2" ry="2" />
+<text  x="120.31" y="111.5" ></text>
+</g>
+<g >
+<title>Z2k&lt;34&gt; const* std::__miter_base&lt;Z2k&lt;34&gt; const*&gt; (56,799,053 samples, 0.03%)</title><rect x="136.4" y="101" width="0.4" height="15.0" fill="rgb(241,167,40)" rx="2" ry="2" />
+<text  x="139.43" y="111.5" ></text>
+</g>
+<g >
+<title>Z2k&lt;34&gt;::operator- (31,130,441 samples, 0.02%)</title><rect x="1173.5" y="165" width="0.3" height="15.0" fill="rgb(215,48,11)" rx="2" ry="2" />
+<text  x="1176.54" y="175.5" ></text>
+</g>
+<g >
+<title>std::remove_reference&lt;unsigned long&gt;::type&amp;&amp; std::move&lt;unsigned long&gt; (92,860,411 samples, 0.06%)</title><rect x="1127.0" y="149" width="0.6" height="15.0" fill="rgb(223,85,20)" rx="2" ry="2" />
+<text  x="1129.95" y="159.5" ></text>
+</g>
+<g >
+<title>Z2k&lt;34&gt;::operator* (198,327,528 samples, 0.12%)</title><rect x="1185.2" y="197" width="1.4" height="15.0" fill="rgb(234,137,32)" rx="2" ry="2" />
+<text  x="1188.21" y="207.5" ></text>
+</g>
+<g >
+<title>GR1e&lt;34, 6&gt;::operator== (20,182,135 samples, 0.01%)</title><rect x="1163.6" y="213" width="0.1" height="15.0" fill="rgb(216,53,12)" rx="2" ry="2" />
+<text  x="1166.55" y="223.5" ></text>
+</g>
+<g >
+<title>Z2k&lt;34&gt;* std::__copy_move_a1&lt;false, Z2k&lt;34&gt; const*, Z2k&lt;34&gt;*&gt; (36,141,202 samples, 0.02%)</title><rect x="141.7" y="85" width="0.3" height="15.0" fill="rgb(247,197,47)" rx="2" ry="2" />
+<text  x="144.70" y="95.5" ></text>
+</g>
+<g >
+<title>Z2k&lt;34&gt;::Z2k (36,356,725 samples, 0.02%)</title><rect x="536.1" y="149" width="0.2" height="15.0" fill="rgb(219,66,15)" rx="2" ry="2" />
+<text  x="539.09" y="159.5" ></text>
+</g>
+<g >
+<title>std::array&lt;Z2k&lt;34&gt;, 6ul&gt;::operator[] (1,018,891,703 samples, 0.61%)</title><rect x="800.5" y="165" width="7.2" height="15.0" fill="rgb(241,165,39)" rx="2" ry="2" />
+<text  x="803.51" y="175.5" ></text>
+</g>
+<g >
+<title>Z2k&lt;34&gt;::Z2k (309,940,362 samples, 0.19%)</title><rect x="167.5" y="101" width="2.2" height="15.0" fill="rgb(219,66,15)" rx="2" ry="2" />
+<text  x="170.55" y="111.5" ></text>
+</g>
+<g >
+<title>std::array&lt;Z2k&lt;34&gt;, 6ul&gt;::operator[] (1,659,079,647 samples, 1.00%)</title><rect x="1132.4" y="181" width="11.7" height="15.0" fill="rgb(241,165,39)" rx="2" ry="2" />
+<text  x="1135.38" y="191.5" ></text>
+</g>
+<g >
+<title>GR1e&lt;34, 6&gt;::operator- (64,126,435 samples, 0.04%)</title><rect x="1172.3" y="229" width="0.5" height="15.0" fill="rgb(214,41,9)" rx="2" ry="2" />
+<text  x="1175.34" y="239.5" ></text>
+</g>
+<g >
+<title>Z2k&lt;34&gt;::Z2k (40,109,107 samples, 0.02%)</title><rect x="1171.5" y="165" width="0.3" height="15.0" fill="rgb(219,66,15)" rx="2" ry="2" />
+<text  x="1174.49" y="175.5" ></text>
+</g>
+<g >
+<title>std::array&lt;Z2k&lt;34&gt;,  (354,385,854 samples, 0.21%)</title><rect x="470.4" y="165" width="2.5" height="15.0" fill="rgb(240,163,39)" rx="2" ry="2" />
+<text  x="473.37" y="175.5" ></text>
+</g>
+<g >
+<title>Z2k&lt;34&gt; const* std::__miter_base&lt;Z2k&lt;34&gt; const*&gt; (56,990,740 samples, 0.03%)</title><rect x="564.4" y="133" width="0.4" height="15.0" fill="rgb(241,167,40)" rx="2" ry="2" />
+<text  x="567.40" y="143.5" ></text>
+</g>
+<g >
+<title>std::is_constant_evaluated (103,938,951 samples, 0.06%)</title><rect x="593.8" y="85" width="0.8" height="15.0" fill="rgb(212,33,8)" rx="2" ry="2" />
+<text  x="596.83" y="95.5" ></text>
+</g>
+<g >
+<title>Z2k&lt;34&gt;::Z2k (3,969,629,446 samples, 2.38%)</title><rect x="393.7" y="85" width="28.1" height="15.0" fill="rgb(219,66,15)" rx="2" ry="2" />
+<text  x="396.65" y="95.5" >Z..</text>
+</g>
+<g >
+<title>Z2k&lt;34&gt;::operator+ (19,202,265 samples, 0.01%)</title><rect x="1188.8" y="213" width="0.2" height="15.0" fill="rgb(228,108,25)" rx="2" ry="2" />
+<text  x="1191.82" y="223.5" ></text>
+</g>
+<g >
+<title>Z2k&lt;34&gt;::operator- (48,620,260 samples, 0.03%)</title><rect x="536.3" y="149" width="0.4" height="15.0" fill="rgb(215,48,11)" rx="2" ry="2" />
+<text  x="539.35" y="159.5" ></text>
+</g>
+<g >
+<title>Z2k&lt;34&gt;::operator- (5,454,155,468 samples, 3.27%)</title><rect x="169.7" y="101" width="38.7" height="15.0" fill="rgb(215,48,11)" rx="2" ry="2" />
+<text  x="172.74" y="111.5" >Z2k..</text>
+</g>
+<g >
+<title>std::array&lt;Z2k&lt;34&gt;, 11&gt; ops::reduce_once&lt;11, 6, Z2k&lt;34&gt; &gt; (227,871,442 samples, 0.14%)</title><rect x="1168.4" y="197" width="1.6" height="15.0" fill="rgb(243,179,42)" rx="2" ry="2" />
+<text  x="1171.37" y="207.5" ></text>
+</g>
+<g >
+<title>GR1e&lt;34, 6&gt;* std::__addressof&lt;GR1e&lt;34, 6&gt; &gt; (20,018,030 samples, 0.01%)</title><rect x="1164.1" y="149" width="0.2" height="15.0" fill="rgb(205,1,0)" rx="2" ry="2" />
+<text  x="1167.13" y="159.5" ></text>
+</g>
+<g >
+<title>Z2k&lt;34&gt;* std::copy&lt;Z2k&lt;34&gt;*, Z2k&lt;34&gt;*&gt; (32,415,346 samples, 0.02%)</title><rect x="468.4" y="133" width="0.2" height="15.0" fill="rgb(217,56,13)" rx="2" ry="2" />
+<text  x="471.38" y="143.5" ></text>
+</g>
+<g >
+<title>std::array&lt;Z2k&lt;34&gt;, 11ul&gt;::begin (19,874,022 samples, 0.01%)</title><rect x="1169.7" y="181" width="0.1" height="15.0" fill="rgb(214,43,10)" rx="2" ry="2" />
+<text  x="1172.70" y="191.5" ></text>
+</g>
+<g >
+<title>std::array&lt;Z2k&lt;34&gt;, 11ul&gt;::begin (24,012,513 samples, 0.01%)</title><rect x="474.9" y="149" width="0.2" height="15.0" fill="rgb(214,43,10)" rx="2" ry="2" />
+<text  x="477.94" y="159.5" ></text>
+</g>
+<g >
+<title>std::array&lt;Z2k&lt;34&gt;, 11ul&gt;::end (52,230,642 samples, 0.03%)</title><rect x="272.4" y="117" width="0.4" height="15.0" fill="rgb(245,185,44)" rx="2" ry="2" />
+<text  x="275.39" y="127.5" ></text>
+</g>
+<g >
+<title>operator new (16,388,703 samples, 0.01%)</title><rect x="1165.6" y="149" width="0.1" height="15.0" fill="rgb(216,51,12)" rx="2" ry="2" />
+<text  x="1168.61" y="159.5" ></text>
+</g>
+<g >
+<title>Z2k&lt;34&gt;* std::copy&lt;Z2k&lt;34&gt; const*, Z2k&lt;34&gt;*&gt; (19,854,164 samples, 0.01%)</title><rect x="1168.5" y="181" width="0.1" height="15.0" fill="rgb(251,212,50)" rx="2" ry="2" />
+<text  x="1171.45" y="191.5" ></text>
+</g>
+<g >
+<title>Z2k&lt;34&gt;* std::__copy_move_a1&lt;false, Z2k&lt;34&gt;*, Z2k&lt;34&gt;*&gt; (516,415,906 samples, 0.31%)</title><rect x="530.8" y="117" width="3.6" height="15.0" fill="rgb(214,41,9)" rx="2" ry="2" />
+<text  x="533.77" y="127.5" ></text>
+</g>
+<g >
+<title>Z2k&lt;34&gt;* std::__copy_move_a&lt;false, Z2k&lt;34&gt;*, Z2k&lt;34&gt;*&gt; (1,644,216,610 samples, 0.99%)</title><rect x="600.4" y="117" width="11.6" height="15.0" fill="rgb(230,117,28)" rx="2" ry="2" />
+<text  x="603.39" y="127.5" ></text>
+</g>
+<g >
+<title>Z2k&lt;34&gt;::Z2k (33,634,473 samples, 0.02%)</title><rect x="1177.2" y="149" width="0.2" height="15.0" fill="rgb(219,66,15)" rx="2" ry="2" />
+<text  x="1180.20" y="159.5" ></text>
+</g>
+<g >
+<title>GR1e&lt;34, 6&gt;::operator+ (66,064,952 samples, 0.04%)</title><rect x="1188.7" y="229" width="0.5" height="15.0" fill="rgb(226,101,24)" rx="2" ry="2" />
+<text  x="1191.69" y="239.5" ></text>
+</g>
+<g >
+<title>std::array&lt;Z2k&lt;34&gt;, 11&gt; ops::reduce_once&lt;11, 6, Z2k&lt;34&gt; &gt; (179,306,367 samples, 0.11%)</title><rect x="1178.2" y="165" width="1.3" height="15.0" fill="rgb(243,179,42)" rx="2" ry="2" />
+<text  x="1181.24" y="175.5" ></text>
+</g>
+<g >
+<title>GR1e&lt;34, 6&gt;::operator+ (48,673,632 samples, 0.03%)</title><rect x="1163.0" y="197" width="0.4" height="15.0" fill="rgb(226,101,24)" rx="2" ry="2" />
+<text  x="1166.04" y="207.5" ></text>
+</g>
+<g >
+<title>bool std::equal&lt;Z2k&lt;34&gt; const*, Z2k&lt;34&gt; const*&gt; (873,395,037 samples, 0.52%)</title><rect x="1144.8" y="165" width="6.2" height="15.0" fill="rgb(239,160,38)" rx="2" ry="2" />
+<text  x="1147.84" y="175.5" ></text>
+</g>
+<g >
+<title>std::array&lt;Z2k&lt;34&gt;, 6ul&gt;::operator[] (608,778,359 samples, 0.37%)</title><rect x="279.0" y="133" width="4.3" height="15.0" fill="rgb(241,165,39)" rx="2" ry="2" />
+<text  x="281.96" y="143.5" ></text>
+</g>
+<g >
+<title>std::array&lt;Z2k&lt;34&gt;, 11&gt; ops::reduce_once&lt;11, 6, Z2k&lt;34&gt; &gt; (155,827,037 samples, 0.09%)</title><rect x="1173.1" y="181" width="1.1" height="15.0" fill="rgb(243,179,42)" rx="2" ry="2" />
+<text  x="1176.10" y="191.5" ></text>
+</g>
+<g >
+<title>std::array&lt;Z2k&lt;34&gt;, 11ul&gt;::begin (56,237,590 samples, 0.03%)</title><rect x="107.9" y="133" width="0.4" height="15.0" fill="rgb(214,43,10)" rx="2" ry="2" />
+<text  x="110.90" y="143.5" ></text>
+</g>
+<g >
+<title>Z2k&lt;34&gt;* std::__copy_move_a&lt;false, Z2k&lt;34&gt; const*, Z2k&lt;34&gt;*&gt; (43,085,172 samples, 0.03%)</title><rect x="1182.5" y="165" width="0.3" height="15.0" fill="rgb(214,43,10)" rx="2" ry="2" />
+<text  x="1185.47" y="175.5" ></text>
+</g>
+<g >
+<title>Z2k&lt;34&gt;::operator- (56,489,647 samples, 0.03%)</title><rect x="474.2" y="149" width="0.4" height="15.0" fill="rgb(215,48,11)" rx="2" ry="2" />
+<text  x="477.17" y="159.5" ></text>
+</g>
+<g >
+<title>Z2k&lt;34&gt;* std::__copy_move&lt;false, true, std::random_access_iterator_tag&gt;::__copy_m&lt;Z2k&lt;34&gt; &gt; (254,257,400 samples, 0.15%)</title><rect x="531.7" y="85" width="1.8" height="15.0" fill="rgb(216,54,13)" rx="2" ry="2" />
+<text  x="534.72" y="95.5" ></text>
+</g>
+<g >
+<title>std::array&lt;Z2k&lt;34&gt;, 11ul&gt;::operator[] (28,018,077 samples, 0.02%)</title><rect x="477.3" y="165" width="0.2" height="15.0" fill="rgb(206,8,1)" rx="2" ry="2" />
+<text  x="480.34" y="175.5" ></text>
+</g>
+<g >
+<title>Z2k&lt;34&gt;::operator* (48,612,697 samples, 0.03%)</title><rect x="85.9" y="133" width="0.4" height="15.0" fill="rgb(234,137,32)" rx="2" ry="2" />
+<text  x="88.93" y="143.5" ></text>
+</g>
+<g >
+<title>Z2k&lt;34&gt;::operator+ (20,404,534 samples, 0.01%)</title><rect x="1163.1" y="181" width="0.2" height="15.0" fill="rgb(228,108,25)" rx="2" ry="2" />
+<text  x="1166.12" y="191.5" ></text>
+</g>
+<g >
+<title>GR1e&lt;34, 6&gt; arith::fast_exp_fermat&lt;GR1e&lt;34, 6&gt; &gt; (54,640,169,392 samples, 32.80%)</title><rect x="80.3" y="181" width="387.0" height="15.0" fill="rgb(214,45,10)" rx="2" ry="2" />
+<text  x="83.25" y="191.5" >GR1e&lt;34, 6&gt; arith::fast_exp_fermat&lt;GR1e&lt;34, 6&gt; &gt;</text>
+</g>
+<g >
+<title>std::array&lt;Z2k&lt;34&gt;, 11&gt; ops::reduce_once&lt;11, 6, Z2k&lt;34&gt; &gt; (379,121,353 samples, 0.23%)</title><rect x="1182.1" y="197" width="2.7" height="15.0" fill="rgb(243,179,42)" rx="2" ry="2" />
+<text  x="1185.14" y="207.5" ></text>
+</g>
+<g >
+<title>std::vector&lt;GR1e&lt;34, 6&gt;, std::allocator&lt;GR1e&lt;34, 6&gt; &gt; &gt;::operator[] (14,853,467 samples, 0.01%)</title><rect x="1181.1" y="229" width="0.1" height="15.0" fill="rgb(244,182,43)" rx="2" ry="2" />
+<text  x="1184.11" y="239.5" ></text>
+</g>
+<g >
+<title>Z2k&lt;34&gt;* std::__copy_move_a&lt;false, Z2k&lt;34&gt; const*, Z2k&lt;34&gt;*&gt; (19,887,585 samples, 0.01%)</title><rect x="473.9" y="133" width="0.2" height="15.0" fill="rgb(214,43,10)" rx="2" ry="2" />
+<text  x="476.94" y="143.5" ></text>
+</g>
+<g >
+<title>Z2k&lt;34&gt;* std::__copy_move&lt;false, true, std::random_access_iterator_tag&gt;::__copy_m&lt;Z2k&lt;34&gt; &gt; (754,006,248 samples, 0.45%)</title><rect x="148.0" y="37" width="5.3" height="15.0" fill="rgb(216,54,13)" rx="2" ry="2" />
+<text  x="150.98" y="47.5" ></text>
+</g>
+<g >
+<title>std::vector&lt;GR1e&lt;34, 6&gt;, std::allocator&lt;GR1e&lt;34, 6&gt; &gt; &gt; detail::generate_sharing&lt;GR1e&lt;34, 6&gt; &gt; (1,156,242,906 samples, 0.69%)</title><rect x="1181.4" y="261" width="8.2" height="15.0" fill="rgb(248,199,47)" rx="2" ry="2" />
+<text  x="1184.40" y="271.5" ></text>
+</g>
+<g >
+<title>std::__array_traits&lt;Z2k&lt;34&gt;, 11ul&gt;::_S_ref (373,949,004 samples, 0.22%)</title><rect x="434.9" y="101" width="2.7" height="15.0" fill="rgb(218,64,15)" rx="2" ry="2" />
+<text  x="437.95" y="111.5" ></text>
+</g>
+<g >
+<title>GR1e&lt;34, 6&gt;::operator* (673,188,507 samples, 0.40%)</title><rect x="473.2" y="197" width="4.8" height="15.0" fill="rgb(233,130,31)" rx="2" ry="2" />
+<text  x="476.20" y="207.5" ></text>
+</g>
+<g >
+<title>std::array&lt;Z2k&lt;34&gt;, 11ul&gt;::operator[] (20,007,012 samples, 0.01%)</title><rect x="1162.2" y="181" width="0.2" height="15.0" fill="rgb(206,8,1)" rx="2" ry="2" />
+<text  x="1165.24" y="191.5" ></text>
+</g>
+<g >
+<title>std::__array_traits&lt;Z2k&lt;34&gt;, 11ul&gt;::_S_ptr (15,960,037 samples, 0.01%)</title><rect x="1159.6" y="133" width="0.2" height="15.0" fill="rgb(207,11,2)" rx="2" ry="2" />
+<text  x="1162.64" y="143.5" ></text>
+</g>
+<g >
+<title>std::array&lt;Z2k&lt;34&gt;, 11ul&gt;::array (789,809,856 samples, 0.47%)</title><rect x="1033.2" y="149" width="5.6" height="15.0" fill="rgb(246,191,45)" rx="2" ry="2" />
+<text  x="1036.21" y="159.5" ></text>
+</g>
+<g >
+<title>Z2k&lt;34&gt;::Z2k&lt;unsigned long&gt; (402,137,615 samples, 0.24%)</title><rect x="283.3" y="117" width="2.8" height="15.0" fill="rgb(222,78,18)" rx="2" ry="2" />
+<text  x="286.30" y="127.5" ></text>
+</g>
+<g >
+<title>ops::reduction_polynomial_impl&lt;6, 3&gt;::value (112,956,608 samples, 0.07%)</title><rect x="120.4" y="85" width="0.8" height="15.0" fill="rgb(208,16,3)" rx="2" ry="2" />
+<text  x="123.35" y="95.5" ></text>
+</g>
+<g >
+<title>GR1e&lt;34, 6&gt;::operator- (6,535,643,948 samples, 3.92%)</title><rect x="1097.8" y="197" width="46.3" height="15.0" fill="rgb(214,41,9)" rx="2" ry="2" />
+<text  x="1100.83" y="207.5" >GR1e..</text>
+</g>
+<g >
+<title>Z2k&lt;34&gt;* std::__niter_wrap&lt;Z2k&lt;34&gt;*&gt; (128,722,636 samples, 0.08%)</title><rect x="155.9" y="69" width="0.9" height="15.0" fill="rgb(216,54,13)" rx="2" ry="2" />
+<text  x="158.92" y="79.5" ></text>
+</g>
+<g >
+<title>Z2k&lt;34&gt;::operator+= (124,900,613 samples, 0.07%)</title><rect x="471.5" y="149" width="0.9" height="15.0" fill="rgb(234,135,32)" rx="2" ry="2" />
+<text  x="474.55" y="159.5" ></text>
+</g>
+<g >
+<title>GR1e&lt;34, 6&gt;&amp; std::vector&lt;GR1e&lt;34, 6&gt;, std::allocator&lt;GR1e&lt;34, 6&gt; &gt; &gt;::emplace_back&lt;GR1e&lt;34, 6&gt; const&amp;&gt; (23,246,741 samples, 0.01%)</title><rect x="1167.5" y="229" width="0.2" height="15.0" fill="rgb(238,155,37)" rx="2" ry="2" />
+<text  x="1170.49" y="239.5" ></text>
+</g>
+<g >
+<title>KeccakWidth1600_Sponge (31,045,774 samples, 0.02%)</title><rect x="10.1" y="293" width="0.2" height="15.0" fill="rgb(217,59,14)" rx="2" ry="2" />
+<text  x="13.08" y="303.5" ></text>
+</g>
+<g >
+<title>Z2k&lt;34&gt;* std::__copy_move_a&lt;false, Z2k&lt;34&gt; const*, Z2k&lt;34&gt;*&gt; (48,374,303 samples, 0.03%)</title><rect x="564.8" y="133" width="0.3" height="15.0" fill="rgb(214,43,10)" rx="2" ry="2" />
+<text  x="567.80" y="143.5" ></text>
+</g>
+<g >
+<title>Z2k&lt;34&gt;::operator- (46,241,051 samples, 0.03%)</title><rect x="1178.7" y="149" width="0.3" height="15.0" fill="rgb(215,48,11)" rx="2" ry="2" />
+<text  x="1181.72" y="159.5" ></text>
+</g>
+<g >
+<title>Z2k&lt;34&gt;* std::__copy_move_a&lt;false, Z2k&lt;34&gt;*, Z2k&lt;34&gt;*&gt; (32,071,228 samples, 0.02%)</title><rect x="565.1" y="133" width="0.3" height="15.0" fill="rgb(230,117,28)" rx="2" ry="2" />
+<text  x="568.14" y="143.5" ></text>
+</g>
+<g >
+<title>std::array&lt;Z2k&lt;34&gt;, 11&gt; ops::reduce_once&lt;11, 6, Z2k&lt;34&gt; &gt; (318,165,034 samples, 0.19%)</title><rect x="1157.6" y="181" width="2.3" height="15.0" fill="rgb(243,179,42)" rx="2" ry="2" />
+<text  x="1160.65" y="191.5" ></text>
+</g>
+<g >
+<title>Z2k&lt;34&gt;::operator+ (116,583,766 samples, 0.07%)</title><rect x="1161.3" y="165" width="0.8" height="15.0" fill="rgb(228,108,25)" rx="2" ry="2" />
+<text  x="1164.30" y="175.5" ></text>
+</g>
+<g >
+<title>Z2k&lt;34&gt;::Z2k (23,270,859 samples, 0.01%)</title><rect x="1174.8" y="149" width="0.1" height="15.0" fill="rgb(219,66,15)" rx="2" ry="2" />
+<text  x="1177.78" y="159.5" ></text>
+</g>
+<g >
+<title>__memmove_avx_unaligned_erms (40,337,007 samples, 0.02%)</title><rect x="115.9" y="53" width="0.3" height="15.0" fill="rgb(205,0,0)" rx="2" ry="2" />
+<text  x="118.91" y="63.5" ></text>
+</g>
+<g >
+<title>Z2k&lt;34&gt;::operator+= (14,531,305,902 samples, 8.72%)</title><rect x="922.1" y="149" width="102.9" height="15.0" fill="rgb(234,135,32)" rx="2" ry="2" />
+<text  x="925.09" y="159.5" >Z2k&lt;34&gt;::ope..</text>
+</g>
+<g >
+<title>Z2k&lt;34&gt;::operator+ (311,064,730 samples, 0.19%)</title><rect x="351.0" y="117" width="2.2" height="15.0" fill="rgb(228,108,25)" rx="2" ry="2" />
+<text  x="353.97" y="127.5" ></text>
+</g>
+<g >
+<title>Z2k&lt;34&gt;::operator+ (34,429,058 samples, 0.02%)</title><rect x="1180.3" y="149" width="0.2" height="15.0" fill="rgb(228,108,25)" rx="2" ry="2" />
+<text  x="1183.26" y="159.5" ></text>
+</g>
+<g >
+<title>std::array&lt;Z2k&lt;34&gt;, 11ul&gt;::data (23,936,490 samples, 0.01%)</title><rect x="1159.6" y="149" width="0.2" height="15.0" fill="rgb(205,3,0)" rx="2" ry="2" />
+<text  x="1162.59" y="159.5" ></text>
+</g>
+<g >
+<title>bool std::__equal&lt;false&gt;::equal&lt;Z2k&lt;34&gt; const*, Z2k&lt;34&gt; const*&gt; (32,345,732 samples, 0.02%)</title><rect x="1146.8" y="133" width="0.2" height="15.0" fill="rgb(234,133,31)" rx="2" ry="2" />
+<text  x="1149.81" y="143.5" ></text>
+</g>
+<g >
+<title>Z2k&lt;34&gt;::operator* (149,012,326 samples, 0.09%)</title><rect x="470.4" y="149" width="1.1" height="15.0" fill="rgb(234,137,32)" rx="2" ry="2" />
+<text  x="473.40" y="159.5" ></text>
+</g>
+<g >
+<title>std::array&lt;Z2k&lt;34&gt;, 11ul&gt;::array (78,221,689 samples, 0.05%)</title><rect x="1183.8" y="181" width="0.6" height="15.0" fill="rgb(246,191,45)" rx="2" ry="2" />
+<text  x="1186.80" y="191.5" ></text>
+</g>
+<g >
+<title>Z2k&lt;34&gt;* std::copy&lt;Z2k&lt;34&gt;*, Z2k&lt;34&gt;*&gt; (1,433,272,886 samples, 0.86%)</title><rect x="157.4" y="101" width="10.1" height="15.0" fill="rgb(217,56,13)" rx="2" ry="2" />
+<text  x="160.39" y="111.5" ></text>
+</g>
+<g >
+<title>Z2k&lt;34&gt;::operator+ (38,912,367 samples, 0.02%)</title><rect x="1174.7" y="165" width="0.2" height="15.0" fill="rgb(228,108,25)" rx="2" ry="2" />
+<text  x="1177.67" y="175.5" ></text>
+</g>
+<g >
+<title>std::array&lt;Z2k&lt;34&gt;, 6ul&gt;::operator[] (40,291,514 samples, 0.02%)</title><rect x="472.6" y="149" width="0.3" height="15.0" fill="rgb(241,165,39)" rx="2" ry="2" />
+<text  x="475.60" y="159.5" ></text>
+</g>
+<g >
+<title>Z2k&lt;34&gt;* std::__niter_wrap&lt;Z2k&lt;34&gt;*&gt; (146,026,263 samples, 0.09%)</title><rect x="596.7" y="101" width="1.0" height="15.0" fill="rgb(216,54,13)" rx="2" ry="2" />
+<text  x="599.70" y="111.5" ></text>
+</g>
+<g >
+<title>std::__array_traits&lt;Z2k&lt;34&gt;, 6ul&gt;::_S_ref (28,257,940 samples, 0.02%)</title><rect x="472.7" y="133" width="0.2" height="15.0" fill="rgb(253,221,52)" rx="2" ry="2" />
+<text  x="475.69" y="143.5" ></text>
+</g>
+<g >
+<title>Z2k&lt;34&gt;::Z2k&lt;unsigned long&gt; (1,584,548,734 samples, 0.95%)</title><rect x="339.7" y="101" width="11.3" height="15.0" fill="rgb(222,78,18)" rx="2" ry="2" />
+<text  x="342.74" y="111.5" ></text>
+</g>
+<g >
+<title>Z2k&lt;34&gt;::operator* (9,150,064,060 samples, 5.49%)</title><rect x="286.1" y="117" width="64.9" height="15.0" fill="rgb(234,137,32)" rx="2" ry="2" />
+<text  x="289.15" y="127.5" >Z2k&lt;34&gt;..</text>
+</g>
+<g >
+<title>GR1e&lt;34, 6&gt;::operator* (343,152,574 samples, 0.21%)</title><rect x="1172.8" y="213" width="2.4" height="15.0" fill="rgb(233,130,31)" rx="2" ry="2" />
+<text  x="1175.79" y="223.5" ></text>
+</g>
+<g >
+<title>mpcbenchmark (166,562,258,148 samples, 100.00%)</title><rect x="10.0" y="309" width="1180.0" height="15.0" fill="rgb(230,117,28)" rx="2" ry="2" />
+<text  x="13.00" y="319.5" >mpcbenchmark</text>
+</g>
+<g >
+<title>std::_Vector_base&lt;GR1e&lt;34, 6&gt;, std::allocator&lt;GR1e&lt;34, 6&gt; &gt; &gt;::~_Vector_base (19,768,681 samples, 0.01%)</title><rect x="1167.3" y="197" width="0.1" height="15.0" fill="rgb(219,68,16)" rx="2" ry="2" />
+<text  x="1170.30" y="207.5" ></text>
+</g>
+<g >
+<title>Z2k&lt;34&gt;::operator+= (72,146,238 samples, 0.04%)</title><rect x="1176.9" y="181" width="0.5" height="15.0" fill="rgb(234,135,32)" rx="2" ry="2" />
+<text  x="1179.93" y="191.5" ></text>
+</g>
+<g >
+<title>auto ops::reduction_polynomial&lt;6&gt; (442,091,723 samples, 0.27%)</title><rect x="118.0" y="101" width="3.2" height="15.0" fill="rgb(234,137,32)" rx="2" ry="2" />
+<text  x="121.02" y="111.5" ></text>
+</g>
+<g >
+<title>Z2k&lt;34&gt;* std::__copy_move_a1&lt;false, Z2k&lt;34&gt;*, Z2k&lt;34&gt;*&gt; (1,027,432,993 samples, 0.62%)</title><rect x="601.6" y="101" width="7.3" height="15.0" fill="rgb(214,41,9)" rx="2" ry="2" />
+<text  x="604.58" y="111.5" ></text>
+</g>
+<g >
+<title>std::array&lt;Z2k&lt;34&gt;, 11ul&gt;::operator[] (753,273,546 samples, 0.45%)</title><rect x="790.2" y="149" width="5.3" height="15.0" fill="rgb(206,8,1)" rx="2" ry="2" />
+<text  x="793.20" y="159.5" ></text>
+</g>
+<g >
+<title>std::allocator_traits&lt;std::allocator&lt;GR1e&lt;34, 6&gt; &gt; &gt;::allocate (16,103,055 samples, 0.01%)</title><rect x="1167.1" y="149" width="0.1" height="15.0" fill="rgb(229,112,26)" rx="2" ry="2" />
+<text  x="1170.09" y="159.5" ></text>
+</g>
+<g >
+<title>std::vector&lt;GR1e&lt;34, 6&gt;, std::allocator&lt;GR1e&lt;34, 6&gt; &gt; &gt; detail::elewise_product&lt;GR1e&lt;34, 6&gt; &gt; (359,140,270 samples, 0.22%)</title><rect x="1175.3" y="229" width="2.6" height="15.0" fill="rgb(213,39,9)" rx="2" ry="2" />
+<text  x="1178.31" y="239.5" ></text>
+</g>
+<g >
+<title>std::array&lt;Z2k&lt;34&gt;, 11ul&gt;::array (544,987,756 samples, 0.33%)</title><rect x="426.6" y="117" width="3.9" height="15.0" fill="rgb(246,191,45)" rx="2" ry="2" />
+<text  x="429.64" y="127.5" ></text>
+</g>
+<g >
+<title>std::__array_traits&lt;Z2k&lt;34&gt;, 11ul&gt;::_S_ptr (68,599,237 samples, 0.04%)</title><rect x="254.7" y="69" width="0.5" height="15.0" fill="rgb(207,11,2)" rx="2" ry="2" />
+<text  x="257.72" y="79.5" ></text>
+</g>
+<g >
+<title>Z2k&lt;34&gt;::operator- (108,812,403 samples, 0.07%)</title><rect x="468.6" y="133" width="0.8" height="15.0" fill="rgb(215,48,11)" rx="2" ry="2" />
+<text  x="471.61" y="143.5" ></text>
+</g>
+<g >
+<title>std::array&lt;Z2k&lt;34&gt;,  (136,605,764 samples, 0.08%)</title><rect x="1174.3" y="197" width="0.9" height="15.0" fill="rgb(240,163,39)" rx="2" ry="2" />
+<text  x="1177.26" y="207.5" ></text>
+</g>
+<g >
+<title>__gnu_cxx::__normal_iterator&lt;GR1e&lt;34, 6&gt; const*, std::vector&lt;GR1e&lt;34, 6&gt;, std::allocator&lt;GR1e&lt;34, 6&gt; &gt; &gt; &gt;::base (19,908,442 samples, 0.01%)</title><rect x="1164.3" y="149" width="0.1" height="15.0" fill="rgb(221,77,18)" rx="2" ry="2" />
+<text  x="1167.27" y="159.5" ></text>
+</g>
+<g >
+<title>std::__array_traits&lt;Z2k&lt;34&gt;, 6ul&gt;::_S_ref (40,128,059 samples, 0.02%)</title><rect x="1162.5" y="165" width="0.3" height="15.0" fill="rgb(253,221,52)" rx="2" ry="2" />
+<text  x="1165.47" y="175.5" ></text>
+</g>
+<g >
+<title>std::array&lt;Z2k&lt;34&gt;, 6&gt; ops::reduce&lt;34, 11, 6, Z2k&lt;34&gt; &gt; (175,332,947 samples, 0.11%)</title><rect x="1173.0" y="197" width="1.2" height="15.0" fill="rgb(205,0,0)" rx="2" ry="2" />
+<text  x="1175.99" y="207.5" ></text>
+</g>
+<g >
+<title>Z2k&lt;34&gt;::Z2k (81,597,581 samples, 0.05%)</title><rect x="1187.4" y="165" width="0.6" height="15.0" fill="rgb(219,66,15)" rx="2" ry="2" />
+<text  x="1190.39" y="175.5" ></text>
+</g>
+<g >
+<title>GR1e&lt;34, 6&gt;::operator* (777,440,278 samples, 0.47%)</title><rect x="467.4" y="181" width="5.5" height="15.0" fill="rgb(233,130,31)" rx="2" ry="2" />
+<text  x="470.38" y="191.5" ></text>
+</g>
+<g >
+<title>Z2k&lt;34&gt;::operator+= (124,498,804 samples, 0.07%)</title><rect x="1170.9" y="197" width="0.9" height="15.0" fill="rgb(234,135,32)" rx="2" ry="2" />
+<text  x="1173.92" y="207.5" ></text>
+</g>
+<g >
+<title>Z2k&lt;34&gt;* std::__niter_base&lt;Z2k&lt;34&gt;*&gt; (204,270,573 samples, 0.12%)</title><rect x="164.5" y="69" width="1.4" height="15.0" fill="rgb(217,56,13)" rx="2" ry="2" />
+<text  x="167.50" y="79.5" ></text>
+</g>
+<g >
+<title>std::array&lt;Z2k&lt;34&gt;,  (320,958,303 samples, 0.19%)</title><rect x="1170.1" y="213" width="2.2" height="15.0" fill="rgb(240,163,39)" rx="2" ry="2" />
+<text  x="1173.06" y="223.5" ></text>
+</g>
+<g >
+<title>std::array&lt;Z2k&lt;34&gt;, 6ul&gt;::operator[] (27,370,663 samples, 0.02%)</title><rect x="1189.0" y="213" width="0.2" height="15.0" fill="rgb(241,165,39)" rx="2" ry="2" />
+<text  x="1191.96" y="223.5" ></text>
+</g>
+<g >
+<title>Z2k&lt;34&gt;* std::__copy_move_a&lt;false, Z2k&lt;34&gt;*, Z2k&lt;34&gt;*&gt; (30,952,152 samples, 0.02%)</title><rect x="1182.8" y="165" width="0.2" height="15.0" fill="rgb(230,117,28)" rx="2" ry="2" />
+<text  x="1185.83" y="175.5" ></text>
+</g>
+<g >
+<title>std::array&lt;Z2k&lt;34&gt;, 6ul&gt;::data (260,591,203 samples, 0.16%)</title><rect x="1151.6" y="149" width="1.8" height="15.0" fill="rgb(239,160,38)" rx="2" ry="2" />
+<text  x="1154.60" y="159.5" ></text>
+</g>
+<g >
+<title>GR1e&lt;34, 6&gt;::operator* (87,230,500,904 samples, 52.37%)</title><rect x="479.6" y="181" width="618.0" height="15.0" fill="rgb(233,130,31)" rx="2" ry="2" />
+<text  x="482.59" y="191.5" >GR1e&lt;34, 6&gt;::operator*</text>
+</g>
+<g >
+<title>Z2k&lt;34&gt;::operator* (145,164,108 samples, 0.09%)</title><rect x="475.5" y="165" width="1.0" height="15.0" fill="rgb(234,137,32)" rx="2" ry="2" />
+<text  x="478.45" y="175.5" ></text>
+</g>
+<g >
+<title>std::array&lt;Z2k&lt;34&gt;, 11ul&gt;::operator[] (338,444,019 samples, 0.20%)</title><rect x="272.8" y="117" width="2.4" height="15.0" fill="rgb(206,8,1)" rx="2" ry="2" />
+<text  x="275.76" y="127.5" ></text>
+</g>
+<g >
+<title>std::array&lt;Z2k&lt;34&gt;, 6&gt; ops::reduce&lt;34, 11, 6, Z2k&lt;34&gt; &gt; (366,420,564 samples, 0.22%)</title><rect x="467.8" y="165" width="2.5" height="15.0" fill="rgb(205,0,0)" rx="2" ry="2" />
+<text  x="470.75" y="175.5" ></text>
+</g>
+<g >
+<title>std::array&lt;Z2k&lt;34&gt;, 6ul&gt;::begin (20,158,117 samples, 0.01%)</title><rect x="1153.9" y="181" width="0.2" height="15.0" fill="rgb(248,201,48)" rx="2" ry="2" />
+<text  x="1156.91" y="191.5" ></text>
+</g>
+<g >
+<title>std::__array_traits&lt;Z2k&lt;34&gt;, 11ul&gt;::_S_ref (15,809,475 samples, 0.01%)</title><rect x="1171.8" y="197" width="0.1" height="15.0" fill="rgb(218,64,15)" rx="2" ry="2" />
+<text  x="1174.80" y="207.5" ></text>
+</g>
+<g >
+<title>GR1e&lt;34, 6&gt; detail::interpolate&lt;GR1e&lt;34, 6&gt; &gt; (153,665,900,112 samples, 92.26%)</title><rect x="78.9" y="229" width="1088.6" height="15.0" fill="rgb(217,56,13)" rx="2" ry="2" />
+<text  x="81.86" y="239.5" >GR1e&lt;34, 6&gt; detail::interpolate&lt;GR1e&lt;34, 6&gt; &gt;</text>
+</g>
+<g >
+<title>std::array&lt;Z2k&lt;34&gt;, 11ul&gt;::operator[] (16,361,083 samples, 0.01%)</title><rect x="470.1" y="133" width="0.1" height="15.0" fill="rgb(206,8,1)" rx="2" ry="2" />
+<text  x="473.06" y="143.5" ></text>
+</g>
+<g >
+<title>GR1e&lt;34, 6&gt;::operator== (1,416,313,719 samples, 0.85%)</title><rect x="1144.1" y="197" width="10.1" height="15.0" fill="rgb(216,53,12)" rx="2" ry="2" />
+<text  x="1147.13" y="207.5" ></text>
+</g>
+<g >
+<title>std::_Vector_base&lt;GR1e&lt;34, 6&gt;, std::allocator&lt;GR1e&lt;34, 6&gt; &gt; &gt;::_M_allocate (24,278,621 samples, 0.01%)</title><rect x="1167.0" y="165" width="0.2" height="15.0" fill="rgb(234,137,32)" rx="2" ry="2" />
+<text  x="1170.04" y="175.5" ></text>
+</g>
+<g >
+<title>Z2k&lt;34&gt;::operator+= (52,232,233 samples, 0.03%)</title><rect x="487.9" y="165" width="0.4" height="15.0" fill="rgb(234,135,32)" rx="2" ry="2" />
+<text  x="490.89" y="175.5" ></text>
+</g>
+<g >
+<title>__gnu_cxx::__normal_iterator&lt;GR1e&lt;34, 6&gt; const*, std::vector&lt;GR1e&lt;34, 6&gt;, std::allocator&lt;GR1e&lt;34, 6&gt; &gt; &gt; &gt;::operator* (32,384,482 samples, 0.02%)</title><rect x="1164.4" y="149" width="0.2" height="15.0" fill="rgb(246,191,45)" rx="2" ry="2" />
+<text  x="1167.41" y="159.5" ></text>
+</g>
+<g >
+<title>std::array&lt;Z2k&lt;34&gt;,  (28,059,845 samples, 0.02%)</title><rect x="1167.9" y="213" width="0.2" height="15.0" fill="rgb(240,163,39)" rx="2" ry="2" />
+<text  x="1170.91" y="223.5" ></text>
+</g>
+<g >
+<title>Z2k&lt;34&gt;* std::copy&lt;Z2k&lt;34&gt;*, Z2k&lt;34&gt;*&gt; (19,852,668 samples, 0.01%)</title><rect x="1168.6" y="181" width="0.1" height="15.0" fill="rgb(217,56,13)" rx="2" ry="2" />
+<text  x="1171.59" y="191.5" ></text>
+</g>
+<g >
+<title>Z2k&lt;34&gt;* std::__copy_move_a1&lt;false, Z2k&lt;34&gt; const*, Z2k&lt;34&gt;*&gt; (1,442,051,224 samples, 0.87%)</title><rect x="144.5" y="69" width="10.2" height="15.0" fill="rgb(247,197,47)" rx="2" ry="2" />
+<text  x="147.50" y="79.5" ></text>
+</g>
+<g >
+<title>std::array&lt;Z2k&lt;34&gt;, 6ul&gt;::data (20,231,931 samples, 0.01%)</title><rect x="800.0" y="149" width="0.2" height="15.0" fill="rgb(239,160,38)" rx="2" ry="2" />
+<text  x="803.04" y="159.5" ></text>
+</g>
+<g >
+<title>std::__array_traits&lt;Z2k&lt;34&gt;, 11ul&gt;::_S_ref (15,596,178 samples, 0.01%)</title><rect x="1184.7" y="165" width="0.1" height="15.0" fill="rgb(218,64,15)" rx="2" ry="2" />
+<text  x="1187.71" y="175.5" ></text>
+</g>
+<g >
+<title>Z2k&lt;34&gt;::Z2k (1,269,036,021 samples, 0.76%)</title><rect x="1118.6" y="165" width="9.0" height="15.0" fill="rgb(219,66,15)" rx="2" ry="2" />
+<text  x="1121.62" y="175.5" ></text>
+</g>
+<g >
+<title>std::array&lt;Z2k&lt;34&gt;, 11ul&gt;::array (47,842,166 samples, 0.03%)</title><rect x="1169.4" y="181" width="0.3" height="15.0" fill="rgb(246,191,45)" rx="2" ry="2" />
+<text  x="1172.36" y="191.5" ></text>
+</g>
+<g >
+<title>std::remove_reference&lt;unsigned long&gt;::type&amp;&amp; std::move&lt;unsigned long&gt; (15,957,699 samples, 0.01%)</title><rect x="1024.9" y="117" width="0.1" height="15.0" fill="rgb(223,85,20)" rx="2" ry="2" />
+<text  x="1027.92" y="127.5" ></text>
+</g>
+<g >
+<title>Z2k&lt;34&gt;::Z2k (23,224,227 samples, 0.01%)</title><rect x="1175.9" y="149" width="0.1" height="15.0" fill="rgb(219,66,15)" rx="2" ry="2" />
+<text  x="1178.88" y="159.5" ></text>
+</g>
+<g >
+<title>bool std::__equal_aux1&lt;Z2k&lt;34&gt; const*, Z2k&lt;34&gt; const*&gt; (564,112,458 samples, 0.34%)</title><rect x="1147.0" y="133" width="4.0" height="15.0" fill="rgb(224,90,21)" rx="2" ry="2" />
+<text  x="1150.04" y="143.5" ></text>
+</g>
+<g >
+<title>std::is_constant_evaluated (32,092,371 samples, 0.02%)</title><rect x="164.2" y="53" width="0.2" height="15.0" fill="rgb(212,33,8)" rx="2" ry="2" />
+<text  x="167.15" y="63.5" ></text>
+</g>
+<g >
+<title>Z2k&lt;34&gt;* std::__niter_wrap&lt;Z2k&lt;34&gt;*&gt; (32,044,668 samples, 0.02%)</title><rect x="614.2" y="117" width="0.3" height="15.0" fill="rgb(216,54,13)" rx="2" ry="2" />
+<text  x="617.23" y="127.5" ></text>
+</g>
+<g >
+<title>bool std::operator==&lt;Z2k&lt;34&gt;, 6ul&gt; (1,315,831,142 samples, 0.79%)</title><rect x="1144.6" y="181" width="9.3" height="15.0" fill="rgb(227,101,24)" rx="2" ry="2" />
+<text  x="1147.59" y="191.5" ></text>
+</g>
+<g >
+<title>Z2k&lt;34&gt;::Z2k (218,336,425 samples, 0.13%)</title><rect x="275.9" y="101" width="1.5" height="15.0" fill="rgb(219,66,15)" rx="2" ry="2" />
+<text  x="278.90" y="111.5" ></text>
+</g>
+<g >
+<title>std::is_constant_evaluated (24,327,074 samples, 0.01%)</title><rect x="116.3" y="69" width="0.2" height="15.0" fill="rgb(212,33,8)" rx="2" ry="2" />
+<text  x="119.31" y="79.5" ></text>
+</g>
+<g >
+<title>Z2k&lt;34&gt;::Z2k (535,860,389 samples, 0.32%)</title><rect x="944.8" y="133" width="3.8" height="15.0" fill="rgb(219,66,15)" rx="2" ry="2" />
+<text  x="947.77" y="143.5" ></text>
+</g>
+<g >
+<title>std::array&lt;Z2k&lt;34&gt;, 6ul&gt;::operator[] (30,827,750 samples, 0.02%)</title><rect x="1180.7" y="165" width="0.2" height="15.0" fill="rgb(241,165,39)" rx="2" ry="2" />
+<text  x="1183.67" y="175.5" ></text>
+</g>
+<g >
+<title>std::array&lt;Z2k&lt;34&gt;, 11ul&gt;::data (24,217,742 samples, 0.01%)</title><rect x="469.9" y="117" width="0.1" height="15.0" fill="rgb(205,3,0)" rx="2" ry="2" />
+<text  x="472.86" y="127.5" ></text>
+</g>
+<g >
+<title>GR1e&lt;34, 6&gt; const&amp; std::forward&lt;GR1e&lt;34, 6&gt; const&amp;&gt; (20,043,475 samples, 0.01%)</title><rect x="1166.6" y="133" width="0.1" height="15.0" fill="rgb(216,53,12)" rx="2" ry="2" />
+<text  x="1169.58" y="143.5" ></text>
+</g>
+<g >
+<title>std::array&lt;Z2k&lt;34&gt;, 11ul&gt;::operator[] (15,341,171 samples, 0.01%)</title><rect x="1179.4" y="149" width="0.1" height="15.0" fill="rgb(206,8,1)" rx="2" ry="2" />
+<text  x="1182.40" y="159.5" ></text>
+</g>
+<g >
+<title>std::__array_traits&lt;Z2k&lt;34&gt;, 6ul&gt;::_S_ref (3,117,275,217 samples, 1.87%)</title><rect x="445.2" y="101" width="22.1" height="15.0" fill="rgb(253,221,52)" rx="2" ry="2" />
+<text  x="448.18" y="111.5" >s..</text>
+</g>
+<g >
+<title>auto ops::reduction_polynomial&lt;6&gt; (628,432,350 samples, 0.38%)</title><rect x="536.8" y="133" width="4.5" height="15.0" fill="rgb(234,137,32)" rx="2" ry="2" />
+<text  x="539.84" y="143.5" ></text>
+</g>
+<g >
+<title>Z2k&lt;34&gt;* std::__copy_move_a1&lt;false, Z2k&lt;34&gt; const*, Z2k&lt;34&gt;*&gt; (2,378,139,724 samples, 1.43%)</title><rect x="577.7" y="101" width="16.9" height="15.0" fill="rgb(247,197,47)" rx="2" ry="2" />
+<text  x="580.72" y="111.5" ></text>
+</g>
+<g >
+<title>std::array&lt;Z2k&lt;34&gt;, 11ul&gt;::data (1,339,117,152 samples, 0.80%)</title><rect x="242.5" y="85" width="9.5" height="15.0" fill="rgb(205,3,0)" rx="2" ry="2" />
+<text  x="245.49" y="95.5" ></text>
+</g>
+<g >
+<title>std::array&lt;Z2k&lt;34&gt;, 11ul&gt;::begin (1,907,336,868 samples, 1.15%)</title><rect x="238.5" y="101" width="13.5" height="15.0" fill="rgb(214,43,10)" rx="2" ry="2" />
+<text  x="241.46" y="111.5" ></text>
+</g>
+<g >
+<title>Z2k&lt;34&gt;* std::__niter_wrap&lt;Z2k&lt;34&gt;*&gt; (19,737,085 samples, 0.01%)</title><rect x="157.3" y="85" width="0.1" height="15.0" fill="rgb(216,54,13)" rx="2" ry="2" />
+<text  x="160.25" y="95.5" ></text>
+</g>
+<g >
+<title>Z2k&lt;34&gt;* std::copy&lt;Z2k&lt;34&gt;*, Z2k&lt;34&gt;*&gt; (20,113,759 samples, 0.01%)</title><rect x="486.7" y="165" width="0.1" height="15.0" fill="rgb(217,56,13)" rx="2" ry="2" />
+<text  x="489.70" y="175.5" ></text>
+</g>
+<g >
+<title>Z2k&lt;34&gt; const* std::__miter_base&lt;Z2k&lt;34&gt; const*&gt; (193,701,090 samples, 0.12%)</title><rect x="139.5" y="85" width="1.3" height="15.0" fill="rgb(241,167,40)" rx="2" ry="2" />
+<text  x="142.47" y="95.5" ></text>
+</g>
+<g >
+<title>std::array&lt;Z2k&lt;34&gt;, 6&gt; ops::reduce&lt;34, 11, 6, Z2k&lt;34&gt; &gt; (105,408,828 samples, 0.06%)</title><rect x="1175.5" y="197" width="0.8" height="15.0" fill="rgb(205,0,0)" rx="2" ry="2" />
+<text  x="1178.52" y="207.5" ></text>
+</g>
+<g >
+<title>std::array&lt;Z2k&lt;34&gt;, 11ul&gt;::begin (707,620,212 samples, 0.42%)</title><rect x="784.6" y="149" width="5.0" height="15.0" fill="rgb(214,43,10)" rx="2" ry="2" />
+<text  x="787.59" y="159.5" ></text>
+</g>
+<g >
+<title>Z2k&lt;34&gt;::operator- (32,248,575 samples, 0.02%)</title><rect x="1172.4" y="213" width="0.3" height="15.0" fill="rgb(215,48,11)" rx="2" ry="2" />
+<text  x="1175.42" y="223.5" ></text>
+</g>
+<g >
+<title>std::array&lt;Z2k&lt;34&gt;, 6&gt; ops::reduce&lt;34, 11, 6, Z2k&lt;34&gt; &gt; (28,300,092 samples, 0.02%)</title><rect x="1097.6" y="181" width="0.2" height="15.0" fill="rgb(205,0,0)" rx="2" ry="2" />
+<text  x="1100.63" y="191.5" ></text>
+</g>
+<g >
+<title>Z2k&lt;34&gt; const* std::__miter_base&lt;Z2k&lt;34&gt; const*&gt; (322,490,877 samples, 0.19%)</title><rect x="569.3" y="117" width="2.3" height="15.0" fill="rgb(241,167,40)" rx="2" ry="2" />
+<text  x="572.32" y="127.5" ></text>
+</g>
+<g >
+<title>void std::_Construct&lt;GR1e&lt;34, 6&gt;, GR1e&lt;34, 6&gt; const&amp;&gt; (156,532,283 samples, 0.09%)</title><rect x="1165.7" y="149" width="1.1" height="15.0" fill="rgb(226,98,23)" rx="2" ry="2" />
+<text  x="1168.73" y="159.5" ></text>
+</g>
+<g >
+<title>Z2k&lt;34&gt;::operator+ (10,794,284,593 samples, 6.48%)</title><rect x="948.6" y="133" width="76.4" height="15.0" fill="rgb(228,108,25)" rx="2" ry="2" />
+<text  x="951.56" y="143.5" >Z2k&lt;34&gt;:..</text>
+</g>
+<g >
+<title>std::is_constant_evaluated (36,434,211 samples, 0.02%)</title><rect x="608.6" y="85" width="0.3" height="15.0" fill="rgb(212,33,8)" rx="2" ry="2" />
+<text  x="611.61" y="95.5" ></text>
+</g>
+<g >
+<title>Z2k&lt;34&gt;* std::__copy_move_a&lt;false, Z2k&lt;34&gt; const*, Z2k&lt;34&gt;*&gt; (32,022,012 samples, 0.02%)</title><rect x="468.1" y="117" width="0.3" height="15.0" fill="rgb(214,43,10)" rx="2" ry="2" />
+<text  x="471.15" y="127.5" ></text>
+</g>
+<g >
+<title>std::array&lt;Z2k&lt;34&gt;, 11ul&gt;::operator[] (507,104,687 samples, 0.30%)</title><rect x="521.5" y="165" width="3.6" height="15.0" fill="rgb(206,8,1)" rx="2" ry="2" />
+<text  x="524.54" y="175.5" ></text>
+</g>
+<g >
+<title>Z2k&lt;34&gt;::Z2k (30,178,995 samples, 0.02%)</title><rect x="1179.1" y="133" width="0.2" height="15.0" fill="rgb(219,66,15)" rx="2" ry="2" />
+<text  x="1182.08" y="143.5" ></text>
+</g>
+<g >
+<title>Z2k&lt;34&gt;::Z2k (580,519,543 samples, 0.35%)</title><rect x="1034.7" y="133" width="4.1" height="15.0" fill="rgb(219,66,15)" rx="2" ry="2" />
+<text  x="1037.70" y="143.5" ></text>
+</g>
+<g >
+<title>Z2k&lt;34&gt;* std::__niter_wrap&lt;Z2k&lt;34&gt;*&gt; (20,223,294 samples, 0.01%)</title><rect x="535.1" y="117" width="0.2" height="15.0" fill="rgb(216,54,13)" rx="2" ry="2" />
+<text  x="538.14" y="127.5" ></text>
+</g>
+<g >
+<title>std::__array_traits&lt;Z2k&lt;34&gt;, 6ul&gt;::_S_ptr (16,137,948 samples, 0.01%)</title><rect x="799.0" y="133" width="0.1" height="15.0" fill="rgb(241,168,40)" rx="2" ry="2" />
+<text  x="802.02" y="143.5" ></text>
+</g>
+<g >
+<title>std::array&lt;Z2k&lt;34&gt;, 6ul&gt;::data (161,134,270 samples, 0.10%)</title><rect x="277.6" y="101" width="1.1" height="15.0" fill="rgb(239,160,38)" rx="2" ry="2" />
+<text  x="280.59" y="111.5" ></text>
+</g>
+<g >
+<title>GR1e&lt;34, 6&gt;* std::__uninitialized_copy_a&lt;__gnu_cxx::__normal_iterator&lt;GR1e&lt;34, 6&gt; const*, std::vector&lt;GR1e&lt;34, 6&gt;, std::allocator&lt;GR1e&lt;34, 6&gt; &gt; &gt; &gt;, GR1e&lt;34, 6&gt;*, GR1e&lt;34, 6&gt; &gt; (15,477,158 samples, 0.01%)</title><rect x="1189.6" y="245" width="0.2" height="15.0" fill="rgb(217,56,13)" rx="2" ry="2" />
+<text  x="1192.64" y="255.5" ></text>
+</g>
+<g >
+<title>std::array&lt;Z2k&lt;34&gt;, 11ul&gt;::operator[] (31,269,854 samples, 0.02%)</title><rect x="1184.6" y="181" width="0.2" height="15.0" fill="rgb(206,8,1)" rx="2" ry="2" />
+<text  x="1187.60" y="191.5" ></text>
+</g>
+<g >
+<title>GR1e&lt;34, 6&gt;* std::uninitialized_copy&lt;__gnu_cxx::__normal_iterator&lt;GR1e&lt;34, 6&gt; const*, std::vector&lt;GR1e&lt;34, 6&gt;, std::allocator&lt;GR1e&lt;34, 6&gt; &gt; &gt; &gt;, GR1e&lt;34, 6&gt;*&gt; (455,155,043 samples, 0.27%)</title><rect x="1163.8" y="181" width="3.2" height="15.0" fill="rgb(233,130,31)" rx="2" ry="2" />
+<text  x="1166.78" y="191.5" ></text>
+</g>
+<g >
+<title>GR1e&lt;34, 6&gt;* std::uninitialized_copy&lt;__gnu_cxx::__normal_iterator&lt;GR1e&lt;34, 6&gt; const*, std::vector&lt;GR1e&lt;34, 6&gt;, std::allocator&lt;GR1e&lt;34, 6&gt; &gt; &gt; &gt;, GR1e&lt;34, 6&gt;*&gt; (15,477,158 samples, 0.01%)</title><rect x="1189.6" y="229" width="0.2" height="15.0" fill="rgb(233,130,31)" rx="2" ry="2" />
+<text  x="1192.64" y="239.5" ></text>
+</g>
+<g >
+<title>Z2k&lt;34&gt;::Z2k (3,071,541,823 samples, 1.84%)</title><rect x="216.7" y="85" width="21.8" height="15.0" fill="rgb(219,66,15)" rx="2" ry="2" />
+<text  x="219.70" y="95.5" >Z..</text>
+</g>
+<g >
+<title>Z2k&lt;34&gt;* std::__niter_base&lt;Z2k&lt;34&gt;*&gt; (68,724,608 samples, 0.04%)</title><rect x="535.6" y="133" width="0.5" height="15.0" fill="rgb(217,56,13)" rx="2" ry="2" />
+<text  x="538.58" y="143.5" ></text>
+</g>
+<g >
+<title>std::array&lt;Z2k&lt;34&gt;, 6ul&gt;::operator[] (20,394,800 samples, 0.01%)</title><rect x="1160.0" y="197" width="0.2" height="15.0" fill="rgb(241,165,39)" rx="2" ry="2" />
+<text  x="1163.04" y="207.5" ></text>
+</g>
+<g >
+<title>Z2k&lt;34&gt;* std::copy&lt;Z2k&lt;34&gt; const*, Z2k&lt;34&gt;*&gt; (2,828,826,692 samples, 1.70%)</title><rect x="137.4" y="101" width="20.0" height="15.0" fill="rgb(251,212,50)" rx="2" ry="2" />
+<text  x="140.35" y="111.5" ></text>
+</g>
+<g >
+<title>GR1e&lt;34, 6&gt;::operator+= (56,571,374 samples, 0.03%)</title><rect x="1163.0" y="213" width="0.4" height="15.0" fill="rgb(232,128,30)" rx="2" ry="2" />
+<text  x="1165.98" y="223.5" ></text>
+</g>
+<g >
+<title>GR1e&lt;34, 6&gt;::operator* (386,144,775 samples, 0.23%)</title><rect x="1178.2" y="197" width="2.7" height="15.0" fill="rgb(233,130,31)" rx="2" ry="2" />
+<text  x="1181.15" y="207.5" ></text>
+</g>
+<g >
+<title>std::array&lt;Z2k&lt;34&gt;, 11ul&gt;::array (6,773,995,861 samples, 4.07%)</title><rect x="681.9" y="133" width="48.0" height="15.0" fill="rgb(246,191,45)" rx="2" ry="2" />
+<text  x="684.88" y="143.5" >std:..</text>
+</g>
+<g >
+<title>std::array&lt;Z2k&lt;34&gt;, 11&gt; ops::reduce_once&lt;11, 6, Z2k&lt;34&gt; &gt; (318,446,481 samples, 0.19%)</title><rect x="467.9" y="149" width="2.3" height="15.0" fill="rgb(243,179,42)" rx="2" ry="2" />
+<text  x="470.92" y="159.5" ></text>
+</g>
+<g >
+<title>Z2k&lt;34&gt;* std::__copy_move_a2&lt;false, Z2k&lt;34&gt;*, Z2k&lt;34&gt;*&gt; (19,430,906 samples, 0.01%)</title><rect x="1182.8" y="133" width="0.2" height="15.0" fill="rgb(207,12,2)" rx="2" ry="2" />
+<text  x="1185.83" y="143.5" ></text>
+</g>
+<g >
+<title>std::__array_traits&lt;Z2k&lt;34&gt;, 6ul&gt;::_S_ref (15,452,022 samples, 0.01%)</title><rect x="1189.0" y="197" width="0.2" height="15.0" fill="rgb(253,221,52)" rx="2" ry="2" />
+<text  x="1192.04" y="207.5" ></text>
+</g>
+<g >
+<title>std::array&lt;Z2k&lt;34&gt;, 6ul&gt;::operator[] (52,377,419 samples, 0.03%)</title><rect x="1162.4" y="181" width="0.4" height="15.0" fill="rgb(241,165,39)" rx="2" ry="2" />
+<text  x="1165.38" y="191.5" ></text>
+</g>
+<g >
+<title>std::array&lt;Z2k&lt;34&gt;, 11ul&gt;::begin (3,582,895,361 samples, 2.15%)</title><rect x="729.9" y="133" width="25.4" height="15.0" fill="rgb(214,43,10)" rx="2" ry="2" />
+<text  x="732.87" y="143.5" >s..</text>
+</g>
+<g >
+<title>Z2k&lt;34&gt;::Z2k&lt;unsigned long&gt; (20,044,268 samples, 0.01%)</title><rect x="1170.8" y="181" width="0.1" height="15.0" fill="rgb(222,78,18)" rx="2" ry="2" />
+<text  x="1173.78" y="191.5" ></text>
+</g>
+<g >
+<title>Z2k&lt;34&gt;::Z2k (64,854,847 samples, 0.04%)</title><rect x="1161.7" y="149" width="0.4" height="15.0" fill="rgb(219,66,15)" rx="2" ry="2" />
+<text  x="1164.67" y="159.5" ></text>
+</g>
+<g >
+<title>__memmove_avx_unaligned_erms (96,801,691 samples, 0.06%)</title><rect x="153.3" y="37" width="0.7" height="15.0" fill="rgb(205,0,0)" rx="2" ry="2" />
+<text  x="156.32" y="47.5" ></text>
+</g>
+<g >
+<title>std::array&lt;Z2k&lt;34&gt;, 11ul&gt;::data (15,493,790 samples, 0.01%)</title><rect x="1184.5" y="165" width="0.1" height="15.0" fill="rgb(205,3,0)" rx="2" ry="2" />
+<text  x="1187.46" y="175.5" ></text>
+</g>
+<g >
+<title>bool std::__equal_aux1&lt;Z2k&lt;34&gt; const*, Z2k&lt;34&gt; const*&gt; (28,175,987 samples, 0.02%)</title><rect x="1145.5" y="149" width="0.2" height="15.0" fill="rgb(224,90,21)" rx="2" ry="2" />
+<text  x="1148.47" y="159.5" ></text>
+</g>
+<g >
+<title>GR1e&lt;34, 6&gt;::inv (55,457,519,352 samples, 33.30%)</title><rect x="80.2" y="197" width="392.9" height="15.0" fill="rgb(212,34,8)" rx="2" ry="2" />
+<text  x="83.23" y="207.5" >GR1e&lt;34, 6&gt;::inv</text>
+</g>
+<g >
+<title>Z2k&lt;34&gt;::Z2k&lt;unsigned long&gt; (24,199,393 samples, 0.01%)</title><rect x="471.3" y="133" width="0.2" height="15.0" fill="rgb(222,78,18)" rx="2" ry="2" />
+<text  x="474.29" y="143.5" ></text>
+</g>
+<g >
+<title>void std::vector&lt;GR1e&lt;34, 6&gt;, std::allocator&lt;GR1e&lt;34, 6&gt; &gt; &gt;::_M_realloc_insert&lt;GR1e&lt;34, 6&gt; const&amp;&gt; (16,472,055 samples, 0.01%)</title><rect x="1167.5" y="213" width="0.2" height="15.0" fill="rgb(205,3,0)" rx="2" ry="2" />
+<text  x="1170.54" y="223.5" ></text>
+</g>
+<g >
+<title>std::__array_traits&lt;Z2k&lt;34&gt;, 6ul&gt;::_S_ptr (145,241,872 samples, 0.09%)</title><rect x="277.7" y="85" width="1.0" height="15.0" fill="rgb(241,168,40)" rx="2" ry="2" />
+<text  x="280.70" y="95.5" ></text>
+</g>
+<g >
+<title>GR1e&lt;34, 6&gt;::operator* (1,025,104,775 samples, 0.62%)</title><rect x="1181.4" y="229" width="7.3" height="15.0" fill="rgb(233,130,31)" rx="2" ry="2" />
+<text  x="1184.42" y="239.5" ></text>
+</g>
+<g >
+<title>Z2k&lt;34&gt;* std::__copy_move_a2&lt;false, Z2k&lt;34&gt;*, Z2k&lt;34&gt;*&gt; (16,329,772 samples, 0.01%)</title><rect x="164.4" y="69" width="0.1" height="15.0" fill="rgb(207,12,2)" rx="2" ry="2" />
+<text  x="167.38" y="79.5" ></text>
+</g>
+<g >
+<title>GR1e&lt;34, 6&gt;::GR1e (15,801,800 samples, 0.01%)</title><rect x="479.5" y="181" width="0.1" height="15.0" fill="rgb(206,5,1)" rx="2" ry="2" />
+<text  x="482.48" y="191.5" ></text>
+</g>
+<g >
+<title>std::array&lt;Z2k&lt;34&gt;, 11ul&gt;::data (205,758,672 samples, 0.12%)</title><rect x="253.7" y="85" width="1.5" height="15.0" fill="rgb(205,3,0)" rx="2" ry="2" />
+<text  x="256.75" y="95.5" ></text>
+</g>
+<g >
+<title>Z2k&lt;34&gt;* std::__copy_move_a2&lt;false, Z2k&lt;34&gt; const*, Z2k&lt;34&gt;*&gt; (16,117,311 samples, 0.01%)</title><rect x="154.7" y="69" width="0.1" height="15.0" fill="rgb(241,167,40)" rx="2" ry="2" />
+<text  x="157.72" y="79.5" ></text>
+</g>
+<g >
+<title>std::array&lt;Z2k&lt;34&gt;, 6ul&gt;::begin (181,197,840 samples, 0.11%)</title><rect x="277.4" y="117" width="1.3" height="15.0" fill="rgb(248,201,48)" rx="2" ry="2" />
+<text  x="280.45" y="127.5" ></text>
+</g>
+<g >
+<title>Z2k&lt;34&gt;::Z2k&lt;unsigned long&gt; (16,005,525 samples, 0.01%)</title><rect x="475.3" y="165" width="0.2" height="15.0" fill="rgb(222,78,18)" rx="2" ry="2" />
+<text  x="478.34" y="175.5" ></text>
+</g>
+<g >
+<title>bool std::__equal_aux&lt;Z2k&lt;34&gt; const*, Z2k&lt;34&gt; const*&gt; (756,810,693 samples, 0.45%)</title><rect x="1145.7" y="149" width="5.3" height="15.0" fill="rgb(241,166,39)" rx="2" ry="2" />
+<text  x="1148.67" y="159.5" ></text>
+</g>
+<g >
+<title>Z2k&lt;34&gt;* std::__copy_move_a1&lt;false, Z2k&lt;34&gt; const*, Z2k&lt;34&gt;*&gt; (68,500,821 samples, 0.04%)</title><rect x="572.7" y="117" width="0.5" height="15.0" fill="rgb(247,197,47)" rx="2" ry="2" />
+<text  x="575.75" y="127.5" ></text>
+</g>
+<g >
+<title>memmove@plt (16,315,520 samples, 0.01%)</title><rect x="116.2" y="53" width="0.1" height="15.0" fill="rgb(232,128,30)" rx="2" ry="2" />
+<text  x="119.19" y="63.5" ></text>
+</g>
+<g >
+<title>std::is_constant_evaluated (60,201,437 samples, 0.04%)</title><rect x="534.0" y="101" width="0.4" height="15.0" fill="rgb(212,33,8)" rx="2" ry="2" />
+<text  x="537.01" y="111.5" ></text>
+</g>
+<g >
+<title>Z2k&lt;34&gt;* std::__copy_move_a&lt;false, Z2k&lt;34&gt; const*, Z2k&lt;34&gt;*&gt; (35,042,997 samples, 0.02%)</title><rect x="1173.2" y="149" width="0.3" height="15.0" fill="rgb(214,43,10)" rx="2" ry="2" />
+<text  x="1176.23" y="159.5" ></text>
+</g>
+<g >
+<title>std::array&lt;Z2k&lt;34&gt;, 6ul&gt;::data (32,433,213 samples, 0.02%)</title><rect x="1153.7" y="149" width="0.2" height="15.0" fill="rgb(239,160,38)" rx="2" ry="2" />
+<text  x="1156.68" y="159.5" ></text>
+</g>
+<g >
+<title>std::array&lt;Z2k&lt;34&gt;, 11ul&gt;::operator[] (20,206,749 samples, 0.01%)</title><rect x="472.5" y="149" width="0.1" height="15.0" fill="rgb(206,8,1)" rx="2" ry="2" />
+<text  x="475.46" y="159.5" ></text>
+</g>
+<g >
+<title>Z2k&lt;34&gt;* std::__niter_base&lt;Z2k&lt;34&gt;*&gt; (261,168,915 samples, 0.16%)</title><rect x="594.9" y="101" width="1.8" height="15.0" fill="rgb(217,56,13)" rx="2" ry="2" />
+<text  x="597.85" y="111.5" ></text>
+</g>
+<g >
+<title>std::__array_traits&lt;Z2k&lt;34&gt;, 11ul&gt;::_S_ptr (104,594,606 samples, 0.06%)</title><rect x="736.9" y="117" width="0.7" height="15.0" fill="rgb(207,11,2)" rx="2" ry="2" />
+<text  x="739.87" y="127.5" ></text>
+</g>
+<g >
+<title>GR1e&lt;34, 6&gt;* std::__relocate_a&lt;GR1e&lt;34, 6&gt;*, GR1e&lt;34, 6&gt;*, std::allocator&lt;GR1e&lt;34, 6&gt; &gt; &gt; (16,472,055 samples, 0.01%)</title><rect x="1167.5" y="165" width="0.2" height="15.0" fill="rgb(246,191,45)" rx="2" ry="2" />
+<text  x="1170.54" y="175.5" ></text>
+</g>
+<g >
+<title>Z2k&lt;34&gt;* std::copy&lt;Z2k&lt;34&gt; const*, Z2k&lt;34&gt;*&gt; (64,547,981 samples, 0.04%)</title><rect x="112.6" y="117" width="0.5" height="15.0" fill="rgb(251,212,50)" rx="2" ry="2" />
+<text  x="115.63" y="127.5" ></text>
+</g>
+<g >
+<title>std::array&lt;Z2k&lt;34&gt;,  (19,040,651 samples, 0.01%)</title><rect x="1175.3" y="197" width="0.2" height="15.0" fill="rgb(240,163,39)" rx="2" ry="2" />
+<text  x="1178.33" y="207.5" ></text>
+</g>
+<g >
+<title>std::array&lt;Z2k&lt;34&gt;, 6&gt; ops::reduce&lt;34, 11, 6, Z2k&lt;34&gt; &gt; (38,825,634,514 samples, 23.31%)</title><rect x="525.1" y="165" width="275.1" height="15.0" fill="rgb(205,0,0)" rx="2" ry="2" />
+<text  x="528.13" y="175.5" >std::array&lt;Z2k&lt;34&gt;, 6&gt; ops::reduce&lt;3..</text>
+</g>
+<g >
+<title>Z2k&lt;34&gt;::Z2k (4,098,526,309 samples, 2.46%)</title><rect x="651.2" y="117" width="29.0" height="15.0" fill="rgb(219,66,15)" rx="2" ry="2" />
+<text  x="654.18" y="127.5" >Z2..</text>
+</g>
+<g >
+<title>[unknown] (9,651,820,809 samples, 5.79%)</title><rect x="10.3" y="293" width="68.4" height="15.0" fill="rgb(210,24,5)" rx="2" ry="2" />
+<text  x="13.30" y="303.5" >[unknown]</text>
+</g>
+<g >
+<title>std::array&lt;Z2k&lt;34&gt;, 11ul&gt;::array (52,216,613 samples, 0.03%)</title><rect x="474.6" y="149" width="0.3" height="15.0" fill="rgb(246,191,45)" rx="2" ry="2" />
+<text  x="477.57" y="159.5" ></text>
+</g>
+<g >
+<title>GR1e&lt;34, 6&gt;::operator+ (19,236,924 samples, 0.01%)</title><rect x="1180.9" y="197" width="0.1" height="15.0" fill="rgb(226,101,24)" rx="2" ry="2" />
+<text  x="1183.89" y="207.5" ></text>
+</g>
+<g >
+<title>Z2k&lt;34&gt;* std::copy&lt;Z2k&lt;34&gt;*, Z2k&lt;34&gt;*&gt; (20,213,834 samples, 0.01%)</title><rect x="1158.2" y="165" width="0.2" height="15.0" fill="rgb(217,56,13)" rx="2" ry="2" />
+<text  x="1161.22" y="175.5" ></text>
+</g>
+<g >
+<title>std::array&lt;Z2k&lt;34&gt;, 11ul&gt;::data (15,856,339 samples, 0.01%)</title><rect x="1169.7" y="165" width="0.1" height="15.0" fill="rgb(205,3,0)" rx="2" ry="2" />
+<text  x="1172.73" y="175.5" ></text>
+</g>
+<g >
+<title>__memmove_avx_unaligned_erms (218,176,279 samples, 0.13%)</title><rect x="591.9" y="69" width="1.5" height="15.0" fill="rgb(205,0,0)" rx="2" ry="2" />
+<text  x="594.86" y="79.5" ></text>
+</g>
+<g >
+<title>std::array&lt;Z2k&lt;34&gt;, 11ul&gt;::begin (15,107,663 samples, 0.01%)</title><rect x="1179.3" y="149" width="0.1" height="15.0" fill="rgb(214,43,10)" rx="2" ry="2" />
+<text  x="1182.29" y="159.5" ></text>
+</g>
+<g >
+<title>auto ops::get_reduction_polynomial&lt;Z2k&lt;34&gt;, 34, 6&gt; (684,624,512 samples, 0.41%)</title><rect x="536.7" y="149" width="4.8" height="15.0" fill="rgb(207,12,3)" rx="2" ry="2" />
+<text  x="539.69" y="159.5" ></text>
+</g>
+<g >
+<title>Z2k&lt;34&gt;* std::__copy_move_a1&lt;false, Z2k&lt;34&gt; const*, Z2k&lt;34&gt;*&gt; (23,992,819 samples, 0.01%)</title><rect x="468.1" y="101" width="0.2" height="15.0" fill="rgb(247,197,47)" rx="2" ry="2" />
+<text  x="471.15" y="111.5" ></text>
+</g>
+<g >
+<title>Z2k&lt;34&gt;* std::__copy_move_a1&lt;false, Z2k&lt;34&gt;*, Z2k&lt;34&gt;*&gt; (16,198,995 samples, 0.01%)</title><rect x="158.4" y="85" width="0.1" height="15.0" fill="rgb(214,41,9)" rx="2" ry="2" />
+<text  x="161.36" y="95.5" ></text>
+</g>
+<g >
+<title>std::array&lt;Z2k&lt;34&gt;,  (371,040,978 samples, 0.22%)</title><rect x="475.3" y="181" width="2.7" height="15.0" fill="rgb(240,163,39)" rx="2" ry="2" />
+<text  x="478.34" y="191.5" ></text>
+</g>
+<g >
+<title>std::array&lt;Z2k&lt;34&gt;, 6&gt; ops::reduce&lt;34, 11, 6, Z2k&lt;34&gt; &gt; (350,392,450 samples, 0.21%)</title><rect x="1157.6" y="197" width="2.4" height="15.0" fill="rgb(205,0,0)" rx="2" ry="2" />
+<text  x="1160.56" y="207.5" ></text>
+</g>
+<g >
+<title>Z2k&lt;34&gt;* std::__copy_move_a&lt;false, Z2k&lt;34&gt; const*, Z2k&lt;34&gt;*&gt; (3,458,684,529 samples, 2.08%)</title><rect x="573.2" y="117" width="24.5" height="15.0" fill="rgb(214,43,10)" rx="2" ry="2" />
+<text  x="576.23" y="127.5" >Z..</text>
+</g>
+<g >
+<title>std::__array_traits&lt;Z2k&lt;34&gt;, 6ul&gt;::_S_ref (46,580,738 samples, 0.03%)</title><rect x="1188.4" y="181" width="0.3" height="15.0" fill="rgb(253,221,52)" rx="2" ry="2" />
+<text  x="1191.36" y="191.5" ></text>
+</g>
+<g >
+<title>GR1e&lt;34, 6&gt; const&amp; std::forward&lt;GR1e&lt;34, 6&gt; const&amp;&gt; (15,934,366 samples, 0.01%)</title><rect x="1164.0" y="149" width="0.1" height="15.0" fill="rgb(216,53,12)" rx="2" ry="2" />
+<text  x="1167.01" y="159.5" ></text>
+</g>
+<g >
+<title>std::vector&lt;GR1e&lt;34, 6&gt;, std::allocator&lt;GR1e&lt;34, 6&gt; &gt; &gt;::~vector (27,736,027 samples, 0.02%)</title><rect x="1167.3" y="213" width="0.2" height="15.0" fill="rgb(221,74,17)" rx="2" ry="2" />
+<text  x="1170.30" y="223.5" ></text>
+</g>
+<g >
+<title>Z2k&lt;34&gt;::operator* (112,559,757 samples, 0.07%)</title><rect x="1170.1" y="197" width="0.8" height="15.0" fill="rgb(234,137,32)" rx="2" ry="2" />
+<text  x="1173.12" y="207.5" ></text>
+</g>
+<g >
+<title>GR1e&lt;34, 6&gt;::GR1e (52,175,251 samples, 0.03%)</title><rect x="1104.8" y="181" width="0.4" height="15.0" fill="rgb(206,5,1)" rx="2" ry="2" />
+<text  x="1107.80" y="191.5" ></text>
+</g>
+<g >
+<title>std::vector&lt;GR1e&lt;34, 6&gt;, std::allocator&lt;GR1e&lt;34, 6&gt; &gt; &gt; detail::elewise_subtract&lt;GR1e&lt;34, 6&gt; &gt; (38,917,522 samples, 0.02%)</title><rect x="1177.9" y="229" width="0.2" height="15.0" fill="rgb(248,198,47)" rx="2" ry="2" />
+<text  x="1180.85" y="239.5" ></text>
+</g>
+<g >
+<title>Z2k&lt;34&gt;::Z2k (5,879,200,401 samples, 3.53%)</title><rect x="983.3" y="117" width="41.6" height="15.0" fill="rgb(219,66,15)" rx="2" ry="2" />
+<text  x="986.27" y="127.5" >Z2k..</text>
+</g>
+<g >
+<title>void std::__relocate_object_a&lt;GR1e&lt;34, 6&gt;, GR1e&lt;34, 6&gt;, std::allocator&lt;GR1e&lt;34, 6&gt; &gt; &gt; (16,472,055 samples, 0.01%)</title><rect x="1167.5" y="133" width="0.2" height="15.0" fill="rgb(217,58,13)" rx="2" ry="2" />
+<text  x="1170.54" y="143.5" ></text>
+</g>
+<g >
+<title>std::array&lt;Z2k&lt;34&gt;, 6ul&gt;::operator[] (60,687,369 samples, 0.04%)</title><rect x="477.5" y="165" width="0.5" height="15.0" fill="rgb(241,165,39)" rx="2" ry="2" />
+<text  x="480.54" y="175.5" ></text>
+</g>
+<g >
+<title>__gnu_cxx::__normal_iterator&lt;GR1e&lt;34, 6&gt; const*, std::vector&lt;GR1e&lt;34, 6&gt;, std::allocator&lt;GR1e&lt;34, 6&gt; &gt; &gt; &gt;::base (31,896,711 samples, 0.02%)</title><rect x="1165.4" y="133" width="0.2" height="15.0" fill="rgb(221,77,18)" rx="2" ry="2" />
+<text  x="1168.38" y="143.5" ></text>
+</g>
+<g >
+<title>std::remove_reference&lt;unsigned long&gt;::type&amp;&amp; std::move&lt;unsigned long&gt; (630,675,330 samples, 0.38%)</title><rect x="1020.5" y="101" width="4.4" height="15.0" fill="rgb(223,85,20)" rx="2" ry="2" />
+<text  x="1023.45" y="111.5" ></text>
+</g>
+<g >
+<title>std::array&lt;Z2k&lt;34&gt;, 11&gt; ops::reduce_once&lt;11, 6, Z2k&lt;34&gt; &gt; (20,829,328,977 samples, 12.51%)</title><rect x="121.3" y="117" width="147.6" height="15.0" fill="rgb(243,179,42)" rx="2" ry="2" />
+<text  x="124.32" y="127.5" >std::array&lt;Z2k&lt;34&gt;..</text>
+</g>
+<g >
+<title>Z2k&lt;34&gt;::operator- (105,858,535 samples, 0.06%)</title><rect x="1183.0" y="181" width="0.8" height="15.0" fill="rgb(215,48,11)" rx="2" ry="2" />
+<text  x="1186.05" y="191.5" ></text>
+</g>
+<g >
+<title>__libc_start_call_main (156,847,268,083 samples, 94.17%)</title><rect x="78.7" y="293" width="1111.2" height="15.0" fill="rgb(210,26,6)" rx="2" ry="2" />
+<text  x="81.73" y="303.5" >__libc_start_call_main</text>
+</g>
+<g >
+<title>Z2k&lt;34&gt;::operator- (29,336,460 samples, 0.02%)</title><rect x="1175.8" y="165" width="0.2" height="15.0" fill="rgb(215,48,11)" rx="2" ry="2" />
+<text  x="1178.84" y="175.5" ></text>
+</g>
+<g >
+<title>Z2k&lt;34&gt;* std::__miter_base&lt;Z2k&lt;34&gt;*&gt; (16,269,818 samples, 0.01%)</title><rect x="527.4" y="149" width="0.1" height="15.0" fill="rgb(223,85,20)" rx="2" ry="2" />
+<text  x="530.40" y="159.5" ></text>
+</g>
+<g >
+<title>std::__array_traits&lt;Z2k&lt;34&gt;, 11ul&gt;::_S_ptr (92,597,100 samples, 0.06%)</title><rect x="759.3" y="101" width="0.6" height="15.0" fill="rgb(207,11,2)" rx="2" ry="2" />
+<text  x="762.27" y="111.5" ></text>
+</g>
+<g >
+<title>std::array&lt;Z2k&lt;34&gt;,  (19,457,128 samples, 0.01%)</title><rect x="1172.8" y="197" width="0.2" height="15.0" fill="rgb(240,163,39)" rx="2" ry="2" />
+<text  x="1175.82" y="207.5" ></text>
+</g>
+<g >
+<title>main::{lambda (155,636,694,813 samples, 93.44%)</title><rect x="78.8" y="261" width="1102.6" height="15.0" fill="rgb(215,50,12)" rx="2" ry="2" />
+<text  x="81.80" y="271.5" >main::{lambda</text>
+</g>
+<g >
+<title>std::array&lt;Z2k&lt;34&gt;, 6ul&gt;::end (16,113,621 samples, 0.01%)</title><rect x="1154.1" y="181" width="0.1" height="15.0" fill="rgb(229,112,26)" rx="2" ry="2" />
+<text  x="1157.05" y="191.5" ></text>
+</g>
+<g >
+<title>Z2k&lt;34&gt;* std::__copy_move_a&lt;false, Z2k&lt;34&gt; const*, Z2k&lt;34&gt;*&gt; (36,216,007 samples, 0.02%)</title><rect x="1158.0" y="149" width="0.2" height="15.0" fill="rgb(214,43,10)" rx="2" ry="2" />
+<text  x="1160.96" y="159.5" ></text>
+</g>
+<g >
+<title>Z2k&lt;34&gt;* std::__copy_move_a2&lt;false, Z2k&lt;34&gt;*, Z2k&lt;34&gt;*&gt; (578,792,181 samples, 0.35%)</title><rect x="160.1" y="53" width="4.1" height="15.0" fill="rgb(207,12,2)" rx="2" ry="2" />
+<text  x="163.05" y="63.5" ></text>
+</g>
+<g >
+<title>std::__array_traits&lt;Z2k&lt;34&gt;, 6ul&gt;::_S_ref (4,740,012,840 samples, 2.85%)</title><rect x="1064.0" y="133" width="33.6" height="15.0" fill="rgb(253,221,52)" rx="2" ry="2" />
+<text  x="1066.99" y="143.5" >st..</text>
+</g>
+<g >
+<title>std::__array_traits&lt;Z2k&lt;34&gt;, 11ul&gt;::_S_ref (701,249,335 samples, 0.42%)</title><rect x="1046.1" y="133" width="5.0" height="15.0" fill="rgb(218,64,15)" rx="2" ry="2" />
+<text  x="1049.14" y="143.5" ></text>
+</g>
+<g >
+<title>Z2k&lt;34&gt;::Z2k (31,114,196 samples, 0.02%)</title><rect x="1173.8" y="149" width="0.2" height="15.0" fill="rgb(219,66,15)" rx="2" ry="2" />
+<text  x="1176.79" y="159.5" ></text>
+</g>
+<g >
+<title>__memmove_avx_unaligned_erms (325,157,814 samples, 0.20%)</title><rect x="118.0" y="85" width="2.3" height="15.0" fill="rgb(205,0,0)" rx="2" ry="2" />
+<text  x="121.02" y="95.5" ></text>
+</g>
+<g >
+<title>Z2k&lt;34&gt;::Z2k (56,527,222 samples, 0.03%)</title><rect x="469.0" y="117" width="0.4" height="15.0" fill="rgb(219,66,15)" rx="2" ry="2" />
+<text  x="471.98" y="127.5" ></text>
+</g>
+<g >
+<title>all (166,562,258,148 samples, 100%)</title><rect x="10.0" y="325" width="1180.0" height="15.0" fill="rgb(213,39,9)" rx="2" ry="2" />
+<text  x="13.00" y="335.5" ></text>
+</g>
+<g >
+<title>GR1e&lt;34, 6&gt;::operator*= (54,562,986,035 samples, 32.76%)</title><rect x="80.8" y="165" width="386.5" height="15.0" fill="rgb(239,158,37)" rx="2" ry="2" />
+<text  x="83.80" y="175.5" >GR1e&lt;34, 6&gt;::operator*=</text>
+</g>
+<g >
+<title>Z2k&lt;34&gt; const* std::__niter_base&lt;Z2k&lt;34&gt; const*&gt; (161,904,009 samples, 0.10%)</title><rect x="571.6" y="117" width="1.1" height="15.0" fill="rgb(234,137,32)" rx="2" ry="2" />
+<text  x="574.60" y="127.5" ></text>
+</g>
+<g >
+<title>Z2k&lt;34&gt;::operator== (282,106,204 samples, 0.17%)</title><rect x="1149.0" y="101" width="2.0" height="15.0" fill="rgb(218,60,14)" rx="2" ry="2" />
+<text  x="1152.03" y="111.5" ></text>
+</g>
+<g >
+<title>std::array&lt;Z2k&lt;34&gt;, 11ul&gt;::data (209,308,754 samples, 0.13%)</title><rect x="755.3" y="133" width="1.4" height="15.0" fill="rgb(205,3,0)" rx="2" ry="2" />
+<text  x="758.25" y="143.5" ></text>
+</g>
+<g >
+<title>Z2k&lt;34&gt;::Z2k&lt;unsigned long&gt; (2,595,753,918 samples, 1.56%)</title><rect x="900.8" y="133" width="18.4" height="15.0" fill="rgb(222,78,18)" rx="2" ry="2" />
+<text  x="903.81" y="143.5" ></text>
+</g>
+<g >
+<title>GR1e&lt;34, 6&gt; detail::lagrange_l&lt;GR1e&lt;34, 6&gt; &gt; (152,191,732,567 samples, 91.37%)</title><rect x="78.9" y="213" width="1078.1" height="15.0" fill="rgb(218,62,15)" rx="2" ry="2" />
+<text  x="81.86" y="223.5" >GR1e&lt;34, 6&gt; detail::lagrange_l&lt;GR1e&lt;34, 6&gt; &gt;</text>
+</g>
+<g >
+<title>Z2k&lt;34&gt;::Z2k (64,415,960 samples, 0.04%)</title><rect x="1159.1" y="149" width="0.4" height="15.0" fill="rgb(219,66,15)" rx="2" ry="2" />
+<text  x="1162.07" y="159.5" ></text>
+</g>
+<g >
+<title>Z2k&lt;34&gt;* std::__miter_base&lt;Z2k&lt;34&gt;*&gt; (32,605,077 samples, 0.02%)</title><rect x="137.1" y="101" width="0.3" height="15.0" fill="rgb(223,85,20)" rx="2" ry="2" />
+<text  x="140.12" y="111.5" ></text>
+</g>
+<g >
+<title>Z2k&lt;34&gt; const* std::__niter_base&lt;Z2k&lt;34&gt; const*&gt; (40,307,211 samples, 0.02%)</title><rect x="1145.2" y="149" width="0.3" height="15.0" fill="rgb(234,137,32)" rx="2" ry="2" />
+<text  x="1148.18" y="159.5" ></text>
+</g>
+<g >
+<title>std::vector&lt;GR1e&lt;34, 6&gt;, std::allocator&lt;GR1e&lt;34, 6&gt; &gt; &gt; detail::generate_sharing&lt;GR1e&lt;34, 6&gt; &gt; (420,812,883 samples, 0.25%)</title><rect x="1178.1" y="229" width="3.0" height="15.0" fill="rgb(248,199,47)" rx="2" ry="2" />
+<text  x="1181.13" y="239.5" ></text>
+</g>
+<g >
+<title>std::array&lt;Z2k&lt;34&gt;, 11ul&gt;::array (31,114,196 samples, 0.02%)</title><rect x="1173.8" y="165" width="0.2" height="15.0" fill="rgb(246,191,45)" rx="2" ry="2" />
+<text  x="1176.79" y="175.5" ></text>
+</g>
+<g >
+<title>std::array&lt;Z2k&lt;34&gt;, 11ul&gt;::begin (23,617,731 samples, 0.01%)</title><rect x="1184.8" y="197" width="0.2" height="15.0" fill="rgb(214,43,10)" rx="2" ry="2" />
+<text  x="1187.82" y="207.5" ></text>
+</g>
+<g >
+<title>ops::reduction_polynomial_impl&lt;6, 3&gt;::value (35,912,182 samples, 0.02%)</title><rect x="541.3" y="133" width="0.2" height="15.0" fill="rgb(208,16,3)" rx="2" ry="2" />
+<text  x="544.29" y="143.5" ></text>
+</g>
+<g >
+<title>std::array&lt;Z2k&lt;34&gt;, 6&gt; ops::reduce&lt;34, 11, 6, Z2k&lt;34&gt; &gt; (249,411,058 samples, 0.15%)</title><rect x="473.5" y="181" width="1.8" height="15.0" fill="rgb(205,0,0)" rx="2" ry="2" />
+<text  x="476.52" y="191.5" ></text>
+</g>
+<g >
+<title>Z2k&lt;34&gt;* std::__copy_move_a1&lt;false, Z2k&lt;34&gt; const*, Z2k&lt;34&gt;*&gt; (31,173,075 samples, 0.02%)</title><rect x="1173.3" y="133" width="0.2" height="15.0" fill="rgb(247,197,47)" rx="2" ry="2" />
+<text  x="1176.26" y="143.5" ></text>
+</g>
+<g >
+<title>void detail::transpose&lt;GR1e&lt;34, 6&gt; &gt; (21,742,251 samples, 0.01%)</title><rect x="1189.8" y="261" width="0.1" height="15.0" fill="rgb(206,6,1)" rx="2" ry="2" />
+<text  x="1192.75" y="271.5" ></text>
+</g>
+<g >
+<title>std::array&lt;Z2k&lt;34&gt;,  (20,303,864 samples, 0.01%)</title><rect x="473.3" y="181" width="0.2" height="15.0" fill="rgb(240,163,39)" rx="2" ry="2" />
+<text  x="476.34" y="191.5" ></text>
+</g>
+<g >
+<title>std::__array_traits&lt;Z2k&lt;34&gt;, 11ul&gt;::_S_ref (226,067,782 samples, 0.14%)</title><rect x="680.3" y="133" width="1.6" height="15.0" fill="rgb(218,64,15)" rx="2" ry="2" />
+<text  x="683.28" y="143.5" ></text>
+</g>
+<g >
+<title>std::__array_traits&lt;Z2k&lt;34&gt;, 11ul&gt;::_S_ptr (84,312,964 samples, 0.05%)</title><rect x="241.9" y="85" width="0.6" height="15.0" fill="rgb(207,11,2)" rx="2" ry="2" />
+<text  x="244.89" y="95.5" ></text>
+</g>
+<g >
+<title>Z2k&lt;34&gt;* std::__copy_move&lt;false, true, std::random_access_iterator_tag&gt;::__copy_m&lt;Z2k&lt;34&gt; &gt; (414,182,649 samples, 0.25%)</title><rect x="160.7" y="37" width="3.0" height="15.0" fill="rgb(216,54,13)" rx="2" ry="2" />
+<text  x="163.74" y="47.5" ></text>
+</g>
+<g >
+<title>Z2k&lt;34&gt;* std::__copy_move&lt;false, true, std::random_access_iterator_tag&gt;::__copy_m&lt;Z2k&lt;34&gt; &gt; (23,434,453 samples, 0.01%)</title><rect x="1173.3" y="101" width="0.2" height="15.0" fill="rgb(216,54,13)" rx="2" ry="2" />
+<text  x="1176.29" y="111.5" ></text>
+</g>
+<g >
+<title>Z2k&lt;34&gt;* std::__copy_move_a&lt;false, Z2k&lt;34&gt; const*, Z2k&lt;34&gt;*&gt; (28,093,975 samples, 0.02%)</title><rect x="136.8" y="101" width="0.2" height="15.0" fill="rgb(214,43,10)" rx="2" ry="2" />
+<text  x="139.84" y="111.5" ></text>
+</g>
+<g >
+<title>Z2k&lt;34&gt;::Z2k (43,037,007 samples, 0.03%)</title><rect x="1183.5" y="165" width="0.3" height="15.0" fill="rgb(219,66,15)" rx="2" ry="2" />
+<text  x="1186.49" y="175.5" ></text>
+</g>
+<g >
+<title>std::array&lt;Z2k&lt;34&gt;, 11ul&gt;::begin (36,026,311 samples, 0.02%)</title><rect x="469.8" y="133" width="0.2" height="15.0" fill="rgb(214,43,10)" rx="2" ry="2" />
+<text  x="472.78" y="143.5" ></text>
+</g>
+<g >
+<title>Z2k&lt;34&gt;* std::__niter_wrap&lt;Z2k&lt;34&gt;*&gt; (47,853,905 samples, 0.03%)</title><rect x="598.4" y="117" width="0.4" height="15.0" fill="rgb(216,54,13)" rx="2" ry="2" />
+<text  x="601.42" y="127.5" ></text>
+</g>
+<g >
+<title>GR1e&lt;34, 6&gt;::GR1e (358,820,486 samples, 0.22%)</title><rect x="83.3" y="133" width="2.6" height="15.0" fill="rgb(206,5,1)" rx="2" ry="2" />
+<text  x="86.34" y="143.5" ></text>
+</g>
+<g >
+<title>Z2k&lt;34&gt;* std::__copy_move&lt;false, true, std::random_access_iterator_tag&gt;::__copy_m&lt;Z2k&lt;34&gt; &gt; (15,955,412 samples, 0.01%)</title><rect x="146.4" y="53" width="0.1" height="15.0" fill="rgb(216,54,13)" rx="2" ry="2" />
+<text  x="149.38" y="63.5" ></text>
+</g>
+<g >
+<title>std::array&lt;Z2k&lt;34&gt;, 11ul&gt;::data (164,803,861 samples, 0.10%)</title><rect x="271.2" y="101" width="1.2" height="15.0" fill="rgb(205,3,0)" rx="2" ry="2" />
+<text  x="274.19" y="111.5" ></text>
+</g>
+<g >
+<title>Z2k&lt;34&gt;::Z2k (32,304,160 samples, 0.02%)</title><rect x="1158.7" y="149" width="0.2" height="15.0" fill="rgb(219,66,15)" rx="2" ry="2" />
+<text  x="1161.70" y="159.5" ></text>
+</g>
+<g >
+<title>std::__array_traits&lt;Z2k&lt;34&gt;, 6ul&gt;::_S_ref (44,511,972 samples, 0.03%)</title><rect x="477.7" y="149" width="0.3" height="15.0" fill="rgb(253,221,52)" rx="2" ry="2" />
+<text  x="480.65" y="159.5" ></text>
+</g>
+<g >
+<title>std::is_constant_evaluated (60,527,309 samples, 0.04%)</title><rect x="154.3" y="53" width="0.4" height="15.0" fill="rgb(212,33,8)" rx="2" ry="2" />
+<text  x="157.29" y="63.5" ></text>
+</g>
+<g >
+<title>GR1e&lt;34, 6&gt;::operator- (24,203,153 samples, 0.01%)</title><rect x="1163.4" y="213" width="0.2" height="15.0" fill="rgb(214,41,9)" rx="2" ry="2" />
+<text  x="1166.38" y="223.5" ></text>
+</g>
+<g >
+<title>std::array&lt;Z2k&lt;34&gt;, 6ul&gt;::operator[] (30,828,057 samples, 0.02%)</title><rect x="1177.6" y="181" width="0.2" height="15.0" fill="rgb(241,165,39)" rx="2" ry="2" />
+<text  x="1180.60" y="191.5" ></text>
+</g>
+<g >
+<title>Z2k&lt;34&gt;::Z2k (430,220,332 samples, 0.26%)</title><rect x="1129.3" y="165" width="3.1" height="15.0" fill="rgb(219,66,15)" rx="2" ry="2" />
+<text  x="1132.33" y="175.5" ></text>
+</g>
+<g >
+<title>Z2k&lt;34&gt;* std::__copy_move_a&lt;false, Z2k&lt;34&gt; const*, Z2k&lt;34&gt;*&gt; (15,839,783 samples, 0.01%)</title><rect x="1168.5" y="165" width="0.1" height="15.0" fill="rgb(214,43,10)" rx="2" ry="2" />
+<text  x="1171.48" y="175.5" ></text>
+</g>
+<g >
+<title>std::array&lt;Z2k&lt;34&gt;,  (44,528,772 samples, 0.03%)</title><rect x="467.4" y="165" width="0.3" height="15.0" fill="rgb(240,163,39)" rx="2" ry="2" />
+<text  x="470.38" y="175.5" ></text>
+</g>
+<g >
+<title>std::array&lt;Z2k&lt;34&gt;, 11ul&gt;::operator[] (20,076,504 samples, 0.01%)</title><rect x="1169.8" y="181" width="0.2" height="15.0" fill="rgb(206,8,1)" rx="2" ry="2" />
+<text  x="1172.84" y="191.5" ></text>
+</g>
+<g >
+<title>std::array&lt;Z2k&lt;34&gt;,  (47,911,345 samples, 0.03%)</title><rect x="1157.2" y="197" width="0.3" height="15.0" fill="rgb(240,163,39)" rx="2" ry="2" />
+<text  x="1160.16" y="207.5" ></text>
+</g>
+<g >
+<title>ops::reduction_polynomial_impl&lt;6, 3&gt;::value (198,017,819 samples, 0.12%)</title><rect x="539.9" y="117" width="1.4" height="15.0" fill="rgb(208,16,3)" rx="2" ry="2" />
+<text  x="542.89" y="127.5" ></text>
+</g>
+<g >
+<title>Z2k&lt;34&gt;::Z2k (22,944,850 samples, 0.01%)</title><rect x="1180.3" y="133" width="0.2" height="15.0" fill="rgb(219,66,15)" rx="2" ry="2" />
+<text  x="1183.35" y="143.5" ></text>
+</g>
+<g >
+<title>std::vector&lt;GR1e&lt;34, 6&gt;, std::allocator&lt;GR1e&lt;34, 6&gt; &gt; &gt;::_S_relocate (16,472,055 samples, 0.01%)</title><rect x="1167.5" y="197" width="0.2" height="15.0" fill="rgb(207,9,2)" rx="2" ry="2" />
+<text  x="1170.54" y="207.5" ></text>
+</g>
+<g >
+<title>Z2k&lt;34&gt;* std::__niter_base&lt;Z2k&lt;34&gt;*&gt; (347,533,638 samples, 0.21%)</title><rect x="608.9" y="101" width="2.5" height="15.0" fill="rgb(217,56,13)" rx="2" ry="2" />
+<text  x="611.92" y="111.5" ></text>
+</g>
+<g >
+<title>std::vector&lt;GR1e&lt;34, 6&gt;, std::allocator&lt;GR1e&lt;34, 6&gt; &gt; &gt;::operator[] (40,231,892 samples, 0.02%)</title><rect x="1156.8" y="197" width="0.2" height="15.0" fill="rgb(244,182,43)" rx="2" ry="2" />
+<text  x="1159.76" y="207.5" ></text>
+</g>
+<g >
+<title>Z2k&lt;34&gt;* std::__copy_move_a1&lt;false, Z2k&lt;34&gt;*, Z2k&lt;34&gt;*&gt; (19,430,906 samples, 0.01%)</title><rect x="1182.8" y="149" width="0.2" height="15.0" fill="rgb(214,41,9)" rx="2" ry="2" />
+<text  x="1185.83" y="159.5" ></text>
+</g>
+<g >
+<title>Z2k&lt;34&gt;::Z2k&lt;unsigned long&gt; (672,930,103 samples, 0.40%)</title><rect x="807.8" y="149" width="4.8" height="15.0" fill="rgb(222,78,18)" rx="2" ry="2" />
+<text  x="810.81" y="159.5" ></text>
+</g>
+<g >
+<title>Z2k&lt;34&gt;* std::__niter_base&lt;Z2k&lt;34&gt;*&gt; (59,942,986 samples, 0.04%)</title><rect x="156.8" y="85" width="0.5" height="15.0" fill="rgb(217,56,13)" rx="2" ry="2" />
+<text  x="159.83" y="95.5" ></text>
+</g>
+<g >
+<title>std::__array_traits&lt;Z2k&lt;34&gt;, 6ul&gt;::_S_ref (23,926,799 samples, 0.01%)</title><rect x="1172.2" y="181" width="0.1" height="15.0" fill="rgb(253,221,52)" rx="2" ry="2" />
+<text  x="1175.17" y="191.5" ></text>
+</g>
+<g >
+<title>Z2k&lt;34&gt;* std::__niter_base&lt;Z2k&lt;34&gt;*&gt; (153,219,221 samples, 0.09%)</title><rect x="154.8" y="69" width="1.1" height="15.0" fill="rgb(217,56,13)" rx="2" ry="2" />
+<text  x="157.83" y="79.5" ></text>
+</g>
+<g >
+<title>std::array&lt;Z2k&lt;34&gt;, 11ul&gt;::array (52,471,350 samples, 0.03%)</title><rect x="469.4" y="133" width="0.4" height="15.0" fill="rgb(246,191,45)" rx="2" ry="2" />
+<text  x="472.40" y="143.5" ></text>
+</g>
+<g >
+<title>std::__array_traits&lt;Z2k&lt;34&gt;, 11ul&gt;::_S_ptr (68,388,579 samples, 0.04%)</title><rect x="271.9" y="85" width="0.5" height="15.0" fill="rgb(207,11,2)" rx="2" ry="2" />
+<text  x="274.88" y="95.5" ></text>
+</g>
+<g >
+<title>Z2k&lt;34&gt;::Z2k&lt;unsigned long&gt; (20,271,681 samples, 0.01%)</title><rect x="1160.9" y="165" width="0.1" height="15.0" fill="rgb(222,78,18)" rx="2" ry="2" />
+<text  x="1163.88" y="175.5" ></text>
+</g>
+<g >
+<title>Z2k&lt;34&gt;::Z2k&lt;unsigned long&gt; (16,287,370 samples, 0.01%)</title><rect x="476.4" y="149" width="0.1" height="15.0" fill="rgb(222,78,18)" rx="2" ry="2" />
+<text  x="479.36" y="159.5" ></text>
+</g>
+<g >
+<title>std::array&lt;Z2k&lt;34&gt;, 11ul&gt;::end (346,819,021 samples, 0.21%)</title><rect x="252.7" y="101" width="2.5" height="15.0" fill="rgb(245,185,44)" rx="2" ry="2" />
+<text  x="255.75" y="111.5" ></text>
+</g>
+<g >
+<title>Z2k&lt;34&gt;* std::__niter_wrap&lt;Z2k&lt;34&gt;*&gt; (28,549,031 samples, 0.02%)</title><rect x="165.9" y="69" width="0.2" height="15.0" fill="rgb(216,54,13)" rx="2" ry="2" />
+<text  x="168.94" y="79.5" ></text>
+</g>
+<g >
+<title>Z2k&lt;34&gt;::operator- (80,429,383 samples, 0.05%)</title><rect x="1158.4" y="165" width="0.5" height="15.0" fill="rgb(215,48,11)" rx="2" ry="2" />
+<text  x="1161.36" y="175.5" ></text>
+</g>
+<g >
+<title>Z2k&lt;34&gt;* std::__copy_move_a1&lt;false, Z2k&lt;34&gt;*, Z2k&lt;34&gt;*&gt; (16,185,326 samples, 0.01%)</title><rect x="468.4" y="101" width="0.1" height="15.0" fill="rgb(214,41,9)" rx="2" ry="2" />
+<text  x="471.38" y="111.5" ></text>
+</g>
+<g >
+<title>main (156,847,268,083 samples, 94.17%)</title><rect x="78.7" y="277" width="1111.2" height="15.0" fill="rgb(243,179,42)" rx="2" ry="2" />
+<text  x="81.73" y="287.5" >main</text>
+</g>
+<g >
+<title>bool std::equal&lt;Z2k&lt;34&gt; const*, Z2k&lt;34&gt; const*&gt; (24,103,599 samples, 0.01%)</title><rect x="1144.4" y="181" width="0.2" height="15.0" fill="rgb(239,160,38)" rx="2" ry="2" />
+<text  x="1147.42" y="191.5" ></text>
+</g>
+<g >
+<title>std::array&lt;Z2k&lt;34&gt;, 11ul&gt;::end (450,673,339 samples, 0.27%)</title><rect x="756.7" y="133" width="3.2" height="15.0" fill="rgb(245,185,44)" rx="2" ry="2" />
+<text  x="759.73" y="143.5" ></text>
+</g>
+<g >
+<title>std::vector&lt;GR1e&lt;34, 6&gt;, std::allocator&lt;GR1e&lt;34, 6&gt; &gt; &gt;::back (23,381,941 samples, 0.01%)</title><rect x="1189.2" y="229" width="0.2" height="15.0" fill="rgb(251,215,51)" rx="2" ry="2" />
+<text  x="1192.21" y="239.5" ></text>
+</g>
+<g >
+<title>Z2k&lt;34&gt;::operator- (8,789,186,959 samples, 5.28%)</title><rect x="618.0" y="133" width="62.3" height="15.0" fill="rgb(215,48,11)" rx="2" ry="2" />
+<text  x="621.01" y="143.5" >Z2k&lt;34..</text>
+</g>
+<g >
+<title>Z2k&lt;34&gt;* std::__miter_base&lt;Z2k&lt;34&gt;*&gt; (129,159,761 samples, 0.08%)</title><rect x="166.1" y="85" width="1.0" height="15.0" fill="rgb(223,85,20)" rx="2" ry="2" />
+<text  x="169.15" y="95.5" ></text>
+</g>
+<g >
+<title>std::__array_traits&lt;Z2k&lt;34&gt;, 11ul&gt;::_S_ref (16,012,268 samples, 0.01%)</title><rect x="472.5" y="133" width="0.1" height="15.0" fill="rgb(218,64,15)" rx="2" ry="2" />
+<text  x="475.49" y="143.5" ></text>
+</g>
+<g >
+<title>std::array&lt;Z2k&lt;34&gt;,  (362,425,369 samples, 0.22%)</title><rect x="1160.2" y="197" width="2.6" height="15.0" fill="rgb(240,163,39)" rx="2" ry="2" />
+<text  x="1163.19" y="207.5" ></text>
+</g>
+<g >
+<title>Z2k&lt;34&gt;* std::__niter_base&lt;Z2k&lt;34&gt;*&gt; (88,025,135 samples, 0.05%)</title><rect x="534.5" y="117" width="0.6" height="15.0" fill="rgb(217,56,13)" rx="2" ry="2" />
+<text  x="537.52" y="127.5" ></text>
+</g>
+<g >
+<title>Z2k&lt;34&gt;::operator+= (171,229,217 samples, 0.10%)</title><rect x="1186.8" y="197" width="1.2" height="15.0" fill="rgb(234,135,32)" rx="2" ry="2" />
+<text  x="1189.75" y="207.5" ></text>
+</g>
+<g >
+<title>GR1e&lt;34, 6&gt;::operator- (27,200,968 samples, 0.02%)</title><rect x="1177.9" y="213" width="0.2" height="15.0" fill="rgb(214,41,9)" rx="2" ry="2" />
+<text  x="1180.88" y="223.5" ></text>
+</g>
+<g >
+<title>std::array&lt;Z2k&lt;34&gt;, 11ul&gt;::data (2,489,997,501 samples, 1.49%)</title><rect x="737.6" y="117" width="17.7" height="15.0" fill="rgb(205,3,0)" rx="2" ry="2" />
+<text  x="740.61" y="127.5" ></text>
+</g>
+<g >
+<title>Z2k&lt;34&gt;* std::__copy_move_a&lt;false, Z2k&lt;34&gt;*, Z2k&lt;34&gt;*&gt; (487,468,672 samples, 0.29%)</title><rect x="113.8" y="101" width="3.5" height="15.0" fill="rgb(230,117,28)" rx="2" ry="2" />
+<text  x="116.80" y="111.5" ></text>
+</g>
+<g >
+<title>std::array&lt;Z2k&lt;34&gt;, 11ul&gt;::data (272,818,049 samples, 0.16%)</title><rect x="758.0" y="117" width="1.9" height="15.0" fill="rgb(205,3,0)" rx="2" ry="2" />
+<text  x="760.99" y="127.5" ></text>
+</g>
+<g >
+<title>operator new (16,040,363 samples, 0.01%)</title><rect x="1166.7" y="133" width="0.1" height="15.0" fill="rgb(216,51,12)" rx="2" ry="2" />
+<text  x="1169.72" y="143.5" ></text>
+</g>
+<g >
+<title>std::array&lt;Z2k&lt;34&gt;, 11ul&gt;::begin (429,804,563 samples, 0.26%)</title><rect x="269.3" y="117" width="3.1" height="15.0" fill="rgb(214,43,10)" rx="2" ry="2" />
+<text  x="272.32" y="127.5" ></text>
+</g>
+<g >
+<title>Z2k&lt;34&gt;* std::copy&lt;Z2k&lt;34&gt; const*, Z2k&lt;34&gt;*&gt; (34,129,293 samples, 0.02%)</title><rect x="1178.4" y="149" width="0.3" height="15.0" fill="rgb(251,212,50)" rx="2" ry="2" />
+<text  x="1181.43" y="159.5" ></text>
+</g>
+<g >
+<title>Z2k&lt;34&gt;* std::__copy_move_a2&lt;false, Z2k&lt;34&gt; const*, Z2k&lt;34&gt;*&gt; (23,470,228 samples, 0.01%)</title><rect x="1182.6" y="133" width="0.1" height="15.0" fill="rgb(241,167,40)" rx="2" ry="2" />
+<text  x="1185.55" y="143.5" ></text>
+</g>
+<g >
+<title>std::array&lt;Z2k&lt;34&gt;, 6ul&gt;::array (28,529,604 samples, 0.02%)</title><rect x="800.2" y="165" width="0.2" height="15.0" fill="rgb(230,118,28)" rx="2" ry="2" />
+<text  x="803.19" y="175.5" ></text>
+</g>
+<g >
+<title>std::array&lt;Z2k&lt;34&gt;, 11ul&gt;::begin (19,476,646 samples, 0.01%)</title><rect x="1174.0" y="165" width="0.1" height="15.0" fill="rgb(214,43,10)" rx="2" ry="2" />
+<text  x="1177.01" y="175.5" ></text>
+</g>
+<g >
+<title>Z2k&lt;34&gt;* std::__copy_move&lt;false, true, std::random_access_iterator_tag&gt;::__copy_m&lt;Z2k&lt;34&gt; &gt; (552,373,658 samples, 0.33%)</title><rect x="603.6" y="69" width="4.0" height="15.0" fill="rgb(216,54,13)" rx="2" ry="2" />
+<text  x="606.64" y="79.5" ></text>
+</g>
+<g >
+<title>Z2k&lt;34&gt;* std::copy&lt;Z2k&lt;34&gt; const*, Z2k&lt;34&gt;*&gt; (43,998,098 samples, 0.03%)</title><rect x="468.1" y="133" width="0.3" height="15.0" fill="rgb(251,212,50)" rx="2" ry="2" />
+<text  x="471.06" y="143.5" ></text>
+</g>
+<g >
+<title>Z2k&lt;34&gt;::operator+ (7,186,537,134 samples, 4.31%)</title><rect x="370.9" y="101" width="50.9" height="15.0" fill="rgb(228,108,25)" rx="2" ry="2" />
+<text  x="373.86" y="111.5" >Z2k&lt;3..</text>
+</g>
+<g >
+<title>Z2k&lt;34&gt;* std::__copy_move_a2&lt;false, Z2k&lt;34&gt; const*, Z2k&lt;34&gt;*&gt; (1,099,902,329 samples, 0.66%)</title><rect x="146.5" y="53" width="7.8" height="15.0" fill="rgb(241,167,40)" rx="2" ry="2" />
+<text  x="149.50" y="63.5" ></text>
+</g>
+<g >
+<title>Z2k&lt;34&gt; const* std::__niter_base&lt;Z2k&lt;34&gt; const*&gt; (217,725,784 samples, 0.13%)</title><rect x="143.0" y="69" width="1.5" height="15.0" fill="rgb(234,137,32)" rx="2" ry="2" />
+<text  x="145.96" y="79.5" ></text>
+</g>
+<g >
+<title>Z2k&lt;34&gt;* std::__copy_move_a2&lt;false, Z2k&lt;34&gt; const*, Z2k&lt;34&gt;*&gt; (27,282,066 samples, 0.02%)</title><rect x="1173.3" y="117" width="0.2" height="15.0" fill="rgb(241,167,40)" rx="2" ry="2" />
+<text  x="1176.29" y="127.5" ></text>
+</g>
+<g >
+<title>Z2k&lt;34&gt;::Z2k (358,979,835 samples, 0.22%)</title><rect x="368.3" y="101" width="2.6" height="15.0" fill="rgb(219,66,15)" rx="2" ry="2" />
+<text  x="371.32" y="111.5" ></text>
+</g>
+<g >
+<title>std::array&lt;Z2k&lt;34&gt;,  (4,550,896,806 samples, 2.73%)</title><rect x="488.3" y="165" width="32.2" height="15.0" fill="rgb(240,163,39)" rx="2" ry="2" />
+<text  x="491.26" y="175.5" >st..</text>
+</g>
+<g >
+<title>Z2k&lt;34&gt;* std::__copy_move&lt;false, true, std::random_access_iterator_tag&gt;::__copy_m&lt;Z2k&lt;34&gt; &gt; (15,564,219 samples, 0.01%)</title><rect x="1182.6" y="117" width="0.1" height="15.0" fill="rgb(216,54,13)" rx="2" ry="2" />
+<text  x="1185.58" y="127.5" ></text>
+</g>
+<g >
+<title>std::array&lt;Z2k&lt;34&gt;,  (208,691,979 samples, 0.13%)</title><rect x="1176.3" y="197" width="1.5" height="15.0" fill="rgb(240,163,39)" rx="2" ry="2" />
+<text  x="1179.34" y="207.5" ></text>
+</g>
+<g >
+<title>Z2k&lt;34&gt;* std::copy&lt;Z2k&lt;34&gt; const*, Z2k&lt;34&gt;*&gt; (111,846,783 samples, 0.07%)</title><rect x="527.5" y="149" width="0.8" height="15.0" fill="rgb(251,212,50)" rx="2" ry="2" />
+<text  x="530.52" y="159.5" ></text>
+</g>
+<g >
+<title>std::__array_traits&lt;Z2k&lt;34&gt;, 6ul&gt;::_S_ptr (148,272,604 samples, 0.09%)</title><rect x="1152.4" y="133" width="1.0" height="15.0" fill="rgb(241,168,40)" rx="2" ry="2" />
+<text  x="1155.40" y="143.5" ></text>
+</g>
+<g >
+<title>std::__array_traits&lt;Z2k&lt;34&gt;, 6ul&gt;::_S_ptr (24,381,306 samples, 0.01%)</title><rect x="1153.7" y="133" width="0.2" height="15.0" fill="rgb(241,168,40)" rx="2" ry="2" />
+<text  x="1156.74" y="143.5" ></text>
+</g>
+<g >
+<title>Z2k&lt;34&gt;::Z2k (44,302,296 samples, 0.03%)</title><rect x="469.5" y="117" width="0.3" height="15.0" fill="rgb(219,66,15)" rx="2" ry="2" />
+<text  x="472.46" y="127.5" ></text>
+</g>
+<g >
+<title>std::array&lt;Z2k&lt;34&gt;, 11ul&gt;::array (34,055,489 samples, 0.02%)</title><rect x="1179.0" y="149" width="0.3" height="15.0" fill="rgb(246,191,45)" rx="2" ry="2" />
+<text  x="1182.05" y="159.5" ></text>
+</g>
+<g >
+<title>std::__array_traits&lt;Z2k&lt;34&gt;, 11ul&gt;::_S_ptr (15,856,339 samples, 0.01%)</title><rect x="1169.7" y="149" width="0.1" height="15.0" fill="rgb(207,11,2)" rx="2" ry="2" />
+<text  x="1172.73" y="159.5" ></text>
+</g>
+<g >
+<title>auto ops::get_reduction_polynomial&lt;Z2k&lt;34&gt;, 34, 6&gt; (462,289,777 samples, 0.28%)</title><rect x="118.0" y="117" width="3.2" height="15.0" fill="rgb(207,12,3)" rx="2" ry="2" />
+<text  x="120.96" y="127.5" ></text>
+</g>
+<g >
+<title>std::array&lt;Z2k&lt;34&gt;, 11ul&gt;::array (112,617,351 samples, 0.07%)</title><rect x="783.8" y="149" width="0.8" height="15.0" fill="rgb(246,191,45)" rx="2" ry="2" />
+<text  x="786.80" y="159.5" ></text>
+</g>
+<g >
+<title>std::array&lt;Z2k&lt;34&gt;, 11ul&gt;::array (80,500,146 samples, 0.05%)</title><rect x="1159.0" y="165" width="0.5" height="15.0" fill="rgb(246,191,45)" rx="2" ry="2" />
+<text  x="1161.96" y="175.5" ></text>
+</g>
+<g >
+<title>Z2k&lt;34&gt;::operator+= (53,580,650 samples, 0.03%)</title><rect x="1180.1" y="165" width="0.4" height="15.0" fill="rgb(234,135,32)" rx="2" ry="2" />
+<text  x="1183.13" y="175.5" ></text>
+</g>
+<g >
+<title>Z2k&lt;34&gt;::operator* (15,049,911,065 samples, 9.04%)</title><rect x="812.6" y="149" width="106.6" height="15.0" fill="rgb(234,137,32)" rx="2" ry="2" />
+<text  x="815.58" y="159.5" >Z2k&lt;34&gt;::oper..</text>
+</g>
+<g >
+<title>std::array&lt;Z2k&lt;34&gt;, 6ul&gt;::begin (160,797,613 samples, 0.10%)</title><rect x="798.9" y="149" width="1.1" height="15.0" fill="rgb(248,201,48)" rx="2" ry="2" />
+<text  x="801.90" y="159.5" ></text>
+</g>
+<g >
+<title>Z2k&lt;34&gt;* std::__copy_move_a1&lt;false, Z2k&lt;34&gt;*, Z2k&lt;34&gt;*&gt; (309,929,674 samples, 0.19%)</title><rect x="114.3" y="85" width="2.2" height="15.0" fill="rgb(214,41,9)" rx="2" ry="2" />
+<text  x="117.28" y="95.5" ></text>
+</g>
+<g >
+<title>memmove@plt (28,422,506 samples, 0.02%)</title><rect x="608.4" y="69" width="0.2" height="15.0" fill="rgb(232,128,30)" rx="2" ry="2" />
+<text  x="611.40" y="79.5" ></text>
+</g>
+<g >
+<title>std::array&lt;Z2k&lt;34&gt;, 6&gt; ops::reduce&lt;34, 11, 6, Z2k&lt;34&gt; &gt; (263,987,282 samples, 0.16%)</title><rect x="1168.1" y="213" width="1.9" height="15.0" fill="rgb(205,0,0)" rx="2" ry="2" />
+<text  x="1171.14" y="223.5" ></text>
+</g>
+<g >
+<title>Z2k&lt;34&gt; const* std::__niter_base&lt;Z2k&lt;34&gt; const*&gt; (96,069,029 samples, 0.06%)</title><rect x="1146.1" y="133" width="0.7" height="15.0" fill="rgb(234,137,32)" rx="2" ry="2" />
+<text  x="1149.13" y="143.5" ></text>
+</g>
+<g >
+<title>Z2k&lt;34&gt;* std::__copy_move&lt;false, true, std::random_access_iterator_tag&gt;::__copy_m&lt;Z2k&lt;34&gt; &gt; (44,260,501 samples, 0.03%)</title><rect x="580.8" y="85" width="0.3" height="15.0" fill="rgb(216,54,13)" rx="2" ry="2" />
+<text  x="583.80" y="95.5" ></text>
+</g>
+<g >
+<title>std::_Vector_base&lt;GR1e&lt;34, 6&gt;, std::allocator&lt;GR1e&lt;34, 6&gt; &gt; &gt;::_Vector_base (36,586,365 samples, 0.02%)</title><rect x="1167.0" y="197" width="0.3" height="15.0" fill="rgb(233,132,31)" rx="2" ry="2" />
+<text  x="1170.01" y="207.5" ></text>
+</g>
+<g >
+<title>memmove@plt (31,867,804 samples, 0.02%)</title><rect x="163.9" y="37" width="0.3" height="15.0" fill="rgb(232,128,30)" rx="2" ry="2" />
+<text  x="166.93" y="47.5" ></text>
+</g>
+<g >
+<title>Z2k&lt;34&gt;::operator+ (92,501,625 samples, 0.06%)</title><rect x="471.8" y="133" width="0.6" height="15.0" fill="rgb(228,108,25)" rx="2" ry="2" />
+<text  x="474.77" y="143.5" ></text>
+</g>
+<g >
+<title>std::__array_traits&lt;Z2k&lt;34&gt;, 11ul&gt;::_S_ref (932,359,298 samples, 0.56%)</title><rect x="1025.0" y="149" width="6.6" height="15.0" fill="rgb(218,64,15)" rx="2" ry="2" />
+<text  x="1028.04" y="159.5" ></text>
+</g>
+<g >
+<title>std::array&lt;Z2k&lt;34&gt;, 11ul&gt;::begin (31,105,132 samples, 0.02%)</title><rect x="1184.4" y="181" width="0.2" height="15.0" fill="rgb(214,43,10)" rx="2" ry="2" />
+<text  x="1187.35" y="191.5" ></text>
+</g>
+<g >
+<title>std::remove_reference&lt;unsigned long&gt;::type&amp;&amp; std::move&lt;unsigned long&gt; (208,804,065 samples, 0.13%)</title><rect x="206.9" y="69" width="1.5" height="15.0" fill="rgb(223,85,20)" rx="2" ry="2" />
+<text  x="209.88" y="79.5" ></text>
+</g>
+<g >
+<title>Z2k&lt;34&gt;* std::__copy_move_a&lt;false, Z2k&lt;34&gt; const*, Z2k&lt;34&gt;*&gt; (2,098,839,020 samples, 1.26%)</title><rect x="142.0" y="85" width="14.8" height="15.0" fill="rgb(214,43,10)" rx="2" ry="2" />
+<text  x="144.96" y="95.5" ></text>
+</g>
+<g >
+<title>bool std::__equal&lt;false&gt;::equal&lt;Z2k&lt;34&gt; const*, Z2k&lt;34&gt; const*&gt; (512,167,388 samples, 0.31%)</title><rect x="1147.4" y="117" width="3.6" height="15.0" fill="rgb(234,133,31)" rx="2" ry="2" />
+<text  x="1150.40" y="127.5" ></text>
+</g>
+<g >
+<title>Z2k&lt;34&gt;* std::__copy_move_a&lt;false, Z2k&lt;34&gt; const*, Z2k&lt;34&gt;*&gt; (26,466,943 samples, 0.02%)</title><rect x="1178.5" y="133" width="0.2" height="15.0" fill="rgb(214,43,10)" rx="2" ry="2" />
+<text  x="1181.48" y="143.5" ></text>
+</g>
+<g >
+<title>Z2k&lt;34&gt;::operator+= (152,393,937 samples, 0.09%)</title><rect x="1161.0" y="181" width="1.1" height="15.0" fill="rgb(234,135,32)" rx="2" ry="2" />
+<text  x="1164.05" y="191.5" ></text>
+</g>
+<g >
+<title>Z2k&lt;34&gt;::operator* (117,480,519 samples, 0.07%)</title><rect x="1160.2" y="181" width="0.8" height="15.0" fill="rgb(234,137,32)" rx="2" ry="2" />
+<text  x="1163.19" y="191.5" ></text>
+</g>
+<g >
+<title>std::array&lt;Z2k&lt;34&gt;, 6ul&gt;::operator[] (39,994,713 samples, 0.02%)</title><rect x="1172.1" y="197" width="0.2" height="15.0" fill="rgb(241,165,39)" rx="2" ry="2" />
+<text  x="1175.05" y="207.5" ></text>
+</g>
+<g >
+<title>Z2k&lt;34&gt;::Z2k (23,201,005 samples, 0.01%)</title><rect x="1178.9" y="133" width="0.1" height="15.0" fill="rgb(219,66,15)" rx="2" ry="2" />
+<text  x="1181.88" y="143.5" ></text>
+</g>
+<g >
+<title>Z2k&lt;34&gt;::operator- (40,353,077 samples, 0.02%)</title><rect x="1154.2" y="197" width="0.3" height="15.0" fill="rgb(215,48,11)" rx="2" ry="2" />
+<text  x="1157.16" y="207.5" ></text>
+</g>
+<g >
+<title>__memmove_avx_unaligned_erms (19,529,125 samples, 0.01%)</title><rect x="78.4" y="277" width="0.2" height="15.0" fill="rgb(205,0,0)" rx="2" ry="2" />
+<text  x="81.42" y="287.5" ></text>
+</g>
+<g >
+<title>GR1e&lt;34, 6&gt;* std::__uninitialized_copy&lt;false&gt;::__uninit_copy&lt;__gnu_cxx::__normal_iterator&lt;GR1e&lt;34, 6&gt; const*, std::vector&lt;GR1e&lt;34, 6&gt;, std::allocator&lt;GR1e&lt;34, 6&gt; &gt; &gt; &gt;, GR1e&lt;34, 6&gt;*&gt; (15,477,158 samples, 0.01%)</title><rect x="1189.6" y="213" width="0.2" height="15.0" fill="rgb(254,226,54)" rx="2" ry="2" />
+<text  x="1192.64" y="223.5" ></text>
+</g>
+<g >
+<title>KeccakP1600_Permute_NroundsLFSR (9,574,346,248 samples, 5.75%)</title><rect x="10.3" y="277" width="67.8" height="15.0" fill="rgb(211,27,6)" rx="2" ry="2" />
+<text  x="13.30" y="287.5" >KeccakP..</text>
+</g>
+<g >
+<title>Z2k&lt;34&gt;* std::__miter_base&lt;Z2k&lt;34&gt;*&gt; (193,466,160 samples, 0.12%)</title><rect x="612.0" y="117" width="1.4" height="15.0" fill="rgb(223,85,20)" rx="2" ry="2" />
+<text  x="615.04" y="127.5" ></text>
+</g>
+<g >
+<title>Z2k&lt;34&gt;::Z2k (145,987,412 samples, 0.09%)</title><rect x="1105.2" y="181" width="1.0" height="15.0" fill="rgb(219,66,15)" rx="2" ry="2" />
+<text  x="1108.17" y="191.5" ></text>
+</g>
+<g >
+<title>Z2k&lt;34&gt;* std::__copy_move_a&lt;false, Z2k&lt;34&gt;*, Z2k&lt;34&gt;*&gt; (20,213,834 samples, 0.01%)</title><rect x="1158.2" y="149" width="0.2" height="15.0" fill="rgb(230,117,28)" rx="2" ry="2" />
+<text  x="1161.22" y="159.5" ></text>
+</g>
+<g >
+<title>Z2k&lt;34&gt;::Z2k (54,640,785 samples, 0.03%)</title><rect x="1184.0" y="165" width="0.4" height="15.0" fill="rgb(219,66,15)" rx="2" ry="2" />
+<text  x="1186.97" y="175.5" ></text>
+</g>
+<g >
+<title>Z2k&lt;34&gt;* std::copy&lt;Z2k&lt;34&gt;*, Z2k&lt;34&gt;*&gt; (1,098,210,692 samples, 0.66%)</title><rect x="528.3" y="149" width="7.8" height="15.0" fill="rgb(217,56,13)" rx="2" ry="2" />
+<text  x="531.31" y="159.5" ></text>
+</g>
+<g >
+<title>Z2k&lt;34&gt;* std::__copy_move_a2&lt;false, Z2k&lt;34&gt;*, Z2k&lt;34&gt;*&gt; (379,239,266 samples, 0.23%)</title><rect x="531.3" y="101" width="2.7" height="15.0" fill="rgb(207,12,2)" rx="2" ry="2" />
+<text  x="534.32" y="111.5" ></text>
+</g>
+<g >
+<title>void sacrificing_check&lt;GR1e&lt;34, 6&gt;, GR1e&lt;34, 6&gt;, 32, 2, 63&gt; (155,636,694,813 samples, 93.44%)</title><rect x="78.8" y="245" width="1102.6" height="15.0" fill="rgb(233,130,31)" rx="2" ry="2" />
+<text  x="81.80" y="255.5" >void sacrificing_check&lt;GR1e&lt;34, 6&gt;, GR1e&lt;34, 6&gt;, 32, 2, 63&gt;</text>
+</g>
+<g >
+<title>std::__array_traits&lt;Z2k&lt;34&gt;, 6ul&gt;::_S_ref (15,863,161 samples, 0.01%)</title><rect x="1172.7" y="197" width="0.1" height="15.0" fill="rgb(253,221,52)" rx="2" ry="2" />
+<text  x="1175.68" y="207.5" ></text>
+</g>
+<g >
+<title>std::array&lt;Z2k&lt;34&gt;,  (65,916,835 samples, 0.04%)</title><rect x="1181.5" y="213" width="0.4" height="15.0" fill="rgb(240,163,39)" rx="2" ry="2" />
+<text  x="1184.48" y="223.5" ></text>
+</g>
+<g >
+<title>Z2k&lt;34&gt;::operator- (24,141,936 samples, 0.01%)</title><rect x="117.8" y="117" width="0.2" height="15.0" fill="rgb(215,48,11)" rx="2" ry="2" />
+<text  x="120.79" y="127.5" ></text>
+</g>
+<g >
+<title>std::array&lt;Z2k&lt;34&gt;, 6ul&gt;::operator[] (322,165,771 samples, 0.19%)</title><rect x="1154.5" y="197" width="2.3" height="15.0" fill="rgb(241,165,39)" rx="2" ry="2" />
+<text  x="1157.48" y="207.5" ></text>
+</g>
+<g >
+<title>std::array&lt;Z2k&lt;34&gt;, 6ul&gt;::operator[] (89,739,309 samples, 0.05%)</title><rect x="1188.1" y="197" width="0.6" height="15.0" fill="rgb(241,165,39)" rx="2" ry="2" />
+<text  x="1191.05" y="207.5" ></text>
+</g>
+<g >
+<title>Z2k&lt;34&gt;* std::copy&lt;Z2k&lt;34&gt; const*, Z2k&lt;34&gt;*&gt; (4,696,465,482 samples, 2.82%)</title><rect x="565.5" y="133" width="33.3" height="15.0" fill="rgb(251,212,50)" rx="2" ry="2" />
+<text  x="568.49" y="143.5" >Z2..</text>
+</g>
+<g >
+<title>std::__array_traits&lt;Z2k&lt;34&gt;, 11ul&gt;::_S_ptr (80,345,251 samples, 0.05%)</title><rect x="789.0" y="117" width="0.6" height="15.0" fill="rgb(207,11,2)" rx="2" ry="2" />
+<text  x="792.04" y="127.5" ></text>
+</g>
+<g >
+<title>Z2k&lt;34&gt;* std::__copy_move_a2&lt;false, Z2k&lt;34&gt;*, Z2k&lt;34&gt;*&gt; (249,443,185 samples, 0.15%)</title><rect x="114.5" y="69" width="1.8" height="15.0" fill="rgb(207,12,2)" rx="2" ry="2" />
+<text  x="117.54" y="79.5" ></text>
+</g>
+<g >
+<title>Z2k&lt;34&gt;* std::__niter_wrap&lt;Z2k&lt;34&gt;*&gt; (92,443,092 samples, 0.06%)</title><rect x="611.4" y="101" width="0.6" height="15.0" fill="rgb(216,54,13)" rx="2" ry="2" />
+<text  x="614.38" y="111.5" ></text>
+</g>
+<g >
+<title>std::array&lt;Z2k&lt;34&gt;, 11ul&gt;::operator[] (3,369,371,499 samples, 2.02%)</title><rect x="759.9" y="133" width="23.9" height="15.0" fill="rgb(206,8,1)" rx="2" ry="2" />
+<text  x="762.93" y="143.5" >s..</text>
+</g>
+<g >
+<title>Z2k&lt;34&gt;* std::__niter_wrap&lt;Z2k&lt;34&gt;*&gt; (28,432,912 samples, 0.02%)</title><rect x="117.1" y="85" width="0.2" height="15.0" fill="rgb(216,54,13)" rx="2" ry="2" />
+<text  x="120.05" y="95.5" ></text>
+</g>
+<g >
+<title>GR1e&lt;34, 6&gt;::GR1e (559,701,973 samples, 0.34%)</title><rect x="482.7" y="165" width="4.0" height="15.0" fill="rgb(206,5,1)" rx="2" ry="2" />
+<text  x="485.73" y="175.5" ></text>
+</g>
+<g >
+<title>Z2k&lt;34&gt;::operator* (149,069,285 samples, 0.09%)</title><rect x="486.8" y="165" width="1.1" height="15.0" fill="rgb(234,137,32)" rx="2" ry="2" />
+<text  x="489.84" y="175.5" ></text>
+</g>
+<g >
+<title>memmove@plt (40,024,763 samples, 0.02%)</title><rect x="154.0" y="37" width="0.3" height="15.0" fill="rgb(232,128,30)" rx="2" ry="2" />
+<text  x="157.01" y="47.5" ></text>
+</g>
+<g >
+<title>std::vector&lt;GR1e&lt;34, 6&gt;, std::allocator&lt;GR1e&lt;34, 6&gt; &gt; &gt;::vector (495,746,220 samples, 0.30%)</title><rect x="1163.8" y="213" width="3.5" height="15.0" fill="rgb(235,138,33)" rx="2" ry="2" />
+<text  x="1166.78" y="223.5" ></text>
+</g>
+<g >
+<title>std::array&lt;Z2k&lt;34&gt;,  (172,480,948 samples, 0.10%)</title><rect x="1179.7" y="181" width="1.2" height="15.0" fill="rgb(240,163,39)" rx="2" ry="2" />
+<text  x="1182.67" y="191.5" ></text>
+</g>
+<g >
+<title>Z2k&lt;34&gt;::operator+ (408,427,753 samples, 0.25%)</title><rect x="919.2" y="149" width="2.9" height="15.0" fill="rgb(228,108,25)" rx="2" ry="2" />
+<text  x="922.20" y="159.5" ></text>
+</g>
+<g >
+<title>Z2k&lt;34&gt;::operator+ (19,496,998 samples, 0.01%)</title><rect x="1186.6" y="197" width="0.2" height="15.0" fill="rgb(228,108,25)" rx="2" ry="2" />
+<text  x="1189.61" y="207.5" ></text>
+</g>
+<g >
+<title>std::__array_traits&lt;Z2k&lt;34&gt;, 6ul&gt;::_S_ref (22,829,910 samples, 0.01%)</title><rect x="1177.7" y="165" width="0.1" height="15.0" fill="rgb(253,221,52)" rx="2" ry="2" />
+<text  x="1180.66" y="175.5" ></text>
+</g>
+<g >
+<title>Z2k&lt;34&gt;::operator+= (24,182,521 samples, 0.01%)</title><rect x="86.3" y="133" width="0.1" height="15.0" fill="rgb(234,135,32)" rx="2" ry="2" />
+<text  x="89.28" y="143.5" ></text>
+</g>
+<g >
+<title>std::array&lt;Z2k&lt;34&gt;, 11ul&gt;::data (20,052,167 samples, 0.01%)</title><rect x="475.0" y="133" width="0.1" height="15.0" fill="rgb(205,3,0)" rx="2" ry="2" />
+<text  x="477.97" y="143.5" ></text>
+</g>
+<g >
+<title>Z2k&lt;34&gt;* std::copy&lt;Z2k&lt;34&gt; const*, Z2k&lt;34&gt;*&gt; (62,752,324 samples, 0.04%)</title><rect x="1182.4" y="181" width="0.4" height="15.0" fill="rgb(251,212,50)" rx="2" ry="2" />
+<text  x="1185.36" y="191.5" ></text>
+</g>
+<g >
+<title>std::__array_traits&lt;Z2k&lt;34&gt;, 11ul&gt;::_S_ref (2,268,618,187 samples, 1.36%)</title><rect x="767.7" y="117" width="16.1" height="15.0" fill="rgb(218,64,15)" rx="2" ry="2" />
+<text  x="770.72" y="127.5" ></text>
+</g>
+<g >
+<title>Z2k&lt;34&gt;* std::__copy_move_a2&lt;false, Z2k&lt;34&gt;*, Z2k&lt;34&gt;*&gt; (829,653,376 samples, 0.50%)</title><rect x="602.7" y="85" width="5.9" height="15.0" fill="rgb(207,12,2)" rx="2" ry="2" />
+<text  x="605.73" y="95.5" ></text>
+</g>
+<g >
+<title>Z2k&lt;34&gt;::operator+= (9,683,075,305 samples, 5.81%)</title><rect x="353.2" y="117" width="68.6" height="15.0" fill="rgb(234,135,32)" rx="2" ry="2" />
+<text  x="356.17" y="127.5" >Z2k&lt;34&gt;..</text>
+</g>
+<g >
+<title>Z2k&lt;34&gt;* std::copy&lt;Z2k&lt;34&gt; const*, Z2k&lt;34&gt;*&gt; (48,252,522 samples, 0.03%)</title><rect x="1157.9" y="165" width="0.3" height="15.0" fill="rgb(251,212,50)" rx="2" ry="2" />
+<text  x="1160.87" y="175.5" ></text>
+</g>
+<g >
+<title>Z2k&lt;34&gt;* std::__niter_base&lt;Z2k&lt;34&gt;*&gt; (56,605,155 samples, 0.03%)</title><rect x="167.1" y="85" width="0.4" height="15.0" fill="rgb(217,56,13)" rx="2" ry="2" />
+<text  x="170.06" y="95.5" ></text>
+</g>
+<g >
+<title>Z2k&lt;34&gt;::Z2k (36,312,794 samples, 0.02%)</title><rect x="474.7" y="133" width="0.2" height="15.0" fill="rgb(219,66,15)" rx="2" ry="2" />
+<text  x="477.68" y="143.5" ></text>
+</g>
+<g >
+<title>Z2k&lt;34&gt;* std::__niter_base&lt;Z2k&lt;34&gt;*&gt; (16,230,020 samples, 0.01%)</title><rect x="468.5" y="101" width="0.1" height="15.0" fill="rgb(217,56,13)" rx="2" ry="2" />
+<text  x="471.49" y="111.5" ></text>
+</g>
+<g >
+<title>Z2k&lt;34&gt;::operator* (57,492,406 samples, 0.03%)</title><rect x="1179.7" y="165" width="0.4" height="15.0" fill="rgb(234,137,32)" rx="2" ry="2" />
+<text  x="1182.72" y="175.5" ></text>
+</g>
+<g >
+<title>Z2k&lt;34&gt;::operator* (82,559,287 samples, 0.05%)</title><rect x="1176.3" y="181" width="0.6" height="15.0" fill="rgb(234,137,32)" rx="2" ry="2" />
+<text  x="1179.34" y="191.5" ></text>
+</g>
+<g >
+<title>Z2k&lt;34&gt;* std::__copy_move&lt;false, true, std::random_access_iterator_tag&gt;::__copy_m&lt;Z2k&lt;34&gt; &gt; (1,189,246,148 samples, 0.71%)</title><rect x="583.4" y="69" width="8.5" height="15.0" fill="rgb(216,54,13)" rx="2" ry="2" />
+<text  x="586.43" y="79.5" ></text>
+</g>
+<g >
+<title>std::__array_traits&lt;Z2k&lt;34&gt;, 11ul&gt;::_S_ref (15,973,970 samples, 0.01%)</title><rect x="477.4" y="149" width="0.1" height="15.0" fill="rgb(218,64,15)" rx="2" ry="2" />
+<text  x="480.42" y="159.5" ></text>
+</g>
+<g >
+<title>GR1e&lt;34, 6&gt;::operator* (657,013,000 samples, 0.39%)</title><rect x="1167.7" y="229" width="4.6" height="15.0" fill="rgb(233,130,31)" rx="2" ry="2" />
+<text  x="1170.68" y="239.5" ></text>
+</g>
+<g >
+<title>Z2k&lt;34&gt;::Z2k (48,270,915 samples, 0.03%)</title><rect x="1169.0" y="165" width="0.4" height="15.0" fill="rgb(219,66,15)" rx="2" ry="2" />
+<text  x="1172.02" y="175.5" ></text>
+</g>
+<g >
+<title>std::array&lt;Z2k&lt;34&gt;,  (3,015,013,967 samples, 1.81%)</title><rect x="86.5" y="133" width="21.3" height="15.0" fill="rgb(240,163,39)" rx="2" ry="2" />
+<text  x="89.48" y="143.5" >s..</text>
+</g>
+<g >
+<title>__memmove_avx_unaligned_erms (48,538,066 samples, 0.03%)</title><rect x="533.6" y="85" width="0.3" height="15.0" fill="rgb(205,0,0)" rx="2" ry="2" />
+<text  x="536.58" y="95.5" ></text>
+</g>
+<g >
+<title>Z2k&lt;34&gt;* std::copy&lt;Z2k&lt;34&gt; const*, Z2k&lt;34&gt;*&gt; (31,916,463 samples, 0.02%)</title><rect x="473.9" y="149" width="0.2" height="15.0" fill="rgb(251,212,50)" rx="2" ry="2" />
+<text  x="476.86" y="159.5" ></text>
+</g>
+<g >
+<title>Z2k&lt;34&gt;* std::__copy_move_a1&lt;false, Z2k&lt;34&gt;*, Z2k&lt;34&gt;*&gt; (20,033,975 samples, 0.01%)</title><rect x="529.7" y="133" width="0.2" height="15.0" fill="rgb(214,41,9)" rx="2" ry="2" />
+<text  x="532.71" y="143.5" ></text>
+</g>
+<g >
+<title>std::array&lt;Z2k&lt;34&gt;, 6ul&gt;::operator[] (15,863,161 samples, 0.01%)</title><rect x="1172.7" y="213" width="0.1" height="15.0" fill="rgb(241,165,39)" rx="2" ry="2" />
+<text  x="1175.68" y="223.5" ></text>
+</g>
+<g >
+<title>std::__array_traits&lt;Z2k&lt;34&gt;, 6ul&gt;::_S_ref (1,194,691,308 samples, 0.72%)</title><rect x="1135.7" y="165" width="8.4" height="15.0" fill="rgb(253,221,52)" rx="2" ry="2" />
+<text  x="1138.67" y="175.5" ></text>
+</g>
+<g >
+<title>Z2k&lt;34&gt;* std::copy&lt;Z2k&lt;34&gt; const*, Z2k&lt;34&gt;*&gt; (38,955,054 samples, 0.02%)</title><rect x="1173.2" y="165" width="0.3" height="15.0" fill="rgb(251,212,50)" rx="2" ry="2" />
+<text  x="1176.21" y="175.5" ></text>
+</g>
+<g >
+<title>GR1e&lt;34, 6&gt;::operator* (805,522,558 samples, 0.48%)</title><rect x="1157.0" y="213" width="5.8" height="15.0" fill="rgb(233,130,31)" rx="2" ry="2" />
+<text  x="1160.05" y="223.5" ></text>
+</g>
+<g >
+<title>Z2k&lt;34&gt;* std::__copy_move_a1&lt;false, Z2k&lt;34&gt; const*, Z2k&lt;34&gt;*&gt; (27,439,479 samples, 0.02%)</title><rect x="1182.5" y="149" width="0.2" height="15.0" fill="rgb(247,197,47)" rx="2" ry="2" />
+<text  x="1185.53" y="159.5" ></text>
+</g>
+<g >
+<title>Z2k&lt;34&gt;* std::__copy_move_a1&lt;false, Z2k&lt;34&gt; const*, Z2k&lt;34&gt;*&gt; (16,178,516 samples, 0.01%)</title><rect x="1158.0" y="133" width="0.2" height="15.0" fill="rgb(247,197,47)" rx="2" ry="2" />
+<text  x="1161.04" y="143.5" ></text>
+</g>
+<g >
+<title>std::array&lt;Z2k&lt;34&gt;, 6ul&gt;::operator[] (6,558,855,297 samples, 3.94%)</title><rect x="1051.1" y="149" width="46.5" height="15.0" fill="rgb(241,165,39)" rx="2" ry="2" />
+<text  x="1054.10" y="159.5" >std:..</text>
+</g>
+<g >
+<title>GR1e&lt;34, 6&gt;* std::__uninitialized_copy_a&lt;__gnu_cxx::__normal_iterator&lt;GR1e&lt;34, 6&gt; const*, std::vector&lt;GR1e&lt;34, 6&gt;, std::allocator&lt;GR1e&lt;34, 6&gt; &gt; &gt; &gt;, GR1e&lt;34, 6&gt;*, GR1e&lt;34, 6&gt; &gt; (455,155,043 samples, 0.27%)</title><rect x="1163.8" y="197" width="3.2" height="15.0" fill="rgb(217,56,13)" rx="2" ry="2" />
+<text  x="1166.78" y="207.5" ></text>
+</g>
+<g >
+<title>std::array&lt;Z2k&lt;34&gt;, 6ul&gt;::begin (341,105,359 samples, 0.20%)</title><rect x="1151.0" y="165" width="2.4" height="15.0" fill="rgb(248,201,48)" rx="2" ry="2" />
+<text  x="1154.03" y="175.5" ></text>
+</g>
+<g >
+<title>std::__array_traits&lt;Z2k&lt;34&gt;, 6ul&gt;::_S_ref (222,147,401 samples, 0.13%)</title><rect x="1031.6" y="149" width="1.6" height="15.0" fill="rgb(253,221,52)" rx="2" ry="2" />
+<text  x="1034.64" y="159.5" ></text>
+</g>
+<g >
+<title>std::array&lt;Z2k&lt;34&gt;, 6ul&gt;::operator[] (31,299,433 samples, 0.02%)</title><rect x="1175.0" y="181" width="0.2" height="15.0" fill="rgb(241,165,39)" rx="2" ry="2" />
+<text  x="1178.00" y="191.5" ></text>
+</g>
+<g >
+<title>std::array&lt;Z2k&lt;34&gt;, 11ul&gt;::array (15,122,577 samples, 0.01%)</title><rect x="1176.0" y="165" width="0.2" height="15.0" fill="rgb(246,191,45)" rx="2" ry="2" />
+<text  x="1179.05" y="175.5" ></text>
+</g>
+<g >
+<title>Z2k&lt;34&gt;::operator* (42,917,357 samples, 0.03%)</title><rect x="1174.3" y="181" width="0.3" height="15.0" fill="rgb(234,137,32)" rx="2" ry="2" />
+<text  x="1177.26" y="191.5" ></text>
+</g>
+<g >
+<title>std::array&lt;Z2k&lt;34&gt;, 6&gt; ops::reduce&lt;34, 11, 6, Z2k&lt;34&gt; &gt; (190,705,697 samples, 0.11%)</title><rect x="1178.2" y="181" width="1.4" height="15.0" fill="rgb(205,0,0)" rx="2" ry="2" />
+<text  x="1181.24" y="191.5" ></text>
+</g>
+<g >
+<title>std::remove_reference&lt;unsigned long&gt;::type&amp;&amp; std::move&lt;unsigned long&gt; (383,449,787 samples, 0.23%)</title><rect x="419.1" y="69" width="2.7" height="15.0" fill="rgb(223,85,20)" rx="2" ry="2" />
+<text  x="422.06" y="79.5" ></text>
+</g>
+<g >
+<title>Z2k&lt;34&gt;::Z2k (24,241,284 samples, 0.01%)</title><rect x="474.4" y="133" width="0.2" height="15.0" fill="rgb(219,66,15)" rx="2" ry="2" />
+<text  x="477.40" y="143.5" ></text>
+</g>
+<g >
+<title>Z2k&lt;34&gt;::Z2k (4,812,716,889 samples, 2.89%)</title><rect x="695.8" y="117" width="34.1" height="15.0" fill="rgb(219,66,15)" rx="2" ry="2" />
+<text  x="698.77" y="127.5" >Z2..</text>
+</g>
+<g >
+<title>std::array&lt;Z2k&lt;34&gt;,  (40,913,139,335 samples, 24.56%)</title><rect x="807.7" y="165" width="289.9" height="15.0" fill="rgb(240,163,39)" rx="2" ry="2" />
+<text  x="810.72" y="175.5" >std::array&lt;Z2k&lt;34&gt;, </text>
+</g>
+<g >
+<title>std::array&lt;Z2k&lt;34&gt;, 6&gt; ops::reduce&lt;34, 11, 6, Z2k&lt;34&gt; &gt; (437,718,499 samples, 0.26%)</title><rect x="1182.0" y="213" width="3.1" height="15.0" fill="rgb(205,0,0)" rx="2" ry="2" />
+<text  x="1185.00" y="223.5" ></text>
+</g>
+<g >
+<title>Z2k&lt;34&gt;::Z2k (35,957,044 samples, 0.02%)</title><rect x="1169.4" y="165" width="0.3" height="15.0" fill="rgb(219,66,15)" rx="2" ry="2" />
+<text  x="1172.44" y="175.5" ></text>
+</g>
+<g >
+<title>GR1e&lt;34, 6&gt;::operator* (355,258,116 samples, 0.21%)</title><rect x="1175.3" y="213" width="2.5" height="15.0" fill="rgb(233,130,31)" rx="2" ry="2" />
+<text  x="1178.31" y="223.5" ></text>
+</g>
+<g >
+<title>Z2k&lt;34&gt;* std::__copy_move&lt;false, true, std::random_access_iterator_tag&gt;::__copy_m&lt;Z2k&lt;34&gt; &gt; (152,744,216 samples, 0.09%)</title><rect x="114.8" y="53" width="1.1" height="15.0" fill="rgb(216,54,13)" rx="2" ry="2" />
+<text  x="117.82" y="63.5" ></text>
+</g>
+<g >
+<title>std::__array_traits&lt;Z2k&lt;34&gt;, 6ul&gt;::_S_ref (81,243,397 samples, 0.05%)</title><rect x="1127.6" y="181" width="0.6" height="15.0" fill="rgb(253,221,52)" rx="2" ry="2" />
+<text  x="1130.64" y="191.5" ></text>
+</g>
+<g >
+<title>__memmove_avx_unaligned_erms (120,275,018 samples, 0.07%)</title><rect x="607.6" y="69" width="0.8" height="15.0" fill="rgb(205,0,0)" rx="2" ry="2" />
+<text  x="610.55" y="79.5" ></text>
+</g>
+<g >
+<title>std::__array_traits&lt;Z2k&lt;34&gt;, 11ul&gt;::_S_ref (529,152,015 samples, 0.32%)</title><rect x="421.8" y="117" width="3.7" height="15.0" fill="rgb(218,64,15)" rx="2" ry="2" />
+<text  x="424.77" y="127.5" ></text>
+</g>
+<g >
+<title>std::array&lt;Z2k&lt;34&gt;, 11ul&gt;::operator[] (1,931,501,347 samples, 1.16%)</title><rect x="255.2" y="101" width="13.7" height="15.0" fill="rgb(206,8,1)" rx="2" ry="2" />
+<text  x="258.20" y="111.5" ></text>
+</g>
+<g >
+<title>GR1e&lt;34, 6&gt;* std::__relocate_a_1&lt;GR1e&lt;34, 6&gt;*, GR1e&lt;34, 6&gt;*, std::allocator&lt;GR1e&lt;34, 6&gt; &gt; &gt; (16,472,055 samples, 0.01%)</title><rect x="1167.5" y="149" width="0.2" height="15.0" fill="rgb(216,52,12)" rx="2" ry="2" />
+<text  x="1170.54" y="159.5" ></text>
+</g>
+<g >
+<title>auto ops::reduction_polynomial&lt;6&gt; (24,437,904 samples, 0.01%)</title><rect x="541.5" y="149" width="0.2" height="15.0" fill="rgb(234,137,32)" rx="2" ry="2" />
+<text  x="544.54" y="159.5" ></text>
+</g>
+<g >
+<title>Z2k&lt;34&gt;::operator- (76,167,121 samples, 0.05%)</title><rect x="1168.8" y="181" width="0.6" height="15.0" fill="rgb(215,48,11)" rx="2" ry="2" />
+<text  x="1171.82" y="191.5" ></text>
+</g>
+<g >
+<title>Z2k&lt;34&gt;::Z2k (341,858,493 samples, 0.21%)</title><rect x="796.5" y="133" width="2.4" height="15.0" fill="rgb(219,66,15)" rx="2" ry="2" />
+<text  x="799.48" y="143.5" ></text>
+</g>
+<g >
+<title>std::_Vector_base&lt;GR1e&lt;34, 6&gt;, std::allocator&lt;GR1e&lt;34, 6&gt; &gt; &gt;::_M_create_storage (28,336,698 samples, 0.02%)</title><rect x="1167.0" y="181" width="0.2" height="15.0" fill="rgb(231,120,28)" rx="2" ry="2" />
+<text  x="1170.01" y="191.5" ></text>
+</g>
+<g >
+<title>std::array&lt;Z2k&lt;34&gt;, 11ul&gt;::data (180,557,881 samples, 0.11%)</title><rect x="788.3" y="133" width="1.3" height="15.0" fill="rgb(205,3,0)" rx="2" ry="2" />
+<text  x="791.33" y="143.5" ></text>
+</g>
+<g >
+<title>std::array&lt;Z2k&lt;34&gt;, 6ul&gt;::begin (16,419,662 samples, 0.01%)</title><rect x="800.4" y="165" width="0.1" height="15.0" fill="rgb(248,201,48)" rx="2" ry="2" />
+<text  x="803.39" y="175.5" ></text>
+</g>
+<g >
+<title>Z2k&lt;34&gt;::operator+ (56,729,160 samples, 0.03%)</title><rect x="1177.0" y="165" width="0.4" height="15.0" fill="rgb(228,108,25)" rx="2" ry="2" />
+<text  x="1180.04" y="175.5" ></text>
+</g>
+<g >
+<title>GR1e&lt;34, 6&gt; detail::horner_eval&lt;GR1e&lt;34, 6&gt; &gt; (1,130,114,580 samples, 0.68%)</title><rect x="1181.4" y="245" width="8.0" height="15.0" fill="rgb(233,131,31)" rx="2" ry="2" />
+<text  x="1184.40" y="255.5" ></text>
+</g>
+<g >
+<title>std::array&lt;Z2k&lt;34&gt;, 11ul&gt;::operator[] (330,448,415 samples, 0.20%)</title><rect x="108.3" y="133" width="2.3" height="15.0" fill="rgb(206,8,1)" rx="2" ry="2" />
+<text  x="111.29" y="143.5" ></text>
+</g>
+<g >
+<title>Z2k&lt;34&gt;::Z2k&lt;unsigned long&gt; (19,319,204 samples, 0.01%)</title><rect x="1186.5" y="181" width="0.1" height="15.0" fill="rgb(222,78,18)" rx="2" ry="2" />
+<text  x="1189.48" y="191.5" ></text>
+</g>
+<g >
+<title>Z2k&lt;34&gt;* std::copy&lt;Z2k&lt;34&gt;*, Z2k&lt;34&gt;*&gt; (652,718,107 samples, 0.39%)</title><rect x="113.1" y="117" width="4.6" height="15.0" fill="rgb(217,56,13)" rx="2" ry="2" />
+<text  x="116.08" y="127.5" ></text>
+</g>
+<g >
+<title>std::array&lt;Z2k&lt;34&gt;, 6ul&gt;::data (128,868,114 samples, 0.08%)</title><rect x="799.1" y="133" width="0.9" height="15.0" fill="rgb(239,160,38)" rx="2" ry="2" />
+<text  x="802.13" y="143.5" ></text>
+</g>
+<g >
+<title>std::vector&lt;GR1e&lt;34, 6&gt;, std::allocator&lt;GR1e&lt;34, 6&gt; &gt; &gt;::_S_do_relocate (16,472,055 samples, 0.01%)</title><rect x="1167.5" y="181" width="0.2" height="15.0" fill="rgb(230,117,27)" rx="2" ry="2" />
+<text  x="1170.54" y="191.5" ></text>
+</g>
+<g >
+<title>Z2k&lt;34&gt;* std::__miter_base&lt;Z2k&lt;34&gt;*&gt; (16,408,120 samples, 0.01%)</title><rect x="565.4" y="133" width="0.1" height="15.0" fill="rgb(223,85,20)" rx="2" ry="2" />
+<text  x="568.37" y="143.5" ></text>
+</g>
+<g >
+<title>Z2k&lt;34&gt;* std::__niter_base&lt;Z2k&lt;34&gt;*&gt; (72,475,182 samples, 0.04%)</title><rect x="116.5" y="85" width="0.6" height="15.0" fill="rgb(217,56,13)" rx="2" ry="2" />
+<text  x="119.54" y="95.5" ></text>
+</g>
+<g >
+<title>std::__array_traits&lt;Z2k&lt;34&gt;, 6ul&gt;::_S_ptr (117,040,446 samples, 0.07%)</title><rect x="799.2" y="117" width="0.8" height="15.0" fill="rgb(241,168,40)" rx="2" ry="2" />
+<text  x="802.21" y="127.5" ></text>
+</g>
+<g >
+<title>GR1e&lt;34, 6&gt;* std::__uninitialized_copy&lt;false&gt;::__uninit_copy&lt;__gnu_cxx::__normal_iterator&lt;GR1e&lt;34, 6&gt; const*, std::vector&lt;GR1e&lt;34, 6&gt;, std::allocator&lt;GR1e&lt;34, 6&gt; &gt; &gt; &gt;, GR1e&lt;34, 6&gt;*&gt; (426,775,268 samples, 0.26%)</title><rect x="1163.8" y="165" width="3.0" height="15.0" fill="rgb(254,226,54)" rx="2" ry="2" />
+<text  x="1166.81" y="175.5" ></text>
+</g>
+<g >
+<title>std::array&lt;Z2k&lt;34&gt;, 6ul&gt;::array (474,721,593 samples, 0.29%)</title><rect x="795.5" y="149" width="3.4" height="15.0" fill="rgb(230,118,28)" rx="2" ry="2" />
+<text  x="798.54" y="159.5" ></text>
+</g>
+<g >
+<title>std::array&lt;Z2k&lt;34&gt;, 11ul&gt;::operator[] (1,002,247,058 samples, 0.60%)</title><rect x="430.5" y="117" width="7.1" height="15.0" fill="rgb(206,8,1)" rx="2" ry="2" />
+<text  x="433.50" y="127.5" ></text>
+</g>
+<g >
+<title>Z2k&lt;34&gt;* std::__niter_base&lt;Z2k&lt;34&gt;*&gt; (116,354,358 samples, 0.07%)</title><rect x="613.4" y="117" width="0.8" height="15.0" fill="rgb(217,56,13)" rx="2" ry="2" />
+<text  x="616.41" y="127.5" ></text>
+</g>
+<g >
+<title>std::vector&lt;GR1e&lt;34, 6&gt;, std::allocator&lt;GR1e&lt;34, 6&gt; &gt; &gt;::vector (15,477,158 samples, 0.01%)</title><rect x="1189.6" y="261" width="0.2" height="15.0" fill="rgb(235,138,33)" rx="2" ry="2" />
+<text  x="1192.64" y="271.5" ></text>
+</g>
+<g >
+<title>std::__array_traits&lt;Z2k&lt;34&gt;, 11ul&gt;::_S_ref (116,247,987 samples, 0.07%)</title><rect x="208.4" y="101" width="0.8" height="15.0" fill="rgb(218,64,15)" rx="2" ry="2" />
+<text  x="211.38" y="111.5" ></text>
+</g>
+<g >
+<title>Z2k&lt;34&gt; const* std::__niter_base&lt;Z2k&lt;34&gt; const*&gt; (121,882,484 samples, 0.07%)</title><rect x="140.8" y="85" width="0.9" height="15.0" fill="rgb(234,137,32)" rx="2" ry="2" />
+<text  x="143.84" y="95.5" ></text>
+</g>
+<g >
+<title>std::array&lt;Z2k&lt;34&gt;, 11&gt; ops::reduce_once&lt;11, 6, Z2k&lt;34&gt; &gt; (217,035,235 samples, 0.13%)</title><rect x="473.7" y="165" width="1.5" height="15.0" fill="rgb(243,179,42)" rx="2" ry="2" />
+<text  x="476.69" y="175.5" ></text>
+</g>
+<g >
+<title>std::__array_traits&lt;Z2k&lt;34&gt;, 11ul&gt;::_S_ptr (704,025,885 samples, 0.42%)</title><rect x="247.0" y="69" width="5.0" height="15.0" fill="rgb(207,11,2)" rx="2" ry="2" />
+<text  x="249.99" y="79.5" ></text>
+</g>
+<g >
+<title>std::array&lt;Z2k&lt;34&gt;, 11ul&gt;::array (60,731,145 samples, 0.04%)</title><rect x="268.9" y="117" width="0.4" height="15.0" fill="rgb(246,191,45)" rx="2" ry="2" />
+<text  x="271.89" y="127.5" ></text>
+</g>
+<g >
+<title>memmove@plt (60,115,880 samples, 0.04%)</title><rect x="593.4" y="69" width="0.4" height="15.0" fill="rgb(232,128,30)" rx="2" ry="2" />
+<text  x="596.40" y="79.5" ></text>
+</g>
+<g >
+<title>Z2k&lt;34&gt;* std::__copy_move_a2&lt;false, Z2k&lt;34&gt; const*, Z2k&lt;34&gt;*&gt; (1,794,629,923 samples, 1.08%)</title><rect x="581.1" y="85" width="12.7" height="15.0" fill="rgb(241,167,40)" rx="2" ry="2" />
+<text  x="584.11" y="95.5" ></text>
+</g>
+<g >
+<title>Z2k&lt;34&gt;::Z2k (2,598,744,233 samples, 1.56%)</title><rect x="189.9" y="85" width="18.5" height="15.0" fill="rgb(219,66,15)" rx="2" ry="2" />
+<text  x="192.94" y="95.5" ></text>
+</g>
+<g >
+<title>GR1e&lt;34, 6&gt;::operator*= (32,121,385 samples, 0.02%)</title><rect x="1162.8" y="213" width="0.2" height="15.0" fill="rgb(239,158,37)" rx="2" ry="2" />
+<text  x="1165.75" y="223.5" ></text>
+</g>
+<g >
+<title>std::array&lt;Z2k&lt;34&gt;,  (25,971,588,688 samples, 15.59%)</title><rect x="283.3" y="133" width="184.0" height="15.0" fill="rgb(240,163,39)" rx="2" ry="2" />
+<text  x="286.27" y="143.5" >std::array&lt;Z2k&lt;34&gt;, </text>
+</g>
+<g >
+<title>Z2k&lt;34&gt;::Z2k (48,462,104 samples, 0.03%)</title><rect x="477.0" y="133" width="0.3" height="15.0" fill="rgb(219,66,15)" rx="2" ry="2" />
+<text  x="479.97" y="143.5" ></text>
+</g>
+<g >
+<title>std::__array_traits&lt;Z2k&lt;34&gt;, 11ul&gt;::_S_ptr (1,305,403,329 samples, 0.78%)</title><rect x="746.0" y="101" width="9.3" height="15.0" fill="rgb(207,11,2)" rx="2" ry="2" />
+<text  x="749.00" y="111.5" ></text>
+</g>
+<g >
+<title>std::array&lt;Z2k&lt;34&gt;, 6ul&gt;::array (587,760,836 samples, 0.35%)</title><rect x="1128.2" y="181" width="4.2" height="15.0" fill="rgb(230,118,28)" rx="2" ry="2" />
+<text  x="1131.21" y="191.5" ></text>
+</g>
+<g >
+<title>Z2k&lt;34&gt;* std::__niter_base&lt;Z2k&lt;34&gt;*&gt; (96,824,511 samples, 0.06%)</title><rect x="597.7" y="117" width="0.7" height="15.0" fill="rgb(217,56,13)" rx="2" ry="2" />
+<text  x="600.74" y="127.5" ></text>
+</g>
+<g >
+<title>Z2k&lt;34&gt;::operator+ (80,650,654 samples, 0.05%)</title><rect x="476.7" y="149" width="0.6" height="15.0" fill="rgb(228,108,25)" rx="2" ry="2" />
+<text  x="479.74" y="159.5" ></text>
+</g>
+<g >
+<title>Z2k&lt;34&gt;::operator+= (50,694,179 samples, 0.03%)</title><rect x="1174.6" y="181" width="0.3" height="15.0" fill="rgb(234,135,32)" rx="2" ry="2" />
+<text  x="1177.59" y="191.5" ></text>
+</g>
+<g >
+<title>GR1e&lt;34, 6&gt;::operator*= (87,496,370,396 samples, 52.53%)</title><rect x="478.0" y="197" width="619.8" height="15.0" fill="rgb(239,158,37)" rx="2" ry="2" />
+<text  x="480.97" y="207.5" >GR1e&lt;34, 6&gt;::operator*=</text>
+</g>
+<g >
+<title>Z2k&lt;34&gt;* std::__copy_move_a1&lt;false, Z2k&lt;34&gt;*, Z2k&lt;34&gt;*&gt; (36,274,254 samples, 0.02%)</title><rect x="600.1" y="117" width="0.3" height="15.0" fill="rgb(214,41,9)" rx="2" ry="2" />
+<text  x="603.13" y="127.5" ></text>
+</g>
+<g >
+<title>std::array&lt;Z2k&lt;34&gt;, 6ul&gt;::end (56,527,445 samples, 0.03%)</title><rect x="1153.5" y="165" width="0.4" height="15.0" fill="rgb(229,112,26)" rx="2" ry="2" />
+<text  x="1156.51" y="175.5" ></text>
+</g>
+<g >
+<title>std::array&lt;Z2k&lt;34&gt;, 6&gt; ops::reduce&lt;34, 11, 6, Z2k&lt;34&gt; &gt; (23,739,388,913 samples, 14.25%)</title><rect x="110.6" y="133" width="168.2" height="15.0" fill="rgb(205,0,0)" rx="2" ry="2" />
+<text  x="113.64" y="143.5" >std::array&lt;Z2k&lt;34&gt;, 6..</text>
+</g>
+<g >
+<title>std::array&lt;Z2k&lt;34&gt;, 11ul&gt;::begin (129,524,628 samples, 0.08%)</title><rect x="520.6" y="165" width="0.9" height="15.0" fill="rgb(214,43,10)" rx="2" ry="2" />
+<text  x="523.62" y="175.5" ></text>
+</g>
+<g >
+<title>Z2k&lt;34&gt;* std::copy&lt;Z2k&lt;34&gt;*, Z2k&lt;34&gt;*&gt; (2,215,903,324 samples, 1.33%)</title><rect x="598.8" y="133" width="15.7" height="15.0" fill="rgb(217,56,13)" rx="2" ry="2" />
+<text  x="601.76" y="143.5" ></text>
+</g>
+<g >
+<title>Z2k&lt;34&gt;::operator- (3,024,924,183 samples, 1.82%)</title><rect x="1106.2" y="181" width="21.4" height="15.0" fill="rgb(215,48,11)" rx="2" ry="2" />
+<text  x="1109.21" y="191.5" >Z..</text>
+</g>
+<g >
+<title>GR1e&lt;34, 6&gt;::operator* (54,414,259,243 samples, 32.67%)</title><rect x="81.8" y="149" width="385.5" height="15.0" fill="rgb(233,130,31)" rx="2" ry="2" />
+<text  x="84.77" y="159.5" >GR1e&lt;34, 6&gt;::operator*</text>
+</g>
+<g >
+<title>Z2k&lt;34&gt;::operator+ (139,882,491 samples, 0.08%)</title><rect x="1187.0" y="181" width="1.0" height="15.0" fill="rgb(228,108,25)" rx="2" ry="2" />
+<text  x="1189.97" y="191.5" ></text>
+</g>
+<g >
+<title>Z2k&lt;34&gt;* std::__copy_move_a&lt;false, Z2k&lt;34&gt;*, Z2k&lt;34&gt;*&gt; (32,415,346 samples, 0.02%)</title><rect x="468.4" y="117" width="0.2" height="15.0" fill="rgb(230,117,28)" rx="2" ry="2" />
+<text  x="471.38" y="127.5" ></text>
+</g>
+<g >
+<title>std::array&lt;Z2k&lt;34&gt;, 11ul&gt;::operator[] (1,735,447,345 samples, 1.04%)</title><rect x="1038.8" y="149" width="12.3" height="15.0" fill="rgb(206,8,1)" rx="2" ry="2" />
+<text  x="1041.81" y="159.5" ></text>
+</g>
+<g >
+<title>bool __gnu_cxx::operator==&lt;GR1e&lt;34, 6&gt; const*, std::vector&lt;GR1e&lt;34, 6&gt;, std::allocator&lt;GR1e&lt;34, 6&gt; &gt; &gt; &gt; (133,261,372 samples, 0.08%)</title><rect x="1164.7" y="149" width="0.9" height="15.0" fill="rgb(237,148,35)" rx="2" ry="2" />
+<text  x="1167.67" y="159.5" ></text>
+</g>
+<g >
+<title>Z2k&lt;34&gt;* std::__copy_move_a&lt;false, Z2k&lt;34&gt;*, Z2k&lt;34&gt;*&gt; (1,082,249,954 samples, 0.65%)</title><rect x="158.5" y="85" width="7.6" height="15.0" fill="rgb(230,117,28)" rx="2" ry="2" />
+<text  x="161.48" y="95.5" ></text>
+</g>
+<g >
+<title>__memmove_avx_unaligned_erms (418,334,657 samples, 0.25%)</title><rect x="536.8" y="117" width="3.0" height="15.0" fill="rgb(205,0,0)" rx="2" ry="2" />
+<text  x="539.84" y="127.5" ></text>
+</g>
+<g >
+<title>Z2k&lt;34&gt;::Z2k (47,953,809 samples, 0.03%)</title><rect x="472.1" y="117" width="0.3" height="15.0" fill="rgb(219,66,15)" rx="2" ry="2" />
+<text  x="475.09" y="127.5" ></text>
+</g>
+<g >
+<title>std::__array_traits&lt;Z2k&lt;34&gt;, 6ul&gt;::_S_ref (30,827,750 samples, 0.02%)</title><rect x="1180.7" y="149" width="0.2" height="15.0" fill="rgb(253,221,52)" rx="2" ry="2" />
+<text  x="1183.67" y="159.5" ></text>
+</g>
+<g >
+<title>std::__array_traits&lt;Z2k&lt;34&gt;, 11ul&gt;::_S_ref (1,197,315,775 samples, 0.72%)</title><rect x="260.4" y="85" width="8.5" height="15.0" fill="rgb(218,64,15)" rx="2" ry="2" />
+<text  x="263.40" y="95.5" ></text>
+</g>
+<g >
+<title>std::array&lt;Z2k&lt;34&gt;, 6ul&gt;::array (323,011,022 samples, 0.19%)</title><rect x="275.2" y="117" width="2.2" height="15.0" fill="rgb(230,118,28)" rx="2" ry="2" />
+<text  x="278.16" y="127.5" ></text>
+</g>
+<g >
+<title>std::array&lt;Z2k&lt;34&gt;, 6ul&gt;::operator[] (4,187,733,866 samples, 2.51%)</title><rect x="437.6" y="117" width="29.7" height="15.0" fill="rgb(241,165,39)" rx="2" ry="2" />
+<text  x="440.60" y="127.5" >st..</text>
+</g>
+<g >
+<title>Z2k&lt;34&gt;::operator+= (104,965,926 samples, 0.06%)</title><rect x="476.6" y="165" width="0.7" height="15.0" fill="rgb(234,135,32)" rx="2" ry="2" />
+<text  x="479.57" y="175.5" ></text>
+</g>
+<g >
+<title>std::array&lt;Z2k&lt;34&gt;, 11ul&gt;::data (108,940,916 samples, 0.07%)</title><rect x="252.0" y="101" width="0.7" height="15.0" fill="rgb(205,3,0)" rx="2" ry="2" />
+<text  x="254.97" y="111.5" ></text>
+</g>
+<g >
+<title>Z2k&lt;34&gt;::Z2k (400,571,274 samples, 0.24%)</title><rect x="427.7" y="101" width="2.8" height="15.0" fill="rgb(219,66,15)" rx="2" ry="2" />
+<text  x="430.66" y="111.5" ></text>
+</g>
+<g >
+<title>std::array&lt;Z2k&lt;34&gt;,  (494,676,373 samples, 0.30%)</title><rect x="1185.2" y="213" width="3.5" height="15.0" fill="rgb(240,163,39)" rx="2" ry="2" />
+<text  x="1188.18" y="223.5" ></text>
+</g>
+<g >
+<title>GR1e&lt;34, 6&gt;::operator*= (27,968,924 samples, 0.02%)</title><rect x="472.9" y="181" width="0.2" height="15.0" fill="rgb(239,158,37)" rx="2" ry="2" />
+<text  x="475.89" y="191.5" ></text>
+</g>
+<g >
+<title>std::__array_traits&lt;Z2k&lt;34&gt;, 6ul&gt;::_S_ref (157,134,274 samples, 0.09%)</title><rect x="425.5" y="117" width="1.1" height="15.0" fill="rgb(253,221,52)" rx="2" ry="2" />
+<text  x="428.52" y="127.5" ></text>
+</g>
+<g >
+<title>Z2k&lt;34&gt;::operator- (19,360,749 samples, 0.01%)</title><rect x="1177.9" y="197" width="0.2" height="15.0" fill="rgb(215,48,11)" rx="2" ry="2" />
+<text  x="1180.93" y="207.5" ></text>
+</g>
+<g >
+<title>Z2k&lt;34&gt;* std::copy&lt;Z2k&lt;34&gt;*, Z2k&lt;34&gt;*&gt; (34,776,297 samples, 0.02%)</title><rect x="1182.8" y="181" width="0.2" height="15.0" fill="rgb(217,56,13)" rx="2" ry="2" />
+<text  x="1185.80" y="191.5" ></text>
+</g>
+<g >
+<title>Z2k&lt;34&gt;* std::__copy_move_a&lt;false, Z2k&lt;34&gt;*, Z2k&lt;34&gt;*&gt; (766,621,829 samples, 0.46%)</title><rect x="529.9" y="133" width="5.4" height="15.0" fill="rgb(230,117,28)" rx="2" ry="2" />
+<text  x="532.86" y="143.5" ></text>
+</g>
+<g >
+<title>std::array&lt;Z2k&lt;34&gt;, 11ul&gt;::begin (32,230,098 samples, 0.02%)</title><rect x="1159.5" y="165" width="0.3" height="15.0" fill="rgb(214,43,10)" rx="2" ry="2" />
+<text  x="1162.53" y="175.5" ></text>
+</g>
+<g >
+<title>__memmove_avx_unaligned_erms (36,395,058 samples, 0.02%)</title><rect x="163.7" y="37" width="0.2" height="15.0" fill="rgb(205,0,0)" rx="2" ry="2" />
+<text  x="166.67" y="47.5" ></text>
+</g>
+<g >
+<title>std::remove_reference&lt;unsigned long&gt;::type&amp;&amp; std::move&lt;unsigned long&gt; (378,696,983 samples, 0.23%)</title><rect x="677.5" y="101" width="2.7" height="15.0" fill="rgb(223,85,20)" rx="2" ry="2" />
+<text  x="680.53" y="111.5" ></text>
+</g>
+<g >
+<title>Z2k&lt;34&gt;::operator+ (96,276,504 samples, 0.06%)</title><rect x="1171.1" y="181" width="0.7" height="15.0" fill="rgb(228,108,25)" rx="2" ry="2" />
+<text  x="1174.12" y="191.5" ></text>
+</g>
+<g >
+<title>Z2k&lt;34&gt; const* std::__niter_base&lt;Z2k&lt;34&gt; const*&gt; (378,534,431 samples, 0.23%)</title><rect x="575.0" y="101" width="2.7" height="15.0" fill="rgb(234,137,32)" rx="2" ry="2" />
+<text  x="578.04" y="111.5" ></text>
+</g>
+<g >
+<title>std::array&lt;Z2k&lt;34&gt;, 11&gt; ops::reduce_once&lt;11, 6, Z2k&lt;34&gt; &gt; (78,618,528 samples, 0.05%)</title><rect x="1175.6" y="181" width="0.6" height="15.0" fill="rgb(243,179,42)" rx="2" ry="2" />
+<text  x="1178.60" y="191.5" ></text>
+</g>
+<g >
+<title>Z2k&lt;34&gt;* std::__miter_base&lt;Z2k&lt;34&gt;*&gt; (40,800,506 samples, 0.02%)</title><rect x="535.3" y="133" width="0.3" height="15.0" fill="rgb(223,85,20)" rx="2" ry="2" />
+<text  x="538.29" y="143.5" ></text>
+</g>
+<g >
+<title>Z2k&lt;34&gt;* std::__copy_move_a1&lt;false, Z2k&lt;34&gt;*, Z2k&lt;34&gt;*&gt; (744,172,687 samples, 0.45%)</title><rect x="159.1" y="69" width="5.3" height="15.0" fill="rgb(214,41,9)" rx="2" ry="2" />
+<text  x="162.11" y="79.5" ></text>
+</g>
+<g >
+<title>GR1e&lt;34, 6&gt; detail::horner_eval&lt;GR1e&lt;34, 6&gt; &gt; (409,245,689 samples, 0.25%)</title><rect x="1178.1" y="213" width="2.9" height="15.0" fill="rgb(233,131,31)" rx="2" ry="2" />
+<text  x="1181.13" y="223.5" ></text>
+</g>
+</g>
+</svg>

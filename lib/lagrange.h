@@ -194,6 +194,35 @@ namespace detail {
         }
         return res;
     }
+    /**
+     * Generate additive secret shares: s = s1 + s2 + ... + sn
+     * Any n-1 shares give no information about s.
+     */
+    template <typename R>
+    std::vector<R> generate_additive_shares(const R& secret, std::size_t n) {
+        assert(n >= 2);
+        std::vector<R> shares(n);
+        randomness::RO ro;
+        ro.gen_random_bytes();
+
+        R sum = R::zero();
+        for (std::size_t i = 0; i < n - 1; ++i) {
+            shares[i] = R::random_element(ro);
+            sum += shares[i];
+        }
+        shares[n - 1] = secret - sum;  // ensure shares sum to the secret
+        return shares;
+    }
+
+    template <typename R>
+    R reconstruct_additive_shares(const std::vector<R>& shares) {
+        R secret = R::zero();
+        for (const auto& share : shares) {
+            secret += share;
+        }
+        return secret;
+    }
+
 
     template <typename R>
     std::vector<R> generate_sharing(const R& v, const std::vector<R> alphas, int t) {

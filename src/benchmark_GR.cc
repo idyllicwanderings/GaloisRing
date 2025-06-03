@@ -7,8 +7,12 @@
 #define WARMUP_ITER 100
 
 // Galois ring parameters
-constexpr int gr_k = 64, gr_d1 = 8;
+constexpr int gr_k = 32, gr_d1 = 24;
 constexpr int lift_k = 32, lift_d1 = 3, lift_d2 = 24;
+
+using GRT = GR1e<gr_k, gr_d1>;
+constexpr int gr_d2 = 2;
+using GRTower = GRT1e<GR1e<gr_k, gr_d1>, gr_d2>;
 
 uint64_t nanos() {
     return std::chrono::duration_cast<std::chrono::nanoseconds>(
@@ -31,7 +35,6 @@ double benchmark(const std::string& name, Func&& func) {
 
 
 uint64_t bench_mult() {
-    using GRT = GR1e<gr_k, gr_d1>;
     randomness::RO ro; ro.gen_random_bytes();
     GRT a = GRT::random_element(ro), b = GRT::random_element(ro);
     auto start = nanos();
@@ -40,7 +43,6 @@ uint64_t bench_mult() {
 }
 
 uint64_t bench_add() {
-    using GRT = GR1e<gr_k, gr_d1>;
     randomness::RO ro; ro.gen_random_bytes();
     GRT a = GRT::random_element(ro), b = GRT::random_element(ro);
     auto start = nanos();
@@ -49,7 +51,6 @@ uint64_t bench_add() {
 }
 
 uint64_t bench_inv() {
-    using GRT = GR1e<gr_k, gr_d1>;
     randomness::RO ro; ro.gen_random_bytes();
     GRT a = GRT::random_element(ro);
     auto start = nanos();
@@ -58,9 +59,9 @@ uint64_t bench_inv() {
 }
 
 uint64_t bench_lift() {
-    using GRT = GR1e<lift_k, lift_d1>;
+    using GRT1 = GR1e<lift_k, lift_d1>;
     randomness::RO ro; ro.gen_random_bytes();
-    GRT a = GRT::random_element(ro);
+    GRT1 a = GRT1::random_element(ro);
     auto start = nanos();
     auto c = liftGR<lift_k, lift_d1, lift_d2>(a);
     return nanos() - start;
@@ -68,6 +69,9 @@ uint64_t bench_lift() {
 
 int main() {
     std::cout << "\n=========== Galois Ring Benchmarks ===========\n" << std::endl;
+    std::cout << "k = " << gr_k << ", d1 = " << gr_d1 << std::endl;
+    std::cout << "lift_k = " << lift_k << ", lift_d1 = " << lift_d1 << ", lift_d2 = " << lift_d2 << std::endl;
+    
     benchmark("addition", bench_add);
     benchmark("multiplication", bench_mult);
     benchmark("inverse", bench_inv);
